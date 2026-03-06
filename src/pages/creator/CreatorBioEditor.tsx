@@ -86,6 +86,10 @@ const SOCIAL_ICON: Record<string, React.ComponentType<{ className?: string }>> =
 function socialIcon(platform: string) {
   return SOCIAL_ICON[platform.toLowerCase()] ?? Share2;
 }
+const SOCIAL_BRAND_COLORS: Record<string, string> = {
+  instagram: "#E4405F", youtube: "#FF0000", facebook: "#1877F2",
+  linkedin: "#0A66C2", twitter: "#1DA1F2", x: "#000000", tiktok: "#000000",
+};
 
 /* ── Sidebar tab definitions ── */
 type EditorTab = "profile" | "theme" | "sections" | "share";
@@ -113,11 +117,14 @@ interface ThemeSettings {
   darkMode: boolean;
 }
 
+/* ── 4×6 swatch grid (Seeksy-style) ── */
 const THEME_SWATCHES = [
-  "#000000", "#374151", "#7f1d1d", "#dc2626",
+  "#000000", "#374151", "#78350f", "#dc2626",
   "#f97316", "#ea580c", "#db2777", "#9333ea",
   "#1e3a8a", "#3b82f6", "#0d9488", "#16a34a",
+  "#6366f1", "#8b5cf6", "#14b8a6", "#22c55e",
   "#d1d5db", "#fce7f3", "#fca5a5", "#fed7aa",
+  "#bfdbfe", "#e9d5ff", "#a7f3d0", "#ffffff",
 ];
 
 const FONT_OPTIONS = [
@@ -398,11 +405,11 @@ export default function CreatorBioEditor() {
 
   const visibleSections = sections.filter((s) => s.visible).sort((a, b) => a.order - b.order);
 
-  /* ── Phone frame width per device (iPhone 17: 19.5:9 aspect, ~310px frame) ── */
+  /* ── Phone frame width per device (Seeksy-style: 380px phone frame) ── */
   const deviceWidth: Record<PreviewDevice, string> = {
-    phone: "w-[310px]",
-    tablet: "w-[440px]",
-    desktop: "w-[540px]",
+    phone: "w-[380px]",
+    tablet: "w-[480px]",
+    desktop: "w-[560px]",
   };
 
   /* ── Preview avatar shape from imageStyle ── */
@@ -460,7 +467,7 @@ export default function CreatorBioEditor() {
                   className={`flex flex-col items-center gap-0.5 rounded-xl p-2 w-14 transition-all ${
                     active ? "text-white" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
-                  style={active ? { background: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)" } : undefined}
+                  style={active ? { background: "linear-gradient(135deg, #ec4899 0%, #9333ea 100%)" } : undefined}
                 >
                   <Icon className="h-5 w-5" />
                   <span className="text-[10px] font-medium leading-tight">{tab.label}</span>
@@ -481,7 +488,7 @@ export default function CreatorBioEditor() {
                   className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
                     active ? "text-white" : "text-muted-foreground hover:bg-muted"
                   }`}
-                  style={active ? { background: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)" } : undefined}
+                  style={active ? { background: "linear-gradient(135deg, #ec4899 0%, #9333ea 100%)" } : undefined}
                 >
                   <Icon className="h-3.5 w-3.5" />
                   {tab.label}
@@ -748,17 +755,17 @@ export default function CreatorBioEditor() {
                       maxLength={7}
                     />
                   </div>
-                  <div className="grid grid-cols-8 gap-1.5 mt-2">
+                  <div className="grid grid-cols-4 gap-2 mt-2">
                     {THEME_SWATCHES.map((color) => (
                       <button
                         key={color}
                         onClick={() => { updateTheme({ themeColor: color }); persistTheme({ ...theme, themeColor: color }); }}
-                        className={`h-7 w-full rounded-md border-2 transition-all ${
+                        className={`h-9 w-full rounded-lg border-2 transition-all ${
                           theme.themeColor.toLowerCase() === color.toLowerCase()
-                            ? "border-blue-500 ring-2 ring-blue-500/30 scale-110"
-                            : "border-transparent hover:scale-105"
+                            ? "border-blue-500 ring-2 ring-blue-500/30 scale-105"
+                            : "border-transparent hover:scale-[1.02]"
                         }`}
-                        style={{ backgroundColor: color }}
+                        style={{ backgroundColor: color, ...(color === "#ffffff" ? { border: "1px solid #e5e7eb" } : {}) }}
                       />
                     ))}
                   </div>
@@ -982,123 +989,200 @@ export default function CreatorBioEditor() {
               </div>
             </div>
 
-            {/* Phone frame — iPhone 17 mockup (19.5:9, 6.3") */}
+            {/* Phone frame — Seeksy-style mockup (380×780, 348×720 screen) */}
             <div className={`${deviceWidth[previewDevice]} transition-all duration-300 relative`}>
-              {/* Side buttons (iPhone 17 — action button left, volume left, power right) */}
-              <div className="absolute -left-[3px] top-[90px] w-[3px] h-[28px] bg-[#2a2a2a] rounded-l-sm" />
-              <div className="absolute -left-[3px] top-[132px] w-[3px] h-[48px] bg-[#2a2a2a] rounded-l-sm" />
-              <div className="absolute -left-[3px] top-[190px] w-[3px] h-[48px] bg-[#2a2a2a] rounded-l-sm" />
-              <div className="absolute -right-[3px] top-[148px] w-[3px] h-[68px] bg-[#2a2a2a] rounded-r-sm" />
+              {/* Side buttons — volume (left), power (right) */}
+              <div className="absolute -left-[3px] top-[130px] w-[3px] h-[30px] bg-[#1a1a1a] rounded-l-sm" />
+              <div className="absolute -left-[3px] top-[180px] w-[3px] h-[56px] bg-[#1a1a1a] rounded-l-sm" />
+              <div className="absolute -left-[3px] top-[248px] w-[3px] h-[56px] bg-[#1a1a1a] rounded-l-sm" />
+              <div className="absolute -right-[3px] top-[200px] w-[3px] h-[80px] bg-[#1a1a1a] rounded-r-sm" />
 
-              {/* Bezel — iPhone 17 aluminum frame */}
+              {/* Bezel — dark frame */}
               <div
-                className="rounded-[48px] p-[10px] relative"
+                className="rounded-[48px] relative"
                 style={{
-                  background: "linear-gradient(145deg, #1c1c1c 0%, #0e0e0e 50%, #1c1c1c 100%)",
-                  boxShadow: "0 25px 60px -10px rgba(0,0,0,0.5), 0 12px 30px -5px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.4)",
+                  padding: "30px 16px",
+                  backgroundColor: "#1a1a1a",
+                  boxShadow: "0 30px 80px rgba(0,0,0,0.4)",
                 }}
               >
-                {/* Dynamic Island (iPhone 17) */}
-                <div className="absolute top-[18px] left-1/2 -translate-x-1/2 z-10">
-                  <div className="w-[90px] h-[24px] rounded-full" style={{ backgroundColor: "#000000", boxShadow: "0 0 0 1px rgba(255,255,255,0.05), inset 0 0 2px rgba(0,0,0,1)" }} />
+                {/* Dynamic Island — true black pill */}
+                <div className="absolute top-[16px] left-1/2 -translate-x-1/2 z-10">
+                  <div className="w-32 h-7 rounded-full bg-black" />
                 </div>
 
-                {/* Screen — 19.5:9 aspect ratio */}
+                {/* Screen — 348×720 */}
                 <div
-                  className="rounded-[38px] overflow-hidden overflow-y-auto relative"
+                  className="rounded-[32px] overflow-hidden overflow-y-auto relative"
                   style={{
-                    height: "628px",
+                    width: "348px",
+                    height: "720px",
                     backgroundColor: phoneBg,
                     backgroundImage: theme.bgMode === "gradient" ? `linear-gradient(180deg, ${theme.themeColor}22 0%, ${phoneBg} 60%)` : undefined,
-                    boxShadow: "inset 0 0 12px rgba(0,0,0,0.1), inset 0 2px 4px rgba(0,0,0,0.08)",
                     fontFamily: theme.fontFamily,
                   }}
                 >
-                  {/* Hero image inside phone */}
+                  {/* Hero image */}
                   {heroImageUrl && (
-                    <div
-                      className="w-full overflow-hidden"
-                      style={{
-                        height: heroImageFormat === "portrait" ? "200px" : heroImageFormat === "square" ? "160px" : "120px",
-                      }}
-                    >
-                      <img
-                        src={heroImageUrl}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
+                    <div className="w-full overflow-hidden" style={{ height: heroImageFormat === "portrait" ? "200px" : heroImageFormat === "square" ? "160px" : "120px" }}>
+                      <img src={heroImageUrl} alt="" className="w-full h-full object-cover" />
                     </div>
                   )}
 
-                  {/* Profile header inside phone */}
-                  <div
-                    className={`p-6 ${heroImageUrl ? "pt-4" : "pt-12"} flex flex-col items-center`}
-                    style={{
-                      background: theme.bgMode === "gradient" ? "transparent"
-                        : theme.darkMode ? "linear-gradient(to bottom, #1f293780, transparent)"
-                          : "linear-gradient(to bottom, #f3f4f680, transparent)",
-                    }}
-                  >
+                  {/* Profile header */}
+                  <div className={`px-5 ${heroImageUrl ? "pt-4" : "pt-14"} pb-3 flex flex-col items-center`}>
+                    {/* Avatar — 64px circular */}
                     {avatarUrl ? (
-                      <img
-                        src={avatarUrl}
-                        alt=""
-                        className={`h-20 w-20 object-cover shadow ${avatarAspect}`}
-                        style={{ borderRadius: avatarRadius, border: `2px solid ${theme.themeColor}` }}
-                      />
+                      <img src={avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover shadow-sm" style={{ border: `2px solid ${theme.themeColor}` }} />
                     ) : (
-                      <div
-                        className="h-20 w-20 flex items-center justify-center text-2xl font-semibold"
-                        style={{ borderRadius: avatarRadius, backgroundColor: theme.darkMode ? "#374151" : "#e5e7eb", color: phoneSubtext }}
-                      >
+                      <div className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-semibold" style={{ backgroundColor: theme.darkMode ? "#374151" : "#e5e7eb", color: phoneSubtext }}>
                         {(displayName || "?")[0].toUpperCase()}
                       </div>
                     )}
-                    <h3 className="mt-3 text-base font-semibold" style={{ color: phoneText, fontFamily: theme.fontFamily }}>
+                    {/* Name — 18px bold */}
+                    <h3 className="mt-2.5 font-bold leading-tight" style={{ fontSize: "18px", color: phoneText, fontFamily: theme.fontFamily }}>
                       {displayName || "Your Name"}
                     </h3>
-                    <p className="text-xs mt-0.5" style={{ color: phoneSubtext }}>@{handle || "username"}</p>
+                    {/* Username — 13px gray */}
+                    <p className="mt-0.5" style={{ fontSize: "13px", color: phoneSubtext }}>@{handle || "username"}</p>
+                    {/* Certified Voice badge */}
+                    <div className="flex items-center gap-1 mt-2 px-3 py-1 rounded-full border" style={{ borderColor: theme.themeColor, color: theme.themeColor }}>
+                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                      <span className="text-[11px] font-medium">Certified Voice</span>
+                    </div>
+                    {/* Bio */}
                     {profileBio && (
-                      <p className="text-xs mt-2 text-center max-w-[260px] line-clamp-3" style={{ color: phoneSubtext }}>
+                      <p className="text-xs mt-2 text-center max-w-[280px] leading-relaxed line-clamp-3" style={{ color: phoneSubtext }}>
                         {profileBio}
                       </p>
                     )}
                   </div>
 
-                  {/* Sections inside phone */}
-                  <div className="px-5 pb-8 space-y-3">
+                  {/* Sections — render actual content per type */}
+                  <div className="px-4 pb-10 space-y-3">
                     {visibleSections.length === 0 ? (
-                      <div className="py-16 text-center">
-                        <Layers className="h-10 w-10 mx-auto mb-3" style={{ color: phoneSectionBorder }} />
-                        <p className="text-sm" style={{ color: phoneSubtext }}>No sections enabled yet</p>
-                        <p className="text-xs mt-1" style={{ color: phoneSectionBorder }}>Add sections from the Sections tab</p>
+                      <div className="py-12 text-center">
+                        <Layers className="h-8 w-8 mx-auto mb-2 opacity-20" style={{ color: phoneSubtext }} />
+                        <p className="text-sm" style={{ color: phoneSubtext }}>No sections yet</p>
+                        <p className="text-[11px] mt-0.5 opacity-60" style={{ color: phoneSubtext }}>Add sections from the Sections tab</p>
                       </div>
                     ) : (
                       visibleSections.map((section) => {
                         const entry = catalogEntryFor(section.type);
                         if (!entry) return null;
                         const cfg = (section.config ?? {}) as Record<string, any>;
+
+                        /* Card style from theme */
+                        const cardBg = theme.cardStyle === "glass"
+                          ? theme.darkMode ? "rgba(31,41,55,0.6)" : "rgba(255,255,255,0.7)"
+                          : theme.darkMode ? "#1f2937" : "#ffffff";
+                        const cardRadius = theme.cardStyle === "square" ? "6px" : "12px";
+                        const cardShadow = theme.cardStyle === "shadow"
+                          ? "0 2px 8px rgba(0,0,0,0.08)"
+                          : theme.cardStyle === "glass"
+                            ? "0 0 0 1px rgba(255,255,255,0.1)"
+                            : "0 1px 3px rgba(0,0,0,0.04)";
+                        const cardBackdrop = theme.cardStyle === "glass" ? "blur(12px)" : undefined;
+                        const cStyle: React.CSSProperties = {
+                          borderRadius: cardRadius,
+                          backgroundColor: cardBg,
+                          boxShadow: cardShadow,
+                          backdropFilter: cardBackdrop,
+                          padding: "16px",
+                        };
+
+                        /* ── Social Links ── */
+                        if (section.type === "social_links") {
+                          const accs = socialAccounts.filter((acc) => {
+                            const toggles = (cfg.platformToggles as any[]) ?? [];
+                            const t = toggles.find((t: any) => t.platform === acc.platform);
+                            return t ? t.enabled : true;
+                          });
+                          const icons = accs.length > 0
+                            ? accs.map((acc) => ({ key: acc.id, platform: acc.platform }))
+                            : ["instagram", "youtube", "twitter", "tiktok"].map((p) => ({ key: p, platform: p }));
+                          return (
+                            <div key={section.id} style={cStyle}>
+                              <p className="text-xs font-semibold mb-3" style={{ color: phoneText }}>Social Links</p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {icons.map(({ key, platform }) => {
+                                  const SIcon = socialIcon(platform);
+                                  const brandColor = accs.length > 0
+                                    ? (SOCIAL_BRAND_COLORS[platform.toLowerCase()] ?? theme.themeColor)
+                                    : theme.darkMode ? "#6b7280" : "#9ca3af";
+                                  return (
+                                    <div key={key} className="flex items-center justify-center rounded-full" style={{ width: 40, height: 40, backgroundColor: `${brandColor}15` }}>
+                                      <SIcon className="h-5 w-5" style={{ color: brandColor }} />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        /* ── Podcast ── */
+                        if (section.type === "podcast") {
+                          return (
+                            <div key={section.id} style={cStyle}>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold tracking-wide" style={{ color: theme.themeColor, fontSize: "14px" }}>&bull;&bull;&bull;</span>
+                                <span className="text-sm font-semibold" style={{ color: theme.themeColor }}>{section.label}</span>
+                              </div>
+                              <p className="text-xs mt-1" style={{ color: phoneSubtext }}>Display your podcast episodes</p>
+                            </div>
+                          );
+                        }
+
+                        /* ── Custom Links ── */
+                        if (section.type === "custom_links") {
+                          const links = (cfg.links as any[]) ?? [];
+                          return (
+                            <div key={section.id} style={cStyle}>
+                              <div className="flex items-center gap-2 mb-2">
+                                <Link className="h-4 w-4" style={{ color: theme.themeColor }} />
+                                <span className="text-sm font-semibold" style={{ color: theme.themeColor }}>Custom Links</span>
+                              </div>
+                              {links.length > 0 ? (
+                                <div className="space-y-1.5">
+                                  {links.slice(0, 3).map((link: any) => (
+                                    <div key={link.id} className="text-xs py-1.5 px-3 rounded-lg truncate" style={{ backgroundColor: `${theme.themeColor}10`, color: phoneText }}>
+                                      {link.label || link.url || "Untitled link"}
+                                    </div>
+                                  ))}
+                                  {links.length > 3 && (
+                                    <p className="text-[10px] pl-3" style={{ color: phoneSubtext }}>+{links.length - 3} more</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="text-xs" style={{ color: phoneSubtext }}>Add links to display here</p>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        /* ── Book a Meeting ── */
+                        if (section.type === "book_meeting") {
+                          return (
+                            <div key={section.id} style={cStyle}>
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-center h-10 w-10 rounded-lg shrink-0" style={{ backgroundColor: `${theme.themeColor}15` }}>
+                                  <CalendarCheck className="h-5 w-5" style={{ color: theme.themeColor }} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold" style={{ color: phoneText }}>{(cfg.buttonLabel as string) || "Book a Meeting"}</p>
+                                  <p className="text-xs" style={{ color: phoneSubtext }}>Schedule time with me</p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        /* ── Default section card ── */
                         return (
-                          <div
-                            key={section.id}
-                            className="p-3.5"
-                            style={{
-                              borderRadius: phoneCardRadius,
-                              border: `1px solid ${phoneSectionBorder}`,
-                              backgroundColor: phoneGlassBg,
-                              boxShadow: phoneCardShadow,
-                              backdropFilter: phoneCardBackdrop,
-                            }}
-                          >
+                          <div key={section.id} style={cStyle}>
                             <div className="flex items-center gap-3">
-                              <div
-                                className="flex items-center justify-center h-10 w-10 shrink-0"
-                                style={{
-                                  borderRadius: theme.cardStyle === "square" ? "0.375rem" : "0.5rem",
-                                  backgroundColor: `${theme.themeColor}18`,
-                                  color: theme.themeColor,
-                                }}
-                              >
+                              <div className="flex items-center justify-center h-10 w-10 rounded-lg shrink-0" style={{ backgroundColor: `${theme.themeColor}15`, color: theme.themeColor }}>
                                 {getSectionIcon(entry)}
                               </div>
                               <div className="flex-1 min-w-0">
@@ -1111,63 +1195,16 @@ export default function CreatorBioEditor() {
                                 <p className="text-xs truncate" style={{ color: phoneSubtext }}>{entry.description}</p>
                               </div>
                             </div>
-
-                            {/* Section-specific preview content */}
-                            {section.type === "social_links" && socialAccounts.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 mt-2.5 pl-[52px]">
-                                {socialAccounts
-                                  .filter((acc) => {
-                                    const toggles = (cfg.platformToggles as any[]) ?? [];
-                                    const t = toggles.find((t: any) => t.platform === acc.platform);
-                                    return t ? t.enabled : true;
-                                  })
-                                  .map((acc) => {
-                                    const SIcon = socialIcon(acc.platform);
-                                    return <SIcon key={acc.id} className="h-4 w-4" style={{ color: theme.themeColor }} />;
-                                  })}
-                              </div>
-                            )}
-                            {section.type === "custom_links" && (cfg.links as any[])?.length > 0 && (
-                              <div className="space-y-1 mt-2.5 pl-[52px]">
-                                {((cfg.links as any[]) ?? []).slice(0, 3).map((link: any) => (
-                                  <div
-                                    key={link.id}
-                                    className="text-[10px] py-1 px-2.5 rounded truncate"
-                                    style={{ backgroundColor: `${theme.themeColor}15`, color: theme.themeColor }}
-                                  >
-                                    {link.label || link.url || "Untitled link"}
-                                  </div>
-                                ))}
-                                {(cfg.links as any[]).length > 3 && (
-                                  <p className="text-[9px]" style={{ color: phoneSubtext }}>+{(cfg.links as any[]).length - 3} more</p>
-                                )}
-                              </div>
-                            )}
-                            {section.type === "book_meeting" && (cfg.calendlyUrl || cfg.buttonLabel) && (
-                              <div className="mt-2.5 pl-[52px]">
-                                <div
-                                  className="text-[10px] py-1.5 px-3 rounded-full text-center font-medium text-white"
-                                  style={{ backgroundColor: theme.themeColor }}
-                                >
-                                  {(cfg.buttonLabel as string) || "Book a Meeting"}
-                                </div>
-                              </div>
-                            )}
-                            {section.type === "podcast" && cfg.displayTitle && (
-                              <p className="text-[10px] mt-1.5 pl-[52px] font-medium truncate" style={{ color: phoneText }}>
-                                {cfg.displayTitle as string}
-                              </p>
-                            )}
                           </div>
                         );
                       })
                     )}
                   </div>
-                </div>
 
-                {/* Home indicator */}
-                <div className="flex justify-center mt-2">
-                  <div className="w-32 h-1 bg-gray-600 rounded-full" />
+                  {/* Home indicator bar — inside screen at bottom */}
+                  <div className="sticky bottom-0 flex justify-center pb-2 pt-1">
+                    <div className="w-28 h-1 rounded-full" style={{ backgroundColor: theme.darkMode ? "#4b5563" : "#d1d5db" }} />
+                  </div>
                 </div>
               </div>
             </div>
