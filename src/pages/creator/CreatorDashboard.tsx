@@ -157,7 +157,7 @@ export default function CreatorDashboard() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button asChild size="sm" className="bg-[#1B3A6B] hover:bg-[#152d54] text-white">
-              <Link to="/creator/post/new">
+              <Link to="/creator/post">
                 <Send className="h-4 w-4 mr-2" />
                 Create Post
               </Link>
@@ -251,7 +251,7 @@ export default function CreatorDashboard() {
                 <PenSquare className="h-8 w-8 mx-auto text-muted-foreground/30 mb-3" />
                 <p className="text-sm text-muted-foreground mb-3">No posts yet.</p>
                 <Button size="sm" variant="outline" asChild>
-                  <Link to="/creator/post/new">Create a Post</Link>
+                  <Link to="/creator/post">Create a Post</Link>
                 </Button>
               </div>
             </CardContent>

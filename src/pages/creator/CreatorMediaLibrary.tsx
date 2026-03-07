@@ -222,7 +222,7 @@ export default function CreatorMediaLibrary({ noLayout }: { noLayout?: boolean }
               </div>
               <Button
                 className="bg-[#1B3A6B] hover:bg-[#152d54] text-white text-xs"
-                onClick={() => navigate("/creator/post/new?tab=cadence")}
+                onClick={() => navigate("/creator/post?tab=cadence")}
               >
                 <Upload className="h-3.5 w-3.5 mr-1.5" />
                 Upload via Campaign
@@ -294,7 +294,7 @@ export default function CreatorMediaLibrary({ noLayout }: { noLayout?: boolean }
                 <Button
                   variant="outline"
                   className="mt-4 text-xs"
-                  onClick={() => navigate("/creator/post/new?tab=cadence")}
+                  onClick={() => navigate("/creator/post?tab=cadence")}
                 >
                   Create a Campaign
                 </Button>
@@ -347,7 +347,7 @@ export default function CreatorMediaLibrary({ noLayout }: { noLayout?: boolean }
                         <Button
                           size="sm"
                           className="bg-[#1B3A6B] hover:bg-[#152d54] text-white text-[11px] h-7 px-2.5"
-                          onClick={() => navigate("/creator/post/new?tab=cadence")}
+                          onClick={() => navigate("/creator/post?tab=cadence")}
                         >
                           Use in Campaign
                         </Button>

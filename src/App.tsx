@@ -360,8 +360,9 @@ const App = () => (
               <Route path="/creator/profile" element={<CreatorRoute><CreatorProfile /></CreatorRoute>} />
               <Route path="/creator/bio" element={<CreatorRoute><CreatorBioEditor /></CreatorRoute>} />
               <Route path="/creator/socials" element={<CreatorRoute><CreatorSocials /></CreatorRoute>} />
-              <Route path="/creator/post/new" element={<CreatorRoute><CreatePost /></CreatorRoute>} />
-              <Route path="/creator/posts" element={<CreatorRoute><CreatorPosts /></CreatorRoute>} />
+              <Route path="/creator/post" element={<CreatorRoute><CreatorPosts /></CreatorRoute>} />
+              <Route path="/creator/post/new" element={<Navigate to="/creator/post" replace />} />
+              <Route path="/creator/posts" element={<Navigate to="/creator/post?tab=drafts" replace />} />
               <Route path="/creator/analytics" element={<CreatorRoute><CreatorAnalytics /></CreatorRoute>} />
               <Route path="/creator/media-library" element={<CreatorRoute><CreatorMediaLibrary /></CreatorRoute>} />
               <Route path="/creator/events" element={<CreatorRoute><CreatorEvents /></CreatorRoute>} />

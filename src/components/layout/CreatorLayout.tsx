@@ -57,8 +57,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { icon: Link2, label: "My Bio Page", href: "/creator/bio" },
       { icon: Share2, label: "My Socials", href: "/creator/socials" },
-      { icon: PenSquare, label: "Create Post", href: "/creator/post/new" },
-      { icon: Calendar, label: "Scheduled Posts", href: "/creator/posts" },
+      { icon: PenSquare, label: "Post", href: "/creator/post" },
       { icon: ImageIcon, label: "Media Library", href: "/creator/media-library" },
       { icon: BarChart3, label: "Content Analytics", href: "/creator/analytics" },
     ],
@@ -285,7 +284,7 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
 
   const mobileBottomTabs = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/creator/dashboard" },
-    { icon: PenSquare, label: "Content", href: "/creator/post/new" },
+    { icon: PenSquare, label: "Content", href: "/creator/post" },
     { icon: CalendarDays, label: "Events", href: "/creator/events" },
     { icon: User, label: "Profile", href: "/creator/bio" },
   ];
