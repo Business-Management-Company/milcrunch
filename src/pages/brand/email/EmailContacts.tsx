@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Loader2, Search, Users, X, Instagram, Youtube, Globe, ExternalLink, Mail, Phone, MapPin, Link } from "lucide-react";
+import { Download, Loader2, Search, Users, X, Globe, ExternalLink, Mail, Phone, MapPin, Link } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { PlatformIcon } from "@/lib/platform-icons";
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
@@ -58,20 +59,6 @@ function platformUrl(platform: string, handle: string): string {
   }
 }
 
-const TikTokIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.88-2.88 2.89 2.89 0 012.88-2.88c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V9.39a8.16 8.16 0 003.76.92V6.86a4.85 4.85 0 01-.01-.17z" />
-  </svg>
-);
-
-function PlatformIcon({ platform, className = "h-4 w-4" }: { platform: string; className?: string }) {
-  switch (platform.toLowerCase()) {
-    case "instagram": return <Instagram className={className} />;
-    case "tiktok": return <TikTokIcon className={className} />;
-    case "youtube": return <Youtube className={className} />;
-    default: return <Globe className={className} />;
-  }
-}
 
 const BRANCH_COLORS: Record<string, string> = {
   army: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300",
@@ -227,7 +214,7 @@ function ContactDrawer({ contact, open, onClose }: { contact: Contact | null; op
               <div className="flex items-center gap-3">
                 <span className="text-gray-400 w-20 shrink-0">Platform</span>
                 <span className="text-gray-900 dark:text-white font-medium capitalize flex items-center gap-1.5">
-                  <PlatformIcon platform={contact.platform} className="h-4 w-4" />
+                  <PlatformIcon platform={contact.platform} size={16} />
                   {contact.platform}
                 </span>
               </div>
@@ -439,7 +426,7 @@ const EmailContacts = () => {
             <Card key={p} className="p-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-muted">
-                  <PlatformIcon platform={p} className="h-5 w-5 text-gray-600" />
+                  <PlatformIcon platform={p} size={20} />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-foreground">{count}</p>
@@ -536,7 +523,7 @@ const EmailContacts = () => {
                   <TableCell className="text-muted-foreground">@{c.creator_handle}</TableCell>
                   <TableCell>
                     <span className="inline-flex items-center gap-1.5 capitalize text-sm">
-                      <PlatformIcon platform={c.platform} className="h-3.5 w-3.5" />
+                      <PlatformIcon platform={c.platform} size={14} />
                       {c.platform}
                     </span>
                   </TableCell>

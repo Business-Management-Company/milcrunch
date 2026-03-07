@@ -3,7 +3,8 @@ import { useParams, Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ExternalLink, Instagram, Twitter, Linkedin, Youtube, Loader2, ArrowLeft } from "lucide-react";
+import { ExternalLink, Loader2, ArrowLeft } from "lucide-react";
+import { PlatformIcon } from "@/lib/platform-icons";
 import { getSponsorPage } from "@/lib/sponsor-db";
 import type { SponsorPage } from "@/lib/sponsor-types";
 import { cn } from "@/lib/utils";
@@ -47,10 +48,10 @@ export default function PublicSponsorPage() {
   }
 
   const socials = [
-    { url: page.social_instagram, icon: Instagram, label: "Instagram" },
-    { url: page.social_twitter, icon: Twitter, label: "Twitter" },
-    { url: page.social_linkedin, icon: Linkedin, label: "LinkedIn" },
-    { url: page.social_youtube, icon: Youtube, label: "YouTube" },
+    { url: page.social_instagram, platform: "instagram", label: "Instagram" },
+    { url: page.social_twitter, platform: "twitter", label: "Twitter" },
+    { url: page.social_linkedin, platform: "linkedin", label: "LinkedIn" },
+    { url: page.social_youtube, platform: "youtube", label: "YouTube" },
   ].filter((s) => s.url);
 
   return (
@@ -123,7 +124,7 @@ export default function PublicSponsorPage() {
                   rel="noreferrer"
                   className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm transition-colors"
                 >
-                  <s.icon className="h-4 w-4" /> {s.label}
+                  <PlatformIcon platform={s.platform} size={16} /> {s.label}
                 </a>
               ))}
             </div>

@@ -10,7 +10,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getDominantColorFromFile } from "@/lib/dominant-color";
 import type { HeroImageFormat, BioPageTheme } from "@/types/bio-page";
-import { Loader2, ImagePlus, ExternalLink, Instagram, Youtube, Twitter, Facebook, Linkedin } from "lucide-react";
+import { Loader2, ImagePlus, ExternalLink } from "lucide-react";
+import { PlatformIcon } from "@/lib/platform-icons";
 import { toast } from "sonner";
 
 export default function CreatorProfile() {
@@ -304,27 +305,19 @@ export default function CreatorProfile() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
-                { name: "Instagram", icon: Instagram, color: "text-pink-500", bg: "bg-pink-50" },
-                { name: "TikTok", icon: () => (
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V9.05a8.16 8.16 0 004.76 1.52V7.12a4.84 4.84 0 01-1-.43z" />
-                  </svg>
-                ), color: "text-gray-900", bg: "bg-gray-100" },
-                { name: "YouTube", icon: Youtube, color: "text-red-600", bg: "bg-red-50" },
-                { name: "Twitter / X", icon: Twitter, color: "text-gray-900", bg: "bg-gray-100" },
-                { name: "Facebook", icon: Facebook, color: "text-blue-600", bg: "bg-blue-50" },
-                { name: "LinkedIn", icon: Linkedin, color: "text-blue-700", bg: "bg-blue-50" },
-              ].map((p) => {
-                const Icon = p.icon;
-                return (
+                { name: "Instagram", platform: "instagram" },
+                { name: "TikTok", platform: "tiktok" },
+                { name: "YouTube", platform: "youtube" },
+                { name: "Twitter / X", platform: "twitter" },
+                { name: "Facebook", platform: "facebook" },
+                { name: "LinkedIn", platform: "linkedin" },
+              ].map((p) => (
                   <div
                     key={p.name}
                     className="flex items-center justify-between border border-border rounded-lg px-4 py-3"
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${p.bg} ${p.color}`}>
-                        <Icon className="w-5 h-5" />
-                      </div>
+                      <PlatformIcon platform={p.platform} size={28} />
                       <span className="text-sm font-medium text-foreground">{p.name}</span>
                     </div>
                     <Button
@@ -335,8 +328,7 @@ export default function CreatorProfile() {
                       Connect
                     </Button>
                   </div>
-                );
-              })}
+              ))}
             </div>
           </Card>
         </div>

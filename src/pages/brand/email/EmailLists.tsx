@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import {
   Plus, ArrowLeft, Upload, Download, Loader2, Trash2, UserMinus, Mail,
-  Instagram, Youtube, Twitter, Linkedin, Globe, MapPin, Search,
+  Globe, MapPin, Search,
 } from "lucide-react";
 import {
   getEmailLists, upsertEmailList, deleteEmailList,
@@ -21,20 +21,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { CONTACT_STATUS_COLORS } from "@/lib/email-types";
 import type { EmailList, EmailContact } from "@/lib/email-types";
-
-const TikTokIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.88-2.88 2.89 2.89 0 012.88-2.88c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V9.39a8.16 8.16 0 003.76.92V6.86a4.85 4.85 0 01-.01-.17z" />
-  </svg>
-);
-
-const PLATFORM_ICONS: Record<string, React.ReactNode> = {
-  instagram: <Instagram className="h-3.5 w-3.5" />,
-  tiktok: <TikTokIcon className="h-3.5 w-3.5" />,
-  youtube: <Youtube className="h-3.5 w-3.5" />,
-  twitter: <Twitter className="h-3.5 w-3.5" />,
-  linkedin: <Linkedin className="h-3.5 w-3.5" />,
-};
+import { PlatformIcon } from "@/lib/platform-icons";
 
 const SOURCE_COLORS: Record<string, string> = {
   manual: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
@@ -460,9 +447,7 @@ const EmailLists = () => {
                       <TableCell>
                         <div className="flex items-center gap-1">
                           {platforms.slice(0, 4).map(p => (
-                            <span key={p} className="text-gray-500 dark:text-gray-400" title={p}>
-                              {PLATFORM_ICONS[p] || <Globe className="h-3.5 w-3.5" />}
-                            </span>
+                            <PlatformIcon key={p} platform={p} size={16} />
                           ))}
                           {platforms.length === 0 && <span className="text-muted-foreground">—</span>}
                         </div>

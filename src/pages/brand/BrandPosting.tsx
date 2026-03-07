@@ -18,11 +18,6 @@ import {
   Check,
   Loader2,
   AlertCircle,
-  Instagram,
-  Youtube,
-  Facebook,
-  Twitter,
-  Linkedin,
   FileVideo,
   Calendar,
   Trash2,
@@ -46,6 +41,7 @@ import {
   Globe,
   TrendingUp,
 } from "lucide-react";
+import { PlatformIcon } from "@/lib/platform-icons";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useDemoMode } from "@/hooks/useDemoMode";
@@ -57,40 +53,16 @@ import { useDemoMode } from "@/hooks/useDemoMode";
 const PLATFORMS: {
   id: UploadPostPlatform;
   name: string;
-  icon: React.ComponentType<{ className?: string }> | null;
   charLimit: number | null;
 }[] = [
-  { id: "instagram", name: "Instagram", icon: Instagram, charLimit: 2200 },
-  { id: "tiktok", name: "TikTok", icon: null, charLimit: 2200 },
-  { id: "youtube", name: "YouTube", icon: Youtube, charLimit: 5000 },
-  { id: "x", name: "X", icon: Twitter, charLimit: 280 },
-  { id: "linkedin", name: "LinkedIn", icon: Linkedin, charLimit: 3000 },
-  { id: "facebook", name: "Facebook", icon: Facebook, charLimit: 63206 },
+  { id: "instagram", name: "Instagram", charLimit: 2200 },
+  { id: "tiktok", name: "TikTok", charLimit: 2200 },
+  { id: "youtube", name: "YouTube", charLimit: 5000 },
+  { id: "x", name: "X", charLimit: 280 },
+  { id: "linkedin", name: "LinkedIn", charLimit: 3000 },
+  { id: "facebook", name: "Facebook", charLimit: 63206 },
 ];
 
-const TikTokIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.88-2.88 2.89 2.89 0 012.88-2.88c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V9.39a8.16 8.16 0 003.76.92V6.86a4.85 4.85 0 01-.01-.17z" />
-  </svg>
-);
-
-const PLATFORM_COLORS: Record<string, string> = {
-  instagram: "bg-blue-600",
-  tiktok: "bg-teal-500",
-  x: "bg-blue-500",
-  youtube: "bg-red-500",
-  linkedin: "bg-blue-700",
-  facebook: "bg-blue-600",
-};
-
-const PLATFORM_GRADIENTS: Record<string, string> = {
-  instagram: "bg-gradient-to-br from-blue-600 via-pink-500 to-orange-400",
-  tiktok: "bg-black",
-  x: "bg-[#1A2744]",
-  youtube: "bg-red-600",
-  linkedin: "bg-blue-700",
-  facebook: "bg-blue-600",
-};
 
 const QUEUE_FILTER_OPTIONS = [
   { id: "all", label: "All" },
@@ -215,13 +187,6 @@ Return ONLY valid JSON array with 3 objects, each having a "text" field. No mark
   });
 }
 
-/* ------------------------------------------------------------------ */
-/* Helper: get platform icon component                                 */
-/* ------------------------------------------------------------------ */
-function getPlatformIcon(pid: string) {
-  if (pid === "tiktok") return TikTokIcon;
-  return PLATFORMS.find((p) => p.id === pid)?.icon ?? null;
-}
 
 /* ------------------------------------------------------------------ */
 /* Main Component                                                      */
@@ -1254,7 +1219,6 @@ export default function BrandPosting() {
     const isSelected = selectedPostIds.has(post.id);
     const platforms = (post.platforms as string[] | null) ?? [];
     const primaryPlatform = platforms[0] || "instagram";
-    const PrimaryIcon = getPlatformIcon(primaryPlatform);
     const isApproved = post.status === "scheduled";
 
     return (
@@ -1339,16 +1303,9 @@ export default function BrandPosting() {
                 />
               ) : (
                 <div
-                  className={cn(
-                    "w-[120px] h-[90px] rounded-lg flex items-center justify-center",
-                    PLATFORM_GRADIENTS[primaryPlatform] || "bg-gray-200 dark:bg-gray-800",
-                  )}
+                  className="w-[120px] h-[90px] rounded-lg flex items-center justify-center bg-gray-200 dark:bg-gray-800"
                 >
-                  {PrimaryIcon ? (
-                    <PrimaryIcon className="h-8 w-8 text-white/80" />
-                  ) : (
-                    <ImagePlus className="h-8 w-8 text-white/50" />
-                  )}
+                  <PlatformIcon platform={primaryPlatform} size={32} />
                 </div>
               )}
             </div>
@@ -1358,14 +1315,9 @@ export default function BrandPosting() {
               {/* Row 1: Platform + date */}
               <div className="flex items-center gap-2 mb-1">
                 <div className="flex items-center gap-1.5">
-                  {platforms.map((pid) => {
-                    const Icon = getPlatformIcon(pid);
-                    return Icon ? (
-                      <div key={pid} className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                        <Icon className="h-3 w-3 text-gray-500 dark:text-gray-400" />
-                      </div>
-                    ) : null;
-                  })}
+                  {platforms.map((pid) => (
+                    <PlatformIcon key={pid} platform={pid} size={16} />
+                  ))}
                   <span className="text-xs text-gray-400 capitalize">
                     {platforms.map((p) => PLATFORMS.find((pp) => pp.id === p)?.name ?? p).join(", ")}
                   </span>
@@ -1500,7 +1452,6 @@ export default function BrandPosting() {
               <div className="flex items-center gap-1.5 flex-wrap flex-1">
                 {QUEUE_FILTER_OPTIONS.map((opt) => {
                   const isActive = queueFilter === opt.id;
-                  const Icon = opt.id !== "all" ? getPlatformIcon(opt.id) : null;
                   return (
                     <button
                       key={opt.id}
@@ -1513,7 +1464,7 @@ export default function BrandPosting() {
                           : "bg-white dark:bg-[#1A1D27] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600",
                       )}
                     >
-                      {Icon && <Icon className={cn("h-3 w-3", isActive ? "text-white" : "text-gray-500")} />}
+                      {opt.id !== "all" && <PlatformIcon platform={opt.id} size={12} />}
                       {opt.label}
                     </button>
                   );
@@ -1647,14 +1598,9 @@ export default function BrandPosting() {
                         )}
                         {/* Platform icons for this day */}
                         <div className="flex items-center gap-0.5 ml-auto">
-                          {group.platformSet.map((pid) => {
-                            const Icon = getPlatformIcon(pid);
-                            return Icon ? (
-                              <div key={pid} className="w-4 h-4 rounded-full bg-white dark:bg-gray-900 flex items-center justify-center">
-                                <Icon className="h-2.5 w-2.5 text-gray-400" />
-                              </div>
-                            ) : null;
-                          })}
+                          {group.platformSet.map((pid) => (
+                            <PlatformIcon key={pid} platform={pid} size={14} />
+                          ))}
                         </div>
                         <span className="text-[10px] text-gray-400 bg-white dark:bg-gray-900 px-1.5 py-0.5 rounded-full shrink-0">
                           {group.posts.length} post{group.posts.length !== 1 ? "s" : ""}
@@ -1964,7 +1910,6 @@ export default function BrandPosting() {
                   <div className="space-y-2">
                     {availablePlatforms.map((p) => {
                       const selected = selectedPlatforms.includes(p.id);
-                      const Icon = p.id === "tiktok" ? TikTokIcon : p.icon;
                       const account = connectedAccounts.find(
                         (a) => a.platform === p.id
                       );
@@ -1991,12 +1936,7 @@ export default function BrandPosting() {
                           >
                             {selected && <Check className="h-3 w-3 text-white" />}
                           </div>
-                          <div className={cn(
-                            "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
-                            PLATFORM_GRADIENTS[p.id] ?? PLATFORM_COLORS[p.id] ?? "bg-gray-500"
-                          )}>
-                            {Icon && <Icon className="h-4.5 w-4.5 text-white" />}
-                          </div>
+                          <PlatformIcon platform={p.id} size={36} className="shrink-0" />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
                               <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{p.name}</p>
@@ -2205,7 +2145,6 @@ export default function BrandPosting() {
                 <div className="flex gap-2 mb-4">
                   {(["instagram", "tiktok", "facebook", "x"] as PreviewTab[]).map((tab) => {
                     const plat = PLATFORMS.find((p) => p.id === tab);
-                    const Icon = tab === "tiktok" ? TikTokIcon : plat?.icon;
                     const isChecked = selectedPlatforms.includes(tab as UploadPostPlatform);
                     const isActive = previewTab === tab;
                     return (
@@ -2222,7 +2161,7 @@ export default function BrandPosting() {
                               : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-[#1e3a5f]/50 hover:text-[#1e3a5f]"
                         )}
                       >
-                        {Icon && <Icon className={cn("h-3.5 w-3.5", isActive && "text-white")} />}
+                        <PlatformIcon platform={tab} size={14} />
                         {plat?.name ?? tab}
                       </button>
                     );
@@ -2265,16 +2204,13 @@ export default function BrandPosting() {
                       const plat = PLATFORMS.find((p) => p.id === pid);
                       const result = platformResults[pid];
                       const status: PostStatus = result?.status ?? "idle";
-                      const Icon = plat?.id === "tiktok" ? TikTokIcon : plat?.icon;
 
                       return (
                         <div
                           key={pid}
                           className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-[#0F1117] border border-gray-100 dark:border-gray-800"
                         >
-                          <div className="w-8 h-8 rounded-full bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-700 flex items-center justify-center">
-                            {Icon && <Icon className="h-4 w-4 text-gray-600 dark:text-gray-400" />}
-                          </div>
+                          <PlatformIcon platform={pid} size={24} />
                           <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex-1">
                             {plat?.name ?? pid}
                           </span>
@@ -2365,7 +2301,6 @@ export default function BrandPosting() {
                 {drafts.map((draft) => {
                   const platforms = draft.platforms ?? [];
                   const primaryPlatform = platforms[0] || "instagram";
-                  const PrimaryIcon = getPlatformIcon(primaryPlatform);
                   return (
                     <div
                       key={draft.id}
@@ -2386,16 +2321,9 @@ export default function BrandPosting() {
                         />
                       ) : (
                         <div
-                          className={cn(
-                            "w-full h-32 flex items-center justify-center",
-                            PLATFORM_GRADIENTS[primaryPlatform] || "bg-gray-100 dark:bg-gray-800",
-                          )}
+                          className="w-full h-32 flex items-center justify-center bg-gray-100 dark:bg-gray-800"
                         >
-                          {PrimaryIcon ? (
-                            <PrimaryIcon className="h-10 w-10 text-white/60" />
-                          ) : (
-                            <ImagePlus className="h-10 w-10 text-white/40" />
-                          )}
+                          <PlatformIcon platform={primaryPlatform} size={40} />
                         </div>
                       )}
 
@@ -2403,14 +2331,9 @@ export default function BrandPosting() {
                       <div className="p-4">
                         {/* Platforms */}
                         <div className="flex items-center gap-1.5 mb-2">
-                          {platforms.map((pid) => {
-                            const Icon = getPlatformIcon(pid);
-                            return Icon ? (
-                              <div key={pid} className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                                <Icon className="h-3 w-3 text-gray-500 dark:text-gray-400" />
-                              </div>
-                            ) : null;
-                          })}
+                          {platforms.map((pid) => (
+                            <PlatformIcon key={pid} platform={pid} size={16} />
+                          ))}
                           {platforms.length === 0 && (
                             <span className="text-[10px] text-gray-400">No platforms selected</span>
                           )}
@@ -2530,13 +2453,7 @@ export default function BrandPosting() {
                         {dayPosts.length > 0 && (
                           <div className="flex items-center gap-0.5 mt-0.5">
                             {Array.from(platformDots).slice(0, 4).map((plat) => (
-                              <div
-                                key={plat}
-                                className={cn(
-                                  "w-1.5 h-1.5 rounded-full",
-                                  isSelected ? "bg-white/70" : (PLATFORM_COLORS[plat] || "bg-gray-400"),
-                                )}
-                              />
+                              <PlatformIcon key={plat} platform={plat} size={6} />
                             ))}
                           </div>
                         )}
@@ -2622,17 +2539,9 @@ export default function BrandPosting() {
                               ) : (
                                 <>
                                   <div className="flex items-center gap-2 mb-2">
-                                    {platforms.map((pid) => {
-                                      const Icon = getPlatformIcon(pid);
-                                      return (
-                                        <div
-                                          key={pid}
-                                          className="w-6 h-6 rounded-full bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-700 flex items-center justify-center"
-                                        >
-                                          {Icon && <Icon className="h-3 w-3 text-gray-600 dark:text-gray-400" />}
-                                        </div>
-                                      );
-                                    })}
+                                    {platforms.map((pid) => (
+                                      <PlatformIcon key={pid} platform={pid} size={20} />
+                                    ))}
                                     {post.scheduled_time && (
                                       <span className="text-[10px] text-gray-400 ml-auto">
                                         {new Date(post.scheduled_time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}

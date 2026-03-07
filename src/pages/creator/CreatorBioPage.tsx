@@ -25,15 +25,11 @@ import {
   Loader2,
   ExternalLink,
   ShieldCheck,
-  Instagram,
-  Youtube,
-  Facebook,
   Globe,
-  Linkedin,
   Mic,
   ShoppingBag,
-  X,
 } from "lucide-react";
+import { PlatformIcon } from "@/lib/platform-icons";
 
 const BRANCH_LABELS: Record<string, string> = {
   army: "Army",
@@ -130,14 +126,8 @@ async function resolveCreator(handle: string): Promise<BioCreator | null> {
   };
 }
 
-function socialIcon(platform: string, className: string) {
-  const p = platform.toLowerCase();
-  if (p.includes("instagram")) return <Instagram className={className} />;
-  if (p.includes("youtube")) return <Youtube className={className} />;
-  if (p.includes("facebook")) return <Facebook className={className} />;
-  if (p.includes("linkedin")) return <Linkedin className={className} />;
-  if (p.includes("twitter") || p === "x") return <X className={className} />;
-  return <Globe className={className} />;
+function socialIcon(platform: string, _className: string) {
+  return <PlatformIcon platform={platform} size={20} />;
 }
 
 function socialUrl(platform: string, username: string | null): string {

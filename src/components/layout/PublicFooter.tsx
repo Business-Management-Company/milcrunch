@@ -1,12 +1,6 @@
 import { Link } from "react-router-dom";
-import { Instagram, Youtube, Twitter } from "lucide-react";
 import HexLogo from "@/components/brand/HexLogo";
-
-const TikTokIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.88-2.88 2.89 2.89 0 012.88-2.88c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V9.39a8.16 8.16 0 003.76.92V6.86a4.85 4.85 0 01-.01-.17z" />
-  </svg>
-);
+import { PlatformIcon } from "@/lib/platform-icons";
 
 export default function PublicFooter() {
   return (
@@ -22,19 +16,11 @@ export default function PublicFooter() {
               Where the military and veteran community comes to be seen, heard, and understood.
             </p>
             {/* Social icons */}
-            <div className="flex items-center gap-4 pt-1">
-              <a href="#" className="text-gray-400 hover:text-[#1e3a5f] transition-colors" aria-label="Instagram">
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-[#1e3a5f] transition-colors" aria-label="YouTube">
-                <Youtube className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-[#1e3a5f] transition-colors" aria-label="Twitter">
-                <Twitter className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-[#1e3a5f] transition-colors" aria-label="TikTok">
-                <TikTokIcon className="h-5 w-5" />
-              </a>
+            <div className="flex items-center gap-3 pt-1">
+              <a href="#" aria-label="Instagram"><PlatformIcon platform="instagram" size={28} /></a>
+              <a href="#" aria-label="YouTube"><PlatformIcon platform="youtube" size={28} /></a>
+              <a href="#" aria-label="X"><PlatformIcon platform="twitter" size={28} /></a>
+              <a href="#" aria-label="TikTok"><PlatformIcon platform="tiktok" size={28} /></a>
             </div>
           </div>
 
