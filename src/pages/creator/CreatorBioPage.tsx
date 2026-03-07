@@ -65,11 +65,47 @@ interface BioCreator {
   service_line: string | null;
 }
 
-/** Resolve creator by handle: creators table or featured_creators (with bio layout). */
+/** Resolve creator by handle: creator_profiles → directory_members → resolve-handle API. */
 async function resolveCreator(handle: string): Promise<BioCreator | null> {
   const h = handle.replace(/^@/, "").trim().toLowerCase();
   if (!h) return null;
 
+  // 1. Try creator_profiles table (registered creators with handle)
+  try {
+    const { data: cp } = await supabase
+      .from("creator_profiles")
+      .select("*")
+      .eq("handle", h)
+      .single();
+
+    if (cp) {
+      const cl = normalizeCustomLinks((cp as any).custom_links);
+      const socials: SocialAccount[] = Array.isArray((cp as any).social_accounts) ? (cp as any).social_accounts : [];
+      return {
+        display_name: (cp as any).display_name || (cp as any).full_name || handle,
+        avatar_url: (cp as any).avatar_url || null,
+        hero_image_url: (cp as any).hero_image_url || null,
+        hero_image_format: ((cp as any).hero_image_format || "landscape") as HeroImageFormat,
+        hero_dominant_color: (cp as any).hero_dominant_color || null,
+        bio_page_theme: (cp as any).bio_page_theme || "light",
+        bio: (cp as any).bio || null,
+        category: (cp as any).category || null,
+        follower_count: (cp as any).follower_count ?? null,
+        is_verified: !!(cp as any).is_verified,
+        links: cl.links,
+        tabs: cl.tabs.length > 0 ? cl.tabs : DEFAULT_TABS.filter((t) => t.visible).sort((a, b) => a.order - b.order),
+        socialAccounts: socials,
+        branch: (cp as any).military_branch || (cp as any).branch || null,
+        is_verified_veteran: !!(cp as any).is_verified_veteran,
+        service_line: (cp as any).service_line || null,
+      };
+    }
+  } catch (err) {
+    // Table may not exist yet or RLS blocks — fall through to other methods
+    console.warn("[resolveCreator] creator_profiles lookup failed:", err);
+  }
+
+  // 2. Try directory_members / featured creators
   const fromCreators = await getCreatorByHandle(h);
   if (fromCreators) {
     const links: BioLinkConfig[] = [
@@ -96,7 +132,7 @@ async function resolveCreator(handle: string): Promise<BioCreator | null> {
     };
   }
 
-  // Try directory_members by creator_handle
+  // 3. Try directory_members by creator_handle
   const { data: profile } = await supabase
     .from("directory_members")
     .select("creator_name, bio, creator_handle, platform, avatar_url, branch")
@@ -125,7 +161,7 @@ async function resolveCreator(handle: string): Promise<BioCreator | null> {
     };
   }
 
-  // Try auth user_metadata via serverless API (handles set during onboarding)
+  // 4. Try auth user_metadata via serverless API (handles set during onboarding)
   try {
     const res = await fetch(`/api/resolve-handle?handle=${encodeURIComponent(h)}`);
     if (res.ok) {
