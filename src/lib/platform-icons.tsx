@@ -99,9 +99,9 @@ function PlatformSvgContent({ platform }: { platform: string }) {
     case "x":
       return (
         <path
-          d="M14.69 6L18.5 18h-2.2l-1.54-4.87L11.26 18H9.06l5-6.5L12.12 6h2.2l1.22 3.86L18.71 6h2.2l-4.46 5.8L14.69 6zM3.09 6h2.2l1.76 5.57L10.52 6h2.2L7.7 12.5 9.94 18h-2.2L5.3 12.95l-3.5 5.05H-.4l4.65-6.08L3.09 6z"
+          d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.742l7.737-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"
           fill="white"
-          transform="translate(1.1,0) scale(0.9)"
+          transform="translate(3,3) scale(0.75)"
         />
       );
     case "linkedin":
