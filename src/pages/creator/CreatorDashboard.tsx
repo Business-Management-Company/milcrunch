@@ -15,8 +15,6 @@ import {
   MousePointer,
   Eye,
   Send,
-  Plus,
-  Share2,
   DollarSign,
   Sparkles,
   Users,
@@ -26,7 +24,6 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { PlatformIcon, PLATFORM_NAMES } from "@/lib/platform-icons";
 import { toast } from "sonner";
 
 function getGreeting(): string {
@@ -233,55 +230,7 @@ export default function CreatorDashboard() {
           ))}
         </div>
 
-        {/* ── 4. CONNECTED PLATFORMS ── */}
-        <Card className="rounded-xl max-w-full overflow-hidden">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">My Social Channels</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {accounts.length === 0 ? (
-              <div className="text-center py-6">
-                <Share2 className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-                <p className="text-sm text-muted-foreground mb-3">Connect your social accounts to track your audience.</p>
-                <Button size="sm" asChild>
-                  <Link to="/creator/socials">Connect Accounts</Link>
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3 overflow-x-auto pb-1">
-                {accounts.map((a) => {
-                  const label = PLATFORM_NAMES[a.platform] ?? a.platform;
-                  return (
-                    <div
-                      key={a.platform}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-muted/30 shrink-0 min-w-[180px]"
-                    >
-                      <PlatformIcon platform={a.platform} size={24} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{label}</p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {a.platform_username ? `@${a.platform_username}` : "—"}
-                        </p>
-                      </div>
-                      <span className="text-[10px] font-medium text-green-600 bg-green-50 dark:bg-green-950/30 px-2 py-0.5 rounded-full shrink-0">
-                        Connected
-                      </span>
-                    </div>
-                  );
-                })}
-                <Link
-                  to="/creator/socials"
-                  className="flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-border text-sm text-muted-foreground hover:border-[#1B3A6B]/30 hover:text-foreground transition-colors shrink-0 min-w-[150px] justify-center"
-                >
-                  <Plus className="h-4 w-4" />
-                  Connect More
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* ── 5. BOTTOM ROW ── */}
+        {/* ── 4. BOTTOM ROW ── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
           {/* Recent Posts */}
