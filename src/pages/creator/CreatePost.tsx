@@ -59,6 +59,7 @@ const platformRules: Record<string, {
   pinterest: { maxChars: 500, imageRequired: true },
   threads: { maxChars: 500, maxImages: 10 },
   google_business: { maxChars: 1500, maxImageMB: 5 },
+  googlebusiness: { maxChars: 1500, maxImageMB: 5 },
 };
 
 export default function CreatePost() {
@@ -277,20 +278,34 @@ export default function CreatePost() {
         if (len > rules.maxChars) items.push({ platform: p, type: "error", message: `${name}: ${len}/${rules.maxChars} chars (over limit)` });
         else if (len > rules.maxChars * 0.8 && len > 0) items.push({ platform: p, type: "warning", message: `${name}: ${len}/${rules.maxChars} chars (approaching limit)` });
       }
+      // Hashtag count check
+      if (rules.maxHashtags && caption.length > 0) {
+        const hashtagCount = (caption.match(/#\w+/g) || []).length;
+        if (hashtagCount > rules.maxHashtags) items.push({ platform: p, type: "error", message: `${name}: ${hashtagCount}/${rules.maxHashtags} hashtags (over limit)` });
+        else if (hashtagCount > rules.maxHashtags * 0.8) items.push({ platform: p, type: "warning", message: `${name}: ${hashtagCount}/${rules.maxHashtags} hashtags (approaching limit)` });
+      }
+      // Video-only platform check
       if (rules.videoOnly && mediaFiles.length > 0) {
         const hasNonVideo = mediaFiles.some((f) => !f.type.startsWith("video/"));
         if (hasNonVideo) items.push({ platform: p, type: "error", message: `${name}: requires video content only` });
       }
+      // Image required check
       if (rules.imageRequired && mediaFiles.length === 0 && !mediaUrl.trim()) {
         items.push({ platform: p, type: "warning", message: `${name}: an image is required` });
       }
+      // Max images check
+      if (rules.maxImages) {
+        const imageCount = mediaFiles.filter((f) => f.type.startsWith("image/")).length;
+        if (imageCount > rules.maxImages) items.push({ platform: p, type: "error", message: `${name}: ${imageCount}/${rules.maxImages} images (over limit)` });
+      }
+      // File size checks
       for (const file of mediaFiles) {
         const sizeMB = file.size / (1024 * 1024);
         if (file.type.startsWith("image/") && rules.maxImageMB && sizeMB > rules.maxImageMB) {
-          items.push({ platform: p, type: "error", message: `${name}: image "${file.name}" exceeds ${rules.maxImageMB}MB limit` });
+          items.push({ platform: p, type: "error", message: `${name}: image "${file.name}" exceeds ${rules.maxImageMB}MB limit (${sizeMB.toFixed(1)}MB)` });
         }
         if (file.type.startsWith("video/") && rules.maxVideoMB && sizeMB > rules.maxVideoMB) {
-          items.push({ platform: p, type: "error", message: `${name}: video "${file.name}" exceeds ${rules.maxVideoMB}MB limit` });
+          items.push({ platform: p, type: "error", message: `${name}: video "${file.name}" exceeds ${rules.maxVideoMB}MB limit (${sizeMB.toFixed(1)}MB)` });
         }
       }
     }
@@ -590,7 +605,7 @@ export default function CreatePost() {
             {/* ── PLATFORM WARNINGS ── */}
             {selected.size > 0 && (
               <div className={cn(
-                "rounded-xl px-4 py-3 text-sm",
+                "rounded-xl px-4 py-3 text-sm transition-colors",
                 warnings.length === 0
                   ? "border border-green-200 bg-green-50 dark:bg-green-900/10 dark:border-green-800/40"
                   : hasErrors
@@ -598,33 +613,54 @@ export default function CreatePost() {
                     : "border border-amber-200 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-800/40"
               )}>
                 {warnings.length === 0 ? (
+                  /* ✅ All good — collapsed single line */
                   <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
                     <CheckCircle2 className="h-4 w-4 shrink-0" />
                     <span className="text-xs font-medium">All platforms look good</span>
                   </div>
                 ) : (
+                  /* ⚠️ / 🚫 Warnings & errors */
                   <div className="space-y-1.5">
                     {warnings.map((w, i) => (
-                      <div key={i} className={cn("flex items-start gap-2 text-xs", w.type === "error" ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400")}>
-                        {w.type === "error" ? <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" /> : <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />}
+                      <div key={i} className={cn("flex items-start gap-2 text-xs",
+                        w.type === "error" ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400"
+                      )}>
+                        <span className="shrink-0 mt-px">{w.type === "error" ? "🚫" : "⚠️"}</span>
                         <span>{w.message}</span>
                       </div>
                     ))}
-                    {/* Per-platform char counts */}
-                    <div className="pt-1.5 mt-1.5 border-t border-current/10 flex flex-wrap gap-x-4 gap-y-1">
-                      {Array.from(selected).map((p) => {
-                        const rules = platformRules[p];
-                        if (!rules?.maxChars) return null;
-                        const pct = caption.length / rules.maxChars;
+                  </div>
+                )}
+
+                {/* Per-platform char counts — always visible when platforms are selected */}
+                {(() => {
+                  const charPlatforms = Array.from(selected).filter((p) => platformRules[p]?.maxChars);
+                  if (charPlatforms.length === 0) return null;
+                  return (
+                    <div className={cn("flex flex-wrap gap-x-4 gap-y-1", warnings.length > 0 ? "pt-2 mt-2 border-t border-current/10" : "mt-1.5")}>
+                      {charPlatforms.map((p) => {
+                        const max = platformRules[p].maxChars!;
+                        const len = caption.length;
+                        const remaining = max - len;
+                        const pct = len / max;
                         return (
-                          <span key={p} className={cn("text-[11px]", pct > 1 ? "text-red-600 font-medium" : pct > 0.8 ? "text-amber-600" : "text-gray-500")}>
-                            {PLATFORM_NAMES[p] ?? p}: {caption.length}/{rules.maxChars}
+                          <span
+                            key={p}
+                            className={cn(
+                              "text-[11px] font-medium",
+                              pct > 1 ? "text-red-600 dark:text-red-400"
+                                : pct > 0.8 ? "text-amber-600 dark:text-amber-400"
+                                : "text-gray-500 dark:text-gray-400"
+                            )}
+                          >
+                            {PLATFORM_NAMES[p] ?? p}: {len}/{max}
+                            {remaining >= 0 ? ` (${remaining} left)` : ` (${Math.abs(remaining)} over)`}
                           </span>
                         );
                       })}
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             )}
 
