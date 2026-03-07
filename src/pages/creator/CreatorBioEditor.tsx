@@ -172,6 +172,8 @@ interface ThemeSettings {
   showBranding: boolean;
   showProfileImage: boolean;
   showHeroImage: boolean;
+  showUsername: boolean;
+  profileImageSize: "s" | "m" | "l";
   template?: string;
 }
 
@@ -334,6 +336,7 @@ export default function CreatorBioEditor() {
     shade: "none", linkShape: "pill", linkStyle: "fill",
     linkColor: "#1B3A6B", showBranding: true,
     showProfileImage: true, showHeroImage: true,
+    showUsername: true, profileImageSize: "m",
   });
   const updateTheme = (patch: Partial<ThemeSettings>) =>
     setTheme((prev) => ({ ...prev, ...patch }));
@@ -856,6 +859,30 @@ export default function CreatorBioEditor() {
                   </div>
                 </div>
 
+                {/* 2b. Profile Image Size */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Profile Image Size</label>
+                  <div className="flex gap-1 rounded-full border border-border p-0.5">
+                    {(["s", "m", "l"] as const).map((sz) => (
+                      <button
+                        key={sz}
+                        onClick={() => {
+                          const updated = { ...theme, profileImageSize: sz };
+                          setTheme(updated);
+                          persistTheme(updated);
+                        }}
+                        className={`flex-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors uppercase ${
+                          theme.profileImageSize === sz
+                            ? "bg-[#1B3A6B] text-white"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {sz}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* 3. Hero / Cover Image Upload */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
@@ -954,6 +981,20 @@ export default function CreatorBioEditor() {
                     }}
                     placeholder="Your name"
                     className="h-9 text-sm"
+                  />
+                </div>
+
+                {/* 5b. Show Username toggle */}
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-muted-foreground">Show Username</label>
+                  <Switch
+                    checked={theme.showUsername}
+                    onCheckedChange={(v) => {
+                      const updated = { ...theme, showUsername: v };
+                      setTheme(updated);
+                      persistTheme(updated);
+                    }}
+                    className="scale-75 origin-right data-[state=checked]:bg-[#1B3A6B]"
                   />
                 </div>
 
@@ -1555,9 +1596,10 @@ export default function CreatorBioEditor() {
                   {(() => {
                     const heroVisible = !!(heroImageUrl && theme.showHeroImage);
                     const avatarVisible = theme.showProfileImage;
+                    const avSize = theme.profileImageSize === "s" ? 48 : theme.profileImageSize === "l" ? 96 : 72;
                     const headerHeight = heroVisible
-                      ? (avatarVisible ? 200 : 168)
-                      : (avatarVisible ? 100 : 40);
+                      ? (avatarVisible ? 160 + avSize / 2 + 10 : 168)
+                      : (avatarVisible ? avSize + 40 : 40);
                     return (
                       <div className="relative w-full" style={{ height: headerHeight }}>
                         {heroVisible && (
@@ -1566,11 +1608,11 @@ export default function CreatorBioEditor() {
                           </div>
                         )}
                         {avatarVisible && (
-                          <div className="absolute left-1/2 -translate-x-1/2 z-[2]" style={{ top: heroVisible ? 130 : 28 }}>
+                          <div className="absolute left-1/2 -translate-x-1/2 z-[2]" style={{ top: heroVisible ? 160 - avSize / 2 : 28 }}>
                             {avatarUrl ? (
-                              <img src={avatarUrl} alt="" className="h-[60px] w-[60px] rounded-full object-cover shadow-md" style={{ border: "3px solid #ffffff" }} />
+                              <img src={avatarUrl} alt="" className="rounded-full object-cover shadow-md" style={{ width: avSize, height: avSize, border: "3px solid #ffffff" }} />
                             ) : (
-                              <div className="h-[60px] w-[60px] rounded-full flex items-center justify-center text-lg font-semibold shadow-md" style={{ backgroundColor: isDark ? "#2d3548" : "#e5e7eb", color: phoneSubtext, border: "3px solid #ffffff" }}>
+                              <div className="rounded-full flex items-center justify-center font-semibold shadow-md" style={{ width: avSize, height: avSize, fontSize: avSize * 0.3, backgroundColor: isDark ? "#2d3548" : "#e5e7eb", color: phoneSubtext, border: "3px solid #ffffff" }}>
                                 {(displayName || "?")[0].toUpperCase()}
                               </div>
                             )}
@@ -1580,14 +1622,12 @@ export default function CreatorBioEditor() {
                     );
                   })()}
 
-                  {/* Name / Username / Badge / Bio */}
+                  {/* Name / Username / Bio */}
                   <div className="px-4 pb-2.5 flex flex-col items-center">
                     <h3 className="font-bold leading-tight" style={{ fontSize: "15px", color: phoneText, fontFamily: theme.fontFamily }}>{displayName || "Your Name"}</h3>
-                    <p className="mt-0.5" style={{ fontSize: "11px", color: phoneSubtext }}>@{handle || "username"}</p>
-                    <div className="flex items-center gap-1 mt-1.5 px-2.5 py-0.5 rounded-full border" style={{ borderColor: theme.themeColor, color: theme.themeColor }}>
-                      <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                      <span className="text-[10px] font-medium">Certified Voice</span>
-                    </div>
+                    {theme.showUsername && (
+                      <p className="mt-0.5" style={{ fontSize: "11px", color: phoneSubtext }}>@{handle || "username"}</p>
+                    )}
                     {profileBio && (
                       <p className="text-[11px] mt-1.5 text-center max-w-[240px] leading-relaxed line-clamp-3" style={{ color: phoneSubtext }}>{profileBio}</p>
                     )}
@@ -2484,10 +2524,6 @@ export default function CreatorBioEditor() {
                                 )}
                                 <p className="mt-1.5 truncate max-w-full font-bold" style={{ fontSize: 14, color: tText, fontFamily: effFont }}>{displayName || "Your Name"}</p>
                                 <p style={{ fontSize: 10, color: tSub }}>@{handle || "username"}</p>
-                                <div className="flex items-center gap-0.5 mt-1 px-2 py-0.5 rounded-full border" style={{ borderColor: effAccent }}>
-                                  <svg className="h-2 w-2" viewBox="0 0 24 24" fill="none" stroke={effAccent} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                                  <span style={{ fontSize: 8, color: effAccent, fontWeight: 600 }}>Certified Voice</span>
-                                </div>
                               </div>
                               {/* Section cards */}
                               <div className={`px-3 space-y-1.5 ${tpl.id === "portrait" ? "pb-4 mt-2" : "mt-3"} flex-1`}>
