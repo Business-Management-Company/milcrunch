@@ -65,6 +65,7 @@ import {
   Droplets,
   QrCode,
   X,
+  Check,
 } from "lucide-react";
 import { getDominantColorFromFile } from "@/lib/dominant-color";
 import type { BioSectionConfig, SectionType, SectionCatalogEntry, HeroImageFormat } from "@/types/bio-page";
@@ -167,6 +168,7 @@ interface ThemeSettings {
   linkStyle: string;
   linkColor: string;
   showBranding: boolean;
+  template?: string;
 }
 
 /* ── Design sub-tab definitions ── */
@@ -212,6 +214,44 @@ const LINK_STYLES = [
   { value: "outline", label: "Outline" },
   { value: "soft-shadow", label: "Soft Shadow" },
   { value: "hard-shadow", label: "Hard Shadow" },
+];
+
+/* ── Template definitions ── */
+type TemplateId = "classic" | "bold" | "minimal" | "vibrant" | "portrait";
+
+interface TemplateConfig {
+  id: TemplateId;
+  label: string;
+  themeOverrides: Partial<ThemeSettings>;
+  imageStyle: ImageStyle;
+}
+
+const TEMPLATES: TemplateConfig[] = [
+  {
+    id: "classic", label: "Classic",
+    themeOverrides: { bgMode: "solid", bgColor: "#ffffff", shade: "none", darkMode: false, cardStyle: "shadow", linkStyle: "fill", linkShape: "pill", fontFamily: "Inter" },
+    imageStyle: "circular",
+  },
+  {
+    id: "bold", label: "Bold",
+    themeOverrides: { bgMode: "solid", bgColor: "#0f1117", shade: "dark", darkMode: true, cardStyle: "round", linkStyle: "fill", linkShape: "rounded", fontFamily: "Inter" },
+    imageStyle: "circular",
+  },
+  {
+    id: "minimal", label: "Minimal",
+    themeOverrides: { bgMode: "solid", bgColor: "#FAFAFA", shade: "minimal", darkMode: false, cardStyle: "square", linkStyle: "outline", linkShape: "square", fontFamily: "IBM Plex Mono" },
+    imageStyle: "square",
+  },
+  {
+    id: "vibrant", label: "Vibrant",
+    themeOverrides: { bgMode: "solid", shade: "color", darkMode: false, cardStyle: "round", linkStyle: "fill", linkShape: "pill", fontFamily: "Poppins" },
+    imageStyle: "circular",
+  },
+  {
+    id: "portrait", label: "Portrait",
+    themeOverrides: { bgMode: "image", shade: "dark", darkMode: true, cardStyle: "glass", linkStyle: "soft-shadow", linkShape: "rounded", fontFamily: "Playfair Display" },
+    imageStyle: "portrait",
+  },
 ];
 
 
@@ -595,6 +635,17 @@ export default function CreatorBioEditor() {
     }
   };
 
+  /* ── Apply a template preset ── */
+  const applyTemplate = (tpl: TemplateConfig) => {
+    const updated: ThemeSettings = { ...theme, ...tpl.themeOverrides, template: tpl.id };
+    if (tpl.id === "vibrant") updated.bgColor = theme.themeColor;
+    if (tpl.id === "portrait" && heroImageUrl) updated.bgImageUrl = heroImageUrl;
+    setTheme(updated);
+    setImageStyle(tpl.imageStyle);
+    persistTheme(updated);
+    debouncedProfileSave({ image_style: tpl.imageStyle });
+  };
+
   /* ────────────────────────────────────────────────────────────────── */
   return (
     <CreatorLayout>
@@ -645,6 +696,99 @@ export default function CreatorBioEditor() {
             {activeTab === "profile" && (
               <div className="space-y-5">
                 <h2 className="text-sm font-semibold text-foreground">Profile</h2>
+
+                {/* 0. Template Picker */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Choose a Template</label>
+                  <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-5 px-5 scrollbar-thin">
+                    {TEMPLATES.map((tpl) => {
+                      const active = theme.template === tpl.id;
+                      const tDark = tpl.themeOverrides.darkMode;
+                      const tBg = tpl.id === "vibrant" ? theme.themeColor
+                        : tpl.id === "portrait" ? "#1a1a2e"
+                        : tpl.themeOverrides.bgColor ?? "#ffffff";
+                      const tText = tDark ? "#ffffff" : "#111827";
+                      const tSub = tDark ? "#9ca3af" : "#6b7280";
+                      const tCardBg = tDark ? "#1e2433" : tpl.id === "minimal" ? "transparent" : "#ffffff";
+                      const tCardBorder = tpl.id === "minimal" ? "1px solid #e5e7eb" : "none";
+                      const tAvatarR = tpl.imageStyle === "square" ? "3px" : "9999px";
+                      return (
+                        <button
+                          key={tpl.id}
+                          onClick={() => applyTemplate(tpl)}
+                          className={`relative shrink-0 rounded-xl overflow-hidden transition-all ${
+                            active ? "ring-2 ring-blue-500 ring-offset-2" : "ring-1 ring-border hover:ring-foreground/30"
+                          }`}
+                          style={{ width: 120, height: 200 }}
+                        >
+                          {/* Background */}
+                          <div className="absolute inset-0" style={
+                            tpl.id === "portrait" && heroImageUrl
+                              ? { backgroundImage: `url(${heroImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+                              : { backgroundColor: tBg }
+                          } />
+                          {tpl.id === "portrait" && (
+                            <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.75) 100%)" }} />
+                          )}
+                          <div className="relative h-full flex flex-col">
+                            {/* Hero strip for bold */}
+                            {tpl.id === "bold" && heroImageUrl && (
+                              <div className="w-full h-[40px] overflow-hidden shrink-0">
+                                <img src={heroImageUrl} alt="" className="w-full h-full object-cover" />
+                              </div>
+                            )}
+                            {/* Profile area */}
+                            <div className={`flex flex-col ${tpl.id === "minimal" ? "items-start px-3" : "items-center"} ${
+                              tpl.id === "portrait" ? "mt-auto" : tpl.id === "bold" && heroImageUrl ? "-mt-3" : "mt-7"
+                            }`}>
+                              {avatarUrl ? (
+                                <img src={avatarUrl} alt="" className="object-cover" style={{
+                                  width: 22, height: 22, borderRadius: tAvatarR,
+                                  border: tpl.id === "bold" ? "2px solid #fff" : tpl.id === "vibrant" ? `2px solid ${theme.themeColor}` : "none",
+                                }} />
+                              ) : (
+                                <div className="flex items-center justify-center" style={{
+                                  width: 22, height: 22, borderRadius: tAvatarR,
+                                  backgroundColor: tDark ? "#2d3548" : "#e5e7eb",
+                                  fontSize: 8, fontWeight: 700, color: tSub,
+                                }}>
+                                  {(displayName || "?")[0]?.toUpperCase()}
+                                </div>
+                              )}
+                              <p className="mt-0.5 truncate max-w-[100px]" style={{ fontSize: 7, fontWeight: 700, color: tText }}>{displayName || "Your Name"}</p>
+                              <p style={{ fontSize: 5, color: tSub }}>@{handle || "username"}</p>
+                            </div>
+                            {/* Section placeholders */}
+                            <div className={`px-2.5 space-y-1 ${tpl.id === "portrait" ? "pb-4 mt-1.5" : "mt-2"}`}>
+                              {[1, 2, 3].map((i) => (
+                                <div key={i} style={{
+                                  height: 8,
+                                  backgroundColor: tpl.themeOverrides.cardStyle === "glass" ? "rgba(255,255,255,0.15)" : tCardBg,
+                                  border: tCardBorder,
+                                  borderRadius: tpl.themeOverrides.cardStyle === "square" ? "2px" : "4px",
+                                  boxShadow: tpl.themeOverrides.cardStyle === "shadow" ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
+                                  backdropFilter: tpl.themeOverrides.cardStyle === "glass" ? "blur(4px)" : undefined,
+                                }} />
+                              ))}
+                            </div>
+                          </div>
+                          {/* Label */}
+                          <div className="absolute bottom-0 left-0 right-0 px-2 pb-1.5 pt-3" style={{
+                            background: tpl.id === "portrait" ? "transparent" : "linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 100%)",
+                          }}>
+                            <p className="text-[9px] font-semibold text-white text-center drop-shadow-sm">{tpl.label}</p>
+                          </div>
+                          {/* Checkmark badge */}
+                          {active && (
+                            <div className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-blue-500 flex items-center justify-center shadow-sm">
+                              <Check className="h-3 w-3 text-white" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 {/* 1. Profile Image Upload */}
                 <div className="space-y-1.5">
