@@ -190,16 +190,48 @@ function extractFromEnrichment(data: EnrichedProfileResponse): Partial<CreatorCa
     Number(instagram.engagement_percent) || Number(instagram.engagement_rate) || Number(instagram.er) || 0;
   if (erVal > 0) partial.engagementRate = Number(erVal.toFixed(2));
 
-  // Extract cross-platform list from enrichment's creator_has flags.
+  // Extract cross-platform list from ALL available signals in enrichment data.
   // The IC Discovery search does NOT return has_tiktok/has_youtube flags —
-  // only the enrichment endpoint provides creator_has, so we must set it here.
+  // only the enrichment endpoint provides cross-platform data.
+  const plats: string[] = ["instagram"]; // always include IG since enrichment is IG-based
+  const addPlat = (raw: string) => { const n = normalizePlatform(raw); if (!plats.includes(n)) plats.push(n); };
+
+  // 1. creator_has boolean flags (most reliable)
   const creatorHas = result.creator_has as Record<string, boolean> | undefined;
   if (creatorHas && typeof creatorHas === "object") {
-    const plats: string[] = ["instagram"]; // always include IG since enrichment is IG-based
-    for (const [k, v] of Object.entries(creatorHas)) {
-      const normalized = normalizePlatform(k);
-      if (v && !plats.includes(normalized)) plats.push(normalized);
-    }
+    for (const [k, v] of Object.entries(creatorHas)) { if (v) addPlat(k); }
+  }
+
+  // 2. Nested platform data objects in result (result.tiktok, result.youtube, etc.)
+  const KNOWN_PLATS = ["tiktok", "youtube", "twitter", "x", "facebook", "linkedin", "threads", "pinterest", "snapchat"];
+  for (const p of KNOWN_PLATS) {
+    const d = (result as Record<string, unknown>)[p];
+    if (d && typeof d === "object") addPlat(p);
+  }
+
+  // 3. accounts array
+  const accounts = result.accounts as { platform?: string }[] | undefined;
+  if (Array.isArray(accounts)) {
+    for (const acc of accounts) { if (acc.platform) addPlat(acc.platform); }
+  }
+
+  // 4. platform_links
+  const platformLinks = result.platform_links as Record<string, string> | undefined;
+  if (platformLinks && typeof platformLinks === "object") {
+    for (const k of Object.keys(platformLinks)) { if (platformLinks[k]) addPlat(k); }
+  }
+
+  // 5. has_* flags directly on the profile (from mergeEnrichFlags)
+  if (instagram.has_tiktok || (result as any).has_tiktok) addPlat("tiktok");
+  if (instagram.has_youtube || (result as any).has_youtube) addPlat("youtube");
+  if (instagram.has_twitter || (result as any).has_twitter) addPlat("x");
+  if (instagram.has_facebook || (result as any).has_facebook) addPlat("facebook");
+  if (instagram.has_linkedin || (result as any).has_linkedin) addPlat("linkedin");
+
+  if (plats.length > 1) {
+    partial.socialPlatforms = plats;
+  } else if (creatorHas) {
+    // creator_has exists but was all false — still set to avoid re-processing
     partial.socialPlatforms = plats;
   }
 
