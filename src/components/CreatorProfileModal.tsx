@@ -19,7 +19,6 @@ import {
 } from "@/lib/influencers-club";
 import { useLists, type ListCreator } from "@/contexts/ListContext";
 import {
-  Instagram,
   ExternalLink,
   ListPlus,
   BarChart3,
@@ -27,7 +26,6 @@ import {
   Users,
   Plus,
   Video,
-  Youtube,
   Loader2,
   Link,
   ShieldCheck,
@@ -35,8 +33,6 @@ import {
   Trash2,
   CalendarPlus,
   FolderPlus,
-  X,
-  Facebook,
   Music,
   Check,
   Mail,
@@ -68,72 +64,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { approveForDirectory, detectBranch, extractAvatarFromEnrichment, extractBannerImage } from "@/lib/featured-creators";
 import { getCrossPlatformSummary, formatCompactFollowers } from "@/lib/enrichment-platforms";
 import CreateListModal from "@/components/CreateListModal";
+import { PlatformIcon } from "@/lib/platform-icons";
 
-/** TikTok branded SVG icon with teal/pink accent */
-function TikTokIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className}>
-      <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.75a8.18 8.18 0 004.77 1.52V6.82a4.84 4.84 0 01-1-.13z" fill="currentColor" />
-    </svg>
-  );
-}
-
-/** Instagram gradient SVG icon */
-function InstagramIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill="none">
-      <defs>
-        <linearGradient id="ig-grad" x1="0%" y1="100%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#FEDA75" />
-          <stop offset="25%" stopColor="#FA7E1E" />
-          <stop offset="50%" stopColor="#D62976" />
-          <stop offset="75%" stopColor="#962FBF" />
-          <stop offset="100%" stopColor="#4F5BD5" />
-        </linearGradient>
-      </defs>
-      <rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#ig-grad)" strokeWidth="2" />
-      <circle cx="12" cy="12" r="5" stroke="url(#ig-grad)" strokeWidth="2" />
-      <circle cx="17.5" cy="6.5" r="1.5" fill="url(#ig-grad)" />
-    </svg>
-  );
-}
-
-/** YouTube red play button SVG icon */
-function YoutubeIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className}>
-      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" fill="#FF0000" />
-      <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#FFF" />
-    </svg>
-  );
-}
-
-/** X (Twitter) black icon */
-function XIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-    </svg>
-  );
-}
-
-/** LinkedIn blue icon */
-function LinkedInIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className}>
-      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" fill="#0A66C2" />
-    </svg>
-  );
-}
-
-/** Facebook blue icon */
-function FacebookIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className}>
-      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" fill="#1877F2" />
-    </svg>
-  );
-}
 
 const BRANCH_STYLES: Record<string, string> = {
   Army: "bg-green-800/10 text-green-800 dark:bg-green-800/20 dark:text-green-400",
@@ -144,18 +76,6 @@ const BRANCH_STYLES: Record<string, string> = {
   "Space Force": "bg-indigo-600/10 text-indigo-700 dark:bg-indigo-600/20 dark:text-indigo-400",
 };
 
-/** Render the branded colored icon for a platform */
-function PlatformBrandIcon({ platform, className }: { platform: string; className?: string }) {
-  switch (platform) {
-    case "instagram": return <InstagramIcon className={className} />;
-    case "tiktok": return <TikTokIcon className={className} />;
-    case "youtube": return <YoutubeIcon className={className} />;
-    case "twitter": return <XIcon className={className} />;
-    case "facebook": return <FacebookIcon className={className} />;
-    case "linkedin": return <LinkedInIcon className={className} />;
-    default: return <ExternalLink className={cn(className, "text-gray-500")} />;
-  }
-}
 
 const PLATFORM_ORDER = ["instagram", "tiktok", "youtube", "facebook", "twitter", "linkedin"];
 const PLATFORM_LABELS: Record<string, string> = {
@@ -166,13 +86,13 @@ const PLATFORM_LABELS: Record<string, string> = {
   twitter: "X",
   linkedin: "LinkedIn",
 };
-const PLATFORM_PILL_STYLES: Record<string, { active: string; inactive: string; icon: React.ComponentType<{ className?: string }> }> = {
-  instagram: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50", icon: Instagram },
-  tiktok: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50", icon: TikTokIcon },
-  youtube: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50", icon: Youtube },
-  facebook: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50", icon: Facebook },
-  twitter: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50", icon: X },
-  linkedin: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50", icon: ExternalLink },
+const PLATFORM_PILL_STYLES: Record<string, { active: string; inactive: string }> = {
+  instagram: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50" },
+  tiktok: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50" },
+  youtube: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50" },
+  facebook: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50" },
+  twitter: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50" },
+  linkedin: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50" },
 };
 
 /**
@@ -1948,7 +1868,7 @@ export default function CreatorProfileModal({
                     : "border-transparent bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
                 )}
               >
-                <PlatformBrandIcon platform={p} className="h-5 w-5 shrink-0" />
+                <PlatformIcon platform={p} size={20} />
                 <div className="text-left min-w-0">
                   <p className="text-sm leading-tight whitespace-nowrap">
                     <span className={cn("font-bold", brandText)}>{formatNumber(pFollowers)}</span>
@@ -2424,7 +2344,7 @@ export default function CreatorProfileModal({
                           )}
                           title={PLATFORM_LABELS[p.toLowerCase()] ?? p}
                         >
-                          <PlatformBrandIcon platform={p} className="h-3.5 w-3.5" />
+                          <PlatformIcon platform={p} size={14} />
                         </button>
                       );
                     })}
