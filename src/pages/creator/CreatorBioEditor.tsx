@@ -229,17 +229,17 @@ interface TemplateConfig {
 const TEMPLATES: TemplateConfig[] = [
   {
     id: "classic", label: "Classic",
-    themeOverrides: { bgMode: "solid", bgColor: "#ffffff", shade: "none", darkMode: false, cardStyle: "shadow", linkStyle: "fill", linkShape: "pill", fontFamily: "Inter" },
+    themeOverrides: { bgMode: "solid", bgColor: "#FFFFFF", shade: "none", darkMode: false, cardStyle: "shadow", linkStyle: "soft-shadow", linkShape: "rounded", fontFamily: "Inter" },
     imageStyle: "circular",
   },
   {
     id: "bold", label: "Bold",
-    themeOverrides: { bgMode: "solid", bgColor: "#0f1117", shade: "dark", darkMode: true, cardStyle: "round", linkStyle: "fill", linkShape: "rounded", fontFamily: "Inter" },
+    themeOverrides: { bgMode: "solid", bgColor: "#0f1117", shade: "dark", darkMode: true, cardStyle: "square", linkStyle: "fill", linkShape: "rounded", fontFamily: "Inter" },
     imageStyle: "circular",
   },
   {
     id: "minimal", label: "Minimal",
-    themeOverrides: { bgMode: "solid", bgColor: "#FAFAFA", shade: "minimal", darkMode: false, cardStyle: "square", linkStyle: "outline", linkShape: "square", fontFamily: "IBM Plex Mono" },
+    themeOverrides: { bgMode: "solid", bgColor: "#FAFAFA", shade: "minimal", darkMode: false, cardStyle: "square", linkStyle: "outline", linkShape: "square", fontFamily: "Merriweather" },
     imageStyle: "square",
   },
   {
@@ -249,8 +249,8 @@ const TEMPLATES: TemplateConfig[] = [
   },
   {
     id: "portrait", label: "Portrait",
-    themeOverrides: { bgMode: "image", shade: "dark", darkMode: true, cardStyle: "glass", linkStyle: "soft-shadow", linkShape: "rounded", fontFamily: "Playfair Display" },
-    imageStyle: "portrait",
+    themeOverrides: { bgMode: "solid", bgColor: "#000000", shade: "dark", darkMode: true, cardStyle: "glass", linkStyle: "soft-shadow", linkShape: "pill", fontFamily: "Inter" },
+    imageStyle: "circular",
   },
 ];
 
@@ -298,6 +298,8 @@ export default function CreatorBioEditor() {
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("phone");
   const [previewMode, setPreviewMode] = useState<"edit" | "preview">("preview");
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [pendingTemplate, setPendingTemplate] = useState<TemplateId | null>(null);
   const sectionSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ── Design scroll-spy state ── */
@@ -636,14 +638,28 @@ export default function CreatorBioEditor() {
   };
 
   /* ── Apply a template preset ── */
-  const applyTemplate = (tpl: TemplateConfig) => {
+  const applyTemplate = async (tplId: TemplateId) => {
+    const tpl = TEMPLATES.find((t) => t.id === tplId);
+    if (!tpl) return;
     const updated: ThemeSettings = { ...theme, ...tpl.themeOverrides, template: tpl.id };
     if (tpl.id === "vibrant") updated.bgColor = theme.themeColor;
     if (tpl.id === "portrait" && heroImageUrl) updated.bgImageUrl = heroImageUrl;
+    // Set all state immediately so phone mockup re-renders
     setTheme(updated);
     setImageStyle(tpl.imageStyle);
-    persistTheme(updated);
-    debouncedProfileSave({ image_style: tpl.imageStyle });
+    // Save to Supabase immediately (not debounced)
+    if (user?.id) {
+      const meta = user.user_metadata ?? {};
+      const cl = typeof meta.custom_links === "object" && meta.custom_links
+        ? (meta.custom_links as Record<string, unknown>) : {};
+      await supabase.auth.updateUser({
+        data: {
+          image_style: tpl.imageStyle,
+          custom_links: { ...cl, themeSettings: updated },
+        },
+      });
+    }
+    toast.success(`Applied "${tpl.label}" template`);
   };
 
   /* ────────────────────────────────────────────────────────────────── */
@@ -700,93 +716,20 @@ export default function CreatorBioEditor() {
                 {/* 0. Template Picker */}
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-muted-foreground">Choose a Template</label>
-                  <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-5 px-5 scrollbar-thin">
-                    {TEMPLATES.map((tpl) => {
-                      const active = theme.template === tpl.id;
-                      const tDark = tpl.themeOverrides.darkMode;
-                      const tBg = tpl.id === "vibrant" ? theme.themeColor
-                        : tpl.id === "portrait" ? "#1a1a2e"
-                        : tpl.themeOverrides.bgColor ?? "#ffffff";
-                      const tText = tDark ? "#ffffff" : "#111827";
-                      const tSub = tDark ? "#9ca3af" : "#6b7280";
-                      const tCardBg = tDark ? "#1e2433" : tpl.id === "minimal" ? "transparent" : "#ffffff";
-                      const tCardBorder = tpl.id === "minimal" ? "1px solid #e5e7eb" : "none";
-                      const tAvatarR = tpl.imageStyle === "square" ? "3px" : "9999px";
-                      return (
-                        <button
-                          key={tpl.id}
-                          onClick={() => applyTemplate(tpl)}
-                          className={`relative shrink-0 rounded-xl overflow-hidden transition-all ${
-                            active ? "ring-2 ring-blue-500 ring-offset-2" : "ring-1 ring-border hover:ring-foreground/30"
-                          }`}
-                          style={{ width: 120, height: 200 }}
-                        >
-                          {/* Background */}
-                          <div className="absolute inset-0" style={
-                            tpl.id === "portrait" && heroImageUrl
-                              ? { backgroundImage: `url(${heroImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
-                              : { backgroundColor: tBg }
-                          } />
-                          {tpl.id === "portrait" && (
-                            <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.75) 100%)" }} />
-                          )}
-                          <div className="relative h-full flex flex-col">
-                            {/* Hero strip for bold */}
-                            {tpl.id === "bold" && heroImageUrl && (
-                              <div className="w-full h-[40px] overflow-hidden shrink-0">
-                                <img src={heroImageUrl} alt="" className="w-full h-full object-cover" />
-                              </div>
-                            )}
-                            {/* Profile area */}
-                            <div className={`flex flex-col ${tpl.id === "minimal" ? "items-start px-3" : "items-center"} ${
-                              tpl.id === "portrait" ? "mt-auto" : tpl.id === "bold" && heroImageUrl ? "-mt-3" : "mt-7"
-                            }`}>
-                              {avatarUrl ? (
-                                <img src={avatarUrl} alt="" className="object-cover" style={{
-                                  width: 22, height: 22, borderRadius: tAvatarR,
-                                  border: tpl.id === "bold" ? "2px solid #fff" : tpl.id === "vibrant" ? `2px solid ${theme.themeColor}` : "none",
-                                }} />
-                              ) : (
-                                <div className="flex items-center justify-center" style={{
-                                  width: 22, height: 22, borderRadius: tAvatarR,
-                                  backgroundColor: tDark ? "#2d3548" : "#e5e7eb",
-                                  fontSize: 8, fontWeight: 700, color: tSub,
-                                }}>
-                                  {(displayName || "?")[0]?.toUpperCase()}
-                                </div>
-                              )}
-                              <p className="mt-0.5 truncate max-w-[100px]" style={{ fontSize: 7, fontWeight: 700, color: tText }}>{displayName || "Your Name"}</p>
-                              <p style={{ fontSize: 5, color: tSub }}>@{handle || "username"}</p>
-                            </div>
-                            {/* Section placeholders */}
-                            <div className={`px-2.5 space-y-1 ${tpl.id === "portrait" ? "pb-4 mt-1.5" : "mt-2"}`}>
-                              {[1, 2, 3].map((i) => (
-                                <div key={i} style={{
-                                  height: 8,
-                                  backgroundColor: tpl.themeOverrides.cardStyle === "glass" ? "rgba(255,255,255,0.15)" : tCardBg,
-                                  border: tCardBorder,
-                                  borderRadius: tpl.themeOverrides.cardStyle === "square" ? "2px" : "4px",
-                                  boxShadow: tpl.themeOverrides.cardStyle === "shadow" ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
-                                  backdropFilter: tpl.themeOverrides.cardStyle === "glass" ? "blur(4px)" : undefined,
-                                }} />
-                              ))}
-                            </div>
-                          </div>
-                          {/* Label */}
-                          <div className="absolute bottom-0 left-0 right-0 px-2 pb-1.5 pt-3" style={{
-                            background: tpl.id === "portrait" ? "transparent" : "linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 100%)",
-                          }}>
-                            <p className="text-[9px] font-semibold text-white text-center drop-shadow-sm">{tpl.label}</p>
-                          </div>
-                          {/* Checkmark badge */}
-                          {active && (
-                            <div className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-blue-500 flex items-center justify-center shadow-sm">
-                              <Check className="h-3 w-3 text-white" />
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      className="rounded-full text-xs h-9 gap-1.5"
+                      onClick={() => { setPendingTemplate(theme.template as TemplateId ?? null); setTemplateModalOpen(true); }}
+                    >
+                      <Palette className="h-3.5 w-3.5" />
+                      Browse Templates
+                    </Button>
+                    {theme.template && (
+                      <span className="text-[11px] text-muted-foreground">
+                        Current: <span className="font-medium text-foreground capitalize">{theme.template}</span>
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -2161,6 +2104,182 @@ export default function CreatorBioEditor() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ── TEMPLATE BROWSER MODAL ── */}
+      {templateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setTemplateModalOpen(false)}>
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          {/* Panel */}
+          <div
+            className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl mx-4 flex flex-col"
+            style={{ maxHeight: "90vh" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+              <h2 className="text-lg font-semibold text-foreground">Choose a Template</h2>
+              <button
+                onClick={() => setTemplateModalOpen(false)}
+                className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Grid */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-3 gap-5">
+                {TEMPLATES.map((tpl) => {
+                  const selected = pendingTemplate === tpl.id;
+                  const tDark = tpl.themeOverrides.darkMode;
+                  const tBg = tpl.id === "vibrant" ? theme.themeColor
+                    : tpl.themeOverrides.bgColor ?? "#ffffff";
+                  const tText = tDark ? "#ffffff" : "#111827";
+                  const tSub = tDark ? "#9ca3af" : "#6b7280";
+                  const tCardBg = tDark ? "#1e2433" : tpl.id === "minimal" ? "transparent" : "#ffffff";
+                  const tCardBorder = tpl.id === "minimal" ? "1px solid #e5e7eb" : "none";
+                  const tAvatarR = tpl.imageStyle === "square" ? "4px" : "9999px";
+                  const tLinkRadius = LINK_SHAPES.find((s) => s.value === tpl.themeOverrides.linkShape)?.radius ?? "9999px";
+                  const tLinkColor = theme.themeColor;
+
+                  /* Link preview style per template */
+                  const tLinkStyle = (): React.CSSProperties => {
+                    const base: React.CSSProperties = { borderRadius: tLinkRadius, height: 14, width: "100%" };
+                    switch (tpl.themeOverrides.linkStyle) {
+                      case "outline":
+                        return { ...base, border: `1.5px solid ${tLinkColor}`, backgroundColor: "transparent" };
+                      case "soft-shadow":
+                        return { ...base, backgroundColor: tDark ? "#1e2433" : "#ffffff", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" };
+                      case "fill":
+                        return { ...base, backgroundColor: tLinkColor };
+                      default:
+                        return { ...base, backgroundColor: tDark ? "#1e2433" : "#ffffff", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" };
+                    }
+                  };
+
+                  return (
+                    <button
+                      key={tpl.id}
+                      onClick={() => setPendingTemplate(tpl.id)}
+                      className={`relative rounded-2xl overflow-hidden transition-all text-left ${
+                        selected ? "ring-3 ring-blue-500 ring-offset-2" : "ring-1 ring-border hover:ring-foreground/30"
+                      }`}
+                      style={{ height: 360 }}
+                    >
+                      {/* Background */}
+                      <div className="absolute inset-0" style={
+                        tpl.id === "portrait" && heroImageUrl
+                          ? { backgroundImage: `url(${heroImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+                          : { backgroundColor: tBg }
+                      } />
+                      {/* Portrait gradient overlay */}
+                      {tpl.id === "portrait" && (
+                        <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 25%, rgba(0,0,0,0.8) 100%)" }} />
+                      )}
+
+                      <div className="relative h-full flex flex-col">
+                        {/* Hero strip for bold template */}
+                        {tpl.id === "bold" && heroImageUrl && (
+                          <div className="w-full h-[72px] overflow-hidden shrink-0">
+                            <img src={heroImageUrl} alt="" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+
+                        {/* Profile area */}
+                        <div className={`flex flex-col ${tpl.id === "minimal" ? "items-start px-5" : "items-center"} ${
+                          tpl.id === "portrait" ? "mt-auto" : tpl.id === "bold" && heroImageUrl ? "-mt-5" : "mt-10"
+                        }`}>
+                          {/* Avatar */}
+                          {avatarUrl ? (
+                            <img src={avatarUrl} alt="" className="object-cover" style={{
+                              width: 40, height: 40, borderRadius: tAvatarR,
+                              border: tpl.id === "bold" ? "3px solid #fff"
+                                : tpl.id === "vibrant" ? `3px solid ${theme.themeColor}`
+                                : "none",
+                            }} />
+                          ) : (
+                            <div className="flex items-center justify-center" style={{
+                              width: 40, height: 40, borderRadius: tAvatarR,
+                              backgroundColor: tDark ? "#2d3548" : "#e5e7eb",
+                              fontSize: 14, fontWeight: 700, color: tSub,
+                            }}>
+                              {(displayName || "?")[0]?.toUpperCase()}
+                            </div>
+                          )}
+                          {/* Name */}
+                          <p className="mt-1.5 truncate max-w-[180px] font-bold" style={{
+                            fontSize: 12, color: tText, fontFamily: tpl.themeOverrides.fontFamily,
+                          }}>
+                            {displayName || "Your Name"}
+                          </p>
+                          <p style={{ fontSize: 9, color: tSub }}>@{handle || "username"}</p>
+                          {/* Mini badge */}
+                          <div className="flex items-center gap-0.5 mt-1 px-2 py-0.5 rounded-full border" style={{ borderColor: tLinkColor }}>
+                            <svg className="h-2 w-2" viewBox="0 0 24 24" fill="none" stroke={tLinkColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                            <span style={{ fontSize: 7, color: tLinkColor, fontWeight: 600 }}>Certified</span>
+                          </div>
+                        </div>
+
+                        {/* Section placeholder bars */}
+                        <div className={`px-4 space-y-2 ${tpl.id === "portrait" ? "pb-6 mt-3" : "mt-4"}`}>
+                          {[1, 2, 3].map((i) => (
+                            <div key={i} style={tLinkStyle()} />
+                          ))}
+                        </div>
+
+                        {/* Social icons row */}
+                        <div className={`flex ${tpl.id === "minimal" ? "justify-start px-5" : "justify-center"} gap-1 mt-1`}>
+                          {["instagram", "tiktok", "youtube"].map((p) => {
+                            const brandColor = SOCIAL_BRAND_COLORS[p] ?? tLinkColor;
+                            return (
+                              <div key={p} className="rounded-full flex items-center justify-center" style={{ width: 16, height: 16, backgroundColor: brandColor }}>
+                                <div className="w-2 h-2 rounded-full bg-white/80" />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Template label */}
+                      <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5 pt-6" style={{
+                        background: tpl.id === "portrait" || tpl.id === "bold"
+                          ? "transparent"
+                          : "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%)",
+                      }}>
+                        <p className="text-[11px] font-bold text-white text-center drop-shadow-md">{tpl.label}</p>
+                      </div>
+
+                      {/* Selection checkmark */}
+                      {selected && (
+                        <div className="absolute top-2.5 right-2.5 h-6 w-6 rounded-full bg-blue-500 flex items-center justify-center shadow-lg">
+                          <Check className="h-3.5 w-3.5 text-white" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-border shrink-0">
+              <Button
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11 text-sm font-medium"
+                disabled={!pendingTemplate}
+                onClick={() => {
+                  if (pendingTemplate) {
+                    applyTemplate(pendingTemplate);
+                    setTemplateModalOpen(false);
+                  }
+                }}
+              >
+                Apply Template
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </CreatorLayout>
   );
 }
