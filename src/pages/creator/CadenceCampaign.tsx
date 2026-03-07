@@ -41,7 +41,14 @@ interface CadenceRule {
   name: string;
   brief: string;
   days: Set<DayOfWeek>;
-  files: File[];
+}
+
+interface MediaLibraryFile {
+  id: string;
+  file: File;
+  previewUrl: string;
+  cadenceTag: string; // cadence name or "" (untagged)
+  isVideo: boolean;
 }
 
 interface GeneratedPost {
@@ -118,7 +125,7 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
 
   // Cadences
   const [cadences, setCadences] = useState<CadenceRule[]>([
-    { id: crypto.randomUUID(), name: "", brief: "", days: new Set(), files: [] },
+    { id: crypto.randomUUID(), name: "", brief: "", days: new Set() },
   ]);
 
   // Generation
@@ -133,7 +140,9 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
   const [scheduling, setScheduling] = useState(false);
   const [scheduleProgress, setScheduleProgress] = useState(0);
 
-  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  // Media library
+  const [mediaLibrary, setMediaLibrary] = useState<MediaLibraryFile[]>([]);
+  const mediaInputRef = useRef<HTMLInputElement>(null);
 
   // The effective user whose accounts to load
   const effectiveUserId = postAsMode === "creator" && selectedCreator?.user_id
@@ -261,7 +270,7 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
 
   // ── Cadence helpers ──
   const addCadence = () => {
-    setCadences((prev) => [...prev, { id: crypto.randomUUID(), name: "", brief: "", days: new Set(), files: [] }]);
+    setCadences((prev) => [...prev, { id: crypto.randomUUID(), name: "", brief: "", days: new Set() }]);
   };
   const removeCadence = (id: string) => {
     setCadences((prev) => prev.filter((c) => c.id !== id));
@@ -277,17 +286,72 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
       return { ...c, days: next };
     }));
   };
-  const handleCadenceFiles = (cadenceId: string, e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    if (files.length > 0) {
-      setCadences((prev) => prev.map((c) => c.id === cadenceId ? { ...c, files: [...c.files, ...files] } : c));
+  // Media library helpers
+  const autoTagFile = (file: File): string => {
+    const normalized = file.name.toLowerCase().replace(/[-_]/g, " ").replace(/\.[^.]+$/, "");
+    for (const c of cadences) {
+      if (c.name.trim() && normalized.includes(c.name.trim().toLowerCase().replace(/[-_]/g, " "))) {
+        return c.name.trim();
+      }
     }
+    return "";
+  };
+
+  const handleMediaLibraryFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    const maxTotal = 20;
+    const remaining = maxTotal - mediaLibrary.length;
+    if (remaining <= 0) { toast.error("Maximum 20 files allowed"); e.target.value = ""; return; }
+    const toAdd = files.slice(0, remaining);
+    if (files.length > remaining) toast.error(`Only ${remaining} more file(s) allowed (max 20)`);
+    const newEntries: MediaLibraryFile[] = toAdd.map((file) => ({
+      id: crypto.randomUUID(),
+      file,
+      previewUrl: URL.createObjectURL(file),
+      cadenceTag: autoTagFile(file),
+      isVideo: isVideoFile(file),
+    }));
+    setMediaLibrary((prev) => [...prev, ...newEntries]);
     e.target.value = "";
   };
-  const removeCadenceFile = (cadenceId: string, fileIdx: number) => {
-    setCadences((prev) => prev.map((c) =>
-      c.id === cadenceId ? { ...c, files: c.files.filter((_, i) => i !== fileIdx) } : c
-    ));
+
+  const removeMediaFile = (id: string) => {
+    setMediaLibrary((prev) => {
+      const item = prev.find((m) => m.id === id);
+      if (item) URL.revokeObjectURL(item.previewUrl);
+      return prev.filter((m) => m.id !== id);
+    });
+  };
+
+  const updateMediaTag = (id: string, tag: string) => {
+    setMediaLibrary((prev) => prev.map((m) => m.id === id ? { ...m, cadenceTag: tag } : m));
+  };
+
+  const handleMediaDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer.files).filter((f) =>
+      /\.(jpg|jpeg|png|mp4|mov)$/i.test(f.name)
+    );
+    if (files.length === 0) return;
+    const maxTotal = 20;
+    const remaining = maxTotal - mediaLibrary.length;
+    if (remaining <= 0) { toast.error("Maximum 20 files allowed"); return; }
+    const toAdd = files.slice(0, remaining);
+    if (files.length > remaining) toast.error(`Only ${remaining} more file(s) allowed (max 20)`);
+    const newEntries: MediaLibraryFile[] = toAdd.map((file) => ({
+      id: crypto.randomUUID(),
+      file,
+      previewUrl: URL.createObjectURL(file),
+      cadenceTag: autoTagFile(file),
+      isVideo: isVideoFile(file),
+    }));
+    setMediaLibrary((prev) => [...prev, ...newEntries]);
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   // Day coverage
@@ -336,6 +400,17 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
     const cadenceByDay: Record<string, CadenceRule> = {};
     cadences.forEach((c) => c.days.forEach((d) => { cadenceByDay[d] = c; }));
     const fileCounters: Record<string, number> = {};
+    const untaggedCounter = { value: 0 };
+
+    // Group media library files by cadence tag
+    const mediaByTag: Record<string, MediaLibraryFile[]> = {};
+    const untaggedMedia = mediaLibrary.filter((m) => !m.cadenceTag);
+    mediaLibrary.forEach((m) => {
+      if (m.cadenceTag) {
+        if (!mediaByTag[m.cadenceTag]) mediaByTag[m.cadenceTag] = [];
+        mediaByTag[m.cadenceTag].push(m);
+      }
+    });
 
     const accountIds = accounts
       .filter((a) => selectedPlatforms.has(a.platform))
@@ -352,12 +427,22 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
       let mediaFile: File | null = null;
       let mediaPreviewUrl: string | null = null;
       let mediaIsVideo = false;
-      if (cadence.files.length > 0) {
-        const counter = fileCounters[cadence.id] ?? 0;
-        mediaFile = cadence.files[counter % cadence.files.length];
-        mediaPreviewUrl = URL.createObjectURL(mediaFile);
-        mediaIsVideo = isVideoFile(mediaFile);
-        fileCounters[cadence.id] = counter + 1;
+
+      // Find media tagged to this cadence, falling back to untagged
+      const taggedFiles = mediaByTag[cadence.name.trim()] ?? [];
+      if (taggedFiles.length > 0) {
+        const counter = fileCounters[cadence.name.trim()] ?? 0;
+        const entry = taggedFiles[counter % taggedFiles.length];
+        mediaFile = entry.file;
+        mediaPreviewUrl = entry.previewUrl;
+        mediaIsVideo = entry.isVideo;
+        fileCounters[cadence.name.trim()] = counter + 1;
+      } else if (untaggedMedia.length > 0) {
+        const entry = untaggedMedia[untaggedCounter.value % untaggedMedia.length];
+        mediaFile = entry.file;
+        mediaPreviewUrl = entry.previewUrl;
+        mediaIsVideo = entry.isVideo;
+        untaggedCounter.value++;
       }
 
       const scheduledAt = `${date.toISOString().split("T")[0]}T${dailyTime}:00`;
@@ -458,7 +543,6 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
           cadences: cadences.map((c) => ({
             name: c.name, brief: c.brief,
             days: Array.from(c.days),
-            fileCount: c.files.length,
           })),
           status: "scheduling",
         })
@@ -473,17 +557,44 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
 
       try {
         let mediaUrl: string | undefined;
-        if (post.mediaFile && user?.id && campaignId) {
-          const storagePath = `${creatorId ?? user.id}/${campaignId}/${post.cadenceName}/${post.mediaFile.name}`;
+        if (post.mediaFile && user?.id) {
+          const uid = creatorId ?? user.id;
+          const cid = campaignId ?? "draft";
+          const cadTag = post.cadenceName || "untagged";
+
+          // A) Campaign media storage
+          const campaignPath = `${uid}/${cid}/${cadTag}/${post.mediaFile.name}`;
           const { data: uploadData } = await supabase.storage
             .from("cadence-media")
-            .upload(storagePath, post.mediaFile, { upsert: true });
+            .upload(campaignPath, post.mediaFile, { upsert: true });
           if (uploadData?.path) {
             const { data: urlData } = supabase.storage
               .from("cadence-media")
               .getPublicUrl(uploadData.path);
             mediaUrl = urlData?.publicUrl;
           }
+
+          // B) Master media library storage (fire-and-forget)
+          const libPath = `${uid}/media/${Date.now()}-${post.mediaFile.name}`;
+          supabase.storage
+            .from("creator-media-library")
+            .upload(libPath, post.mediaFile, { upsert: true })
+            .then(({ data: libUpload }) => {
+              if (libUpload?.path) {
+                const { data: libUrl } = supabase.storage
+                  .from("creator-media-library")
+                  .getPublicUrl(libUpload.path);
+                supabase.from("creator_media").insert({
+                  user_id: uid,
+                  filename: post.mediaFile!.name,
+                  file_url: libUrl?.publicUrl ?? null,
+                  file_type: post.mediaIsVideo ? "video" : "image",
+                  file_size: post.mediaFile!.size,
+                  cadence_tag: cadTag,
+                  campaign_id: campaignId,
+                });
+              }
+            });
         }
 
         // Route based on media type: video → Reels/Shorts endpoint, image → standard post
@@ -1079,7 +1190,7 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
             <span className="flex items-center justify-center h-5 w-5 rounded-full bg-[#1B3A6B] text-white text-[10px] font-bold">C</span>
             Cadence Rules
           </h2>
-          <p className="text-xs text-muted-foreground">Define your cadences — assign day patterns and upload media for each</p>
+          <p className="text-xs text-muted-foreground">Define your cadences — assign day patterns and content briefs</p>
 
           {/* Day coverage indicator */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -1151,59 +1262,6 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
                   </div>
                 </div>
 
-                {/* Media upload */}
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1.5 block">Media (optional)</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/gif,video/mp4,video/quicktime,video/webm"
-                      multiple
-                      ref={(el) => { fileInputRefs.current[cadence.id] = el; }}
-                      onChange={(e) => handleCadenceFiles(cadence.id, e)}
-                      className="hidden"
-                    />
-                    <button
-                      onClick={() => fileInputRefs.current[cadence.id]?.click()}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-border text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                    >
-                      <Upload className="h-3.5 w-3.5" />
-                      Upload jpg/png/mp4/mov
-                    </button>
-                    {cadence.files.length > 0 && (
-                      <span className="text-xs text-muted-foreground">{cadence.files.length} file{cadence.files.length > 1 ? "s" : ""}</span>
-                    )}
-                  </div>
-                  {cadence.files.length > 0 && (
-                    <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
-                      {cadence.files.map((file, fi) => (
-                        <div key={fi} className="relative shrink-0">
-                          {file.type.startsWith("image") ? (
-                            <img
-                              src={URL.createObjectURL(file)}
-                              className="h-16 w-16 rounded-lg object-cover border border-border"
-                              alt={file.name}
-                            />
-                          ) : (
-                            <div className="h-16 w-16 rounded-lg bg-gray-100 dark:bg-gray-800 border border-border flex flex-col items-center justify-center">
-                              <span className="text-[10px] text-muted-foreground font-medium">
-                                {file.name.split(".").pop()?.toUpperCase() ?? "VID"}
-                              </span>
-                              <span className="text-[8px] text-purple-500 font-medium mt-0.5">REEL</span>
-                            </div>
-                          )}
-                          <button
-                            onClick={() => removeCadenceFile(cadence.id, fi)}
-                            className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-white flex items-center justify-center"
-                          >
-                            <X className="h-2.5 w-2.5" />
-                          </button>
-                          <p className="text-[9px] text-muted-foreground mt-0.5 truncate max-w-[64px]">{file.name}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
               </div>
             );
           })}
@@ -1212,6 +1270,108 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
             <Plus className="h-4 w-4 mr-2" />
             Add Cadence
           </Button>
+        </div>
+
+        {/* ── Section D: Media Library ── */}
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <span className="flex items-center justify-center h-5 w-5 rounded-full bg-[#1B3A6B] text-white text-[10px] font-bold">D</span>
+            Media Library
+            {mediaLibrary.length > 0 && (
+              <span className="ml-1 text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                {mediaLibrary.length} file{mediaLibrary.length !== 1 ? "s" : ""} uploaded
+              </span>
+            )}
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Upload media for this campaign. Tag each file to a cadence so the AI knows which media to use.
+          </p>
+
+          {/* Drop zone */}
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleMediaDrop}
+            onClick={() => mediaInputRef.current?.click()}
+            className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-8 cursor-pointer hover:bg-muted/40 hover:border-muted-foreground/30 transition-colors"
+          >
+            <Upload className="h-8 w-8 text-muted-foreground/50" />
+            <p className="text-sm font-medium text-muted-foreground">Drop files here or click to browse</p>
+            <p className="text-xs text-muted-foreground/70">jpg, png, mp4, mov &middot; max 20 files</p>
+            <input
+              type="file"
+              ref={mediaInputRef}
+              onChange={handleMediaLibraryFiles}
+              accept="image/jpeg,image/png,video/mp4,video/quicktime"
+              multiple
+              className="hidden"
+            />
+          </div>
+
+          {/* Media grid */}
+          {mediaLibrary.length > 0 && (
+            <div className="grid grid-cols-3 gap-3">
+              {mediaLibrary.map((item) => {
+                const cadenceNames = cadences.filter((c) => c.name.trim()).map((c) => c.name.trim());
+                return (
+                  <div key={item.id} className="rounded-xl border border-border overflow-hidden bg-card">
+                    {/* Thumbnail */}
+                    <div className="relative h-28 bg-gray-100 dark:bg-gray-800">
+                      {item.isVideo ? (
+                        <>
+                          <video src={item.previewUrl} className="w-full h-full object-cover" muted />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="h-8 w-8 rounded-full bg-black/50 flex items-center justify-center">
+                              <div className="ml-0.5 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[10px] border-l-white" />
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <img src={item.previewUrl} className="w-full h-full object-cover" alt={item.file.name} />
+                      )}
+                      {/* Remove button */}
+                      <button
+                        onClick={() => removeMediaFile(item.id)}
+                        className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                      {/* Type badge */}
+                      <span className={`absolute bottom-1.5 left-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        item.isVideo
+                          ? "bg-purple-600 text-white"
+                          : "bg-blue-600 text-white"
+                      }`}>
+                        {item.isVideo ? "REEL" : "IMAGE"}
+                      </span>
+                    </div>
+                    {/* Info */}
+                    <div className="px-2.5 py-2 space-y-1.5">
+                      <p className="text-[11px] font-medium truncate" title={item.file.name}>{item.file.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{formatFileSize(item.file.size)}</p>
+                      {/* Cadence tag dropdown */}
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          value={item.cadenceTag}
+                          onChange={(e) => updateMediaTag(item.id, e.target.value)}
+                          className="flex-1 h-7 rounded-md border border-border bg-background px-1.5 text-[11px] focus:outline-none focus:ring-1 focus:ring-ring"
+                        >
+                          <option value="">Untagged</option>
+                          {cadenceNames.map((name) => (
+                            <option key={name} value={name}>{name}</option>
+                          ))}
+                        </select>
+                        {!item.cadenceTag && (
+                          <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded whitespace-nowrap">
+                            Untagged
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Generate button */}
