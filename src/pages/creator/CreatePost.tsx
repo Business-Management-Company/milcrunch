@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import CreatorLayout from "@/components/layout/CreatorLayout";
 import { Button } from "@/components/ui/button";
@@ -62,7 +62,7 @@ const platformRules: Record<string, {
   googlebusiness: { maxChars: 1500, maxImageMB: 5 },
 };
 
-export default function CreatePost() {
+export default function CreatePost({ noLayout }: { noLayout?: boolean } = {}) {
   const { user, creatorProfile } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -405,8 +405,10 @@ export default function CreatePost() {
     );
   };
 
+  const Wrapper = noLayout ? ({ children }: { children: React.ReactNode }) => <>{children}</> : CreatorLayout;
+
   return (
-    <CreatorLayout>
+    <Wrapper>
       <div className="flex flex-col h-[calc(100vh-2rem)] -mt-2">
         {/* ── TAB BAR ── */}
         <div className="shrink-0 border-b border-border bg-card">
@@ -989,6 +991,6 @@ export default function CreatePost() {
         </div>
         </>}
       </div>
-    </CreatorLayout>
+    </Wrapper>
   );
 }

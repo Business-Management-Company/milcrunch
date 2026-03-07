@@ -86,7 +86,6 @@ import BrandEventCreate from "./pages/brand/BrandEventCreate";
 import BrandEventDetail from "./pages/brand/BrandEventDetail";
 import BrandAttribution from "./pages/brand/BrandAttribution";
 import BrandSettings from "./pages/brand/BrandSettings";
-import BrandPosting from "./pages/brand/BrandPosting";
 import BrandTags from "./pages/brand/BrandTags";
 import BrandVenueFinder from "./pages/brand/BrandVenueFinder";
 import PdxWizard from "./pages/brand/PdxWizard";
@@ -257,7 +256,7 @@ const App = () => (
                 <Route path="/brand/calculators" element={<Calculators />} />
                 <Route path="/brand/attribution" element={<BrandAttribution />} />
                 <Route path="/brand/settings" element={<BrandSettings />} />
-                <Route path="/brand/posting" element={<BrandPosting />} />
+                <Route path="/brand/posting" element={<CreatePost noLayout />} />
                 <Route path="/brand/pages" element={<BrandPages />} />
                 <Route path="/brand/pages/:id" element={<BrandPageEdit />} />
                 <Route path="/brand/sponsors" element={<SponsorDashboard />} />
