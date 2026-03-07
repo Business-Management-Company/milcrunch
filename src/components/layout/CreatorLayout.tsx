@@ -25,6 +25,7 @@ import {
   Menu,
   ExternalLink,
   FileText,
+  ImageIcon,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -49,6 +50,7 @@ const SECTIONS: { label: string; items: NavItem[] }[] = [
       { icon: Share2, label: "My Socials", href: "/creator/socials" },
       { icon: PenSquare, label: "Create Post", href: "/creator/post/new" },
       { icon: Calendar, label: "Scheduled Posts", href: "/creator/posts" },
+      { icon: ImageIcon, label: "Media Library", href: "/creator/media-library" },
       { icon: BarChart3, label: "Content Analytics", href: "/creator/analytics" },
     ],
   },

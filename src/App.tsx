@@ -74,6 +74,7 @@ import CreatorHelp from "./pages/creator/CreatorHelp";
 import SimilarCreators from "./pages/creator/SimilarCreators";
 import Leaderboard from "./pages/creator/Leaderboard";
 import CreatorOpportunities from "./pages/creator/CreatorOpportunities";
+import CreatorMediaLibrary from "./pages/creator/CreatorMediaLibrary";
 
 import BrandDiscover from "./pages/brand/BrandDiscover";
 import BrandLists, { BrandListDetail } from "./pages/brand/BrandLists";
@@ -358,6 +359,7 @@ const App = () => (
               <Route path="/creator/post/new" element={<CreatorRoute><CreatePost /></CreatorRoute>} />
               <Route path="/creator/posts" element={<CreatorRoute><CreatorPosts /></CreatorRoute>} />
               <Route path="/creator/analytics" element={<CreatorRoute><CreatorAnalytics /></CreatorRoute>} />
+              <Route path="/creator/media-library" element={<CreatorRoute><CreatorMediaLibrary /></CreatorRoute>} />
               <Route path="/creator/events" element={<CreatorRoute><CreatorEvents /></CreatorRoute>} />
               <Route path="/creator/deals" element={<CreatorRoute><CreatorDeals /></CreatorRoute>} />
               <Route path="/creator/lists" element={<CreatorRoute><CreatorLists /></CreatorRoute>} />

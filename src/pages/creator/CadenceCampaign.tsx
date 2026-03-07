@@ -9,6 +9,7 @@ import { createUploadPost } from "@/services/upload-post";
 import {
   Loader2, Check, X, Plus, Upload, Pencil, ChevronLeft,
   Calendar, Clock, Sparkles, Search, UserCircle, Link2,
+  FolderOpen,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -143,6 +144,12 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
   // Media library
   const [mediaLibrary, setMediaLibrary] = useState<MediaLibraryFile[]>([]);
   const mediaInputRef = useRef<HTMLInputElement>(null);
+
+  // Choose from existing media library modal
+  const [showLibraryModal, setShowLibraryModal] = useState(false);
+  const [existingMedia, setExistingMedia] = useState<Array<{ id: string; filename: string; file_url: string; file_type: string; file_size: number; cadence_tag: string | null }>>([]);
+  const [loadingExisting, setLoadingExisting] = useState(false);
+  const [selectedExisting, setSelectedExisting] = useState<Set<string>>(new Set());
 
   // The effective user whose accounts to load
   const effectiveUserId = postAsMode === "creator" && selectedCreator?.user_id
@@ -352,6 +359,49 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const openLibraryModal = async () => {
+    if (!user?.id) return;
+    setShowLibraryModal(true);
+    setLoadingExisting(true);
+    setSelectedExisting(new Set());
+    const { data } = await supabase
+      .from("creator_media")
+      .select("id, filename, file_url, file_type, file_size, cadence_tag")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    setExistingMedia((data ?? []) as any);
+    setLoadingExisting(false);
+  };
+
+  const importSelectedMedia = async () => {
+    const toImport = existingMedia.filter((m) => selectedExisting.has(m.id));
+    const maxTotal = 20;
+    const remaining = maxTotal - mediaLibrary.length;
+    if (remaining <= 0) { toast.error("Maximum 20 files reached"); return; }
+    const items = toImport.slice(0, remaining);
+
+    // For each selected item, create a local entry by fetching the file
+    for (const item of items) {
+      try {
+        const resp = await fetch(item.file_url);
+        const blob = await resp.blob();
+        const file = new File([blob], item.filename, { type: blob.type });
+        const entry: MediaLibraryFile = {
+          id: crypto.randomUUID(),
+          file,
+          previewUrl: URL.createObjectURL(file),
+          cadenceTag: item.cadence_tag ?? "",
+          isVideo: item.file_type === "video",
+        };
+        setMediaLibrary((prev) => [...prev, entry]);
+      } catch {
+        // skip failed fetches
+      }
+    }
+    setShowLibraryModal(false);
+    toast.success(`${items.length} file${items.length !== 1 ? "s" : ""} imported`);
   };
 
   // Day coverage
@@ -924,13 +974,13 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
 
   // ── Step 1: Campaign Setup ──
   return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+    <div className="flex-1 overflow-y-auto" style={{ backgroundColor: "#F5F7FA" }}>
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
 
         {/* ── Section A: Campaign Basics ── */}
-        <div className="space-y-4">
-          <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <span className="flex items-center justify-center h-5 w-5 rounded-full bg-[#1B3A6B] text-white text-[10px] font-bold">A</span>
+        <div className="bg-white dark:bg-card rounded-2xl p-6 space-y-4" style={{ borderLeft: "4px solid #1B3A6B", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
+          <h2 className="text-lg font-semibold text-foreground flex items-center gap-3">
+            <span className="flex items-center justify-center h-8 w-8 rounded-full text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#1B3A6B" }}>A</span>
             Campaign Basics
           </h2>
 
@@ -1136,9 +1186,9 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
         </div>
 
         {/* ── Section B: Tone & Voice Profile ── */}
-        <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <span className="flex items-center justify-center h-5 w-5 rounded-full bg-[#1B3A6B] text-white text-[10px] font-bold">B</span>
+        <div className="bg-white dark:bg-card rounded-2xl p-6 space-y-3" style={{ borderLeft: "4px solid #C8A84B", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
+          <h2 className="text-lg font-semibold text-foreground flex items-center gap-3">
+            <span className="flex items-center justify-center h-8 w-8 rounded-full text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#C8A84B" }}>B</span>
             Tone & Voice Profile
           </h2>
 
@@ -1185,28 +1235,12 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
         </div>
 
         {/* ── Section C: Cadence Rules ── */}
-        <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <span className="flex items-center justify-center h-5 w-5 rounded-full bg-[#1B3A6B] text-white text-[10px] font-bold">C</span>
+        <div className="bg-white dark:bg-card rounded-2xl p-6 space-y-3" style={{ borderLeft: "4px solid #0D9488", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
+          <h2 className="text-lg font-semibold text-foreground flex items-center gap-3">
+            <span className="flex items-center justify-center h-8 w-8 rounded-full text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#0D9488" }}>C</span>
             Cadence Rules
           </h2>
           <p className="text-xs text-muted-foreground">Define your cadences — assign day patterns and content briefs</p>
-
-          {/* Day coverage indicator */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {DAYS_OF_WEEK.map((d) => (
-              <span
-                key={d}
-                className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                  coveredDays.has(d)
-                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                    : "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500"
-                }`}
-              >
-                {d} {coveredDays.has(d) ? "\u2713" : "\u2013"}
-              </span>
-            ))}
-          </div>
 
           {cadences.map((cadence, idx) => {
             const color = CADENCE_COLORS[idx % CADENCE_COLORS.length];
@@ -1272,10 +1306,49 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
           </Button>
         </div>
 
+        {/* ── Day Coverage Indicator (between C and D) ── */}
+        <div className="bg-white dark:bg-card rounded-2xl p-4" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
+          {allDaysCovered ? (
+            <div className="flex items-center justify-center gap-2 text-sm font-medium text-green-600 dark:text-green-400">
+              <Check className="h-4 w-4" />
+              All 7 days covered
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 flex-wrap justify-center">
+              {DAYS_OF_WEEK.map((d) => {
+                const assignedCadence = cadences.find((c) => c.days.has(d));
+                const cadenceIdx = assignedCadence ? cadences.indexOf(assignedCadence) : -1;
+                const color = cadenceIdx >= 0 ? CADENCE_COLORS[cadenceIdx % CADENCE_COLORS.length] : undefined;
+                const abbrev = assignedCadence?.name?.trim() ? (assignedCadence.name.trim().length > 6 ? assignedCadence.name.trim().slice(0, 5) + "…" : assignedCadence.name.trim()) : undefined;
+                return (
+                  <div
+                    key={d}
+                    className="flex flex-col items-center gap-0.5"
+                  >
+                    <span
+                      className={`text-xs font-bold px-3 py-1.5 rounded-full transition-colors ${
+                        assignedCadence
+                          ? "text-white"
+                          : "border-2 border-red-400 text-red-500 dark:border-red-500 dark:text-red-400"
+                      }`}
+                      style={assignedCadence ? { backgroundColor: color } : undefined}
+                    >
+                      {assignedCadence ? d : `${d} !`}
+                    </span>
+                    {abbrev && (
+                      <span className="text-[9px] text-muted-foreground truncate max-w-[60px]">{abbrev}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         {/* ── Section D: Media Library ── */}
-        <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <span className="flex items-center justify-center h-5 w-5 rounded-full bg-[#1B3A6B] text-white text-[10px] font-bold">D</span>
+        <div className="bg-white dark:bg-card rounded-2xl p-6 space-y-3" style={{ borderLeft: "4px solid #7C3AED", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
+          <h2 className="text-lg font-semibold text-foreground flex items-center gap-3">
+            <span className="flex items-center justify-center h-8 w-8 rounded-full text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#7C3AED" }}>D</span>
             Media Library
             {mediaLibrary.length > 0 && (
               <span className="ml-1 text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
@@ -1306,6 +1379,17 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
               className="hidden"
             />
           </div>
+
+          {/* Choose from existing media library */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-xs"
+            onClick={openLibraryModal}
+          >
+            <FolderOpen className="h-3.5 w-3.5 mr-1.5" />
+            Choose from Media Library
+          </Button>
 
           {/* Media grid */}
           {mediaLibrary.length > 0 && (
@@ -1376,7 +1460,7 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
 
         {/* Generate button */}
         <Button
-          className="w-full h-11 bg-[#1B3A6B] hover:bg-[#152d54] text-white text-sm font-semibold"
+          className="w-full h-12 bg-[#1B3A6B] hover:bg-[#152d54] text-white text-sm font-semibold rounded-2xl shadow-lg"
           disabled={!allDaysCovered || generating || accounts.length === 0 || (postAsMode === "creator" && !selectedCreator)}
           onClick={handleGenerate}
         >
@@ -1395,6 +1479,99 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
 
         <div className="h-4" />
       </div>
+
+      {/* ── Choose from Media Library Modal ── */}
+      {showLibraryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowLibraryModal(false)}>
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div
+            className="relative bg-white dark:bg-card rounded-2xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col"
+            style={{ maxHeight: "80vh" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+              <div>
+                <h3 className="text-lg font-semibold">Choose from Media Library</h3>
+                <p className="text-xs text-muted-foreground">Select files to reuse in this campaign</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {selectedExisting.size > 0 && (
+                  <Button
+                    className="bg-[#1B3A6B] hover:bg-[#152d54] text-white text-xs"
+                    onClick={importSelectedMedia}
+                  >
+                    Import {selectedExisting.size} file{selectedExisting.size !== 1 ? "s" : ""}
+                  </Button>
+                )}
+                <button onClick={() => setShowLibraryModal(false)} className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              {loadingExisting ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : existingMedia.length === 0 ? (
+                <div className="text-center py-16">
+                  <FolderOpen className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
+                  <p className="text-sm text-muted-foreground">No media in your library yet</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Upload media using the drop zone above</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-3">
+                  {existingMedia.map((item) => {
+                    const isSelected = selectedExisting.has(item.id);
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          setSelectedExisting((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(item.id)) next.delete(item.id);
+                            else next.add(item.id);
+                            return next;
+                          });
+                        }}
+                        className={`rounded-xl border-2 overflow-hidden text-left transition-colors ${
+                          isSelected
+                            ? "border-[#1B3A6B] ring-2 ring-[#1B3A6B]/20"
+                            : "border-border hover:border-gray-300"
+                        }`}
+                      >
+                        <div className="relative h-24 bg-gray-100 dark:bg-gray-800">
+                          {item.file_type === "video" ? (
+                            <video src={item.file_url} className="w-full h-full object-cover" muted />
+                          ) : (
+                            <img src={item.file_url} className="w-full h-full object-cover" alt={item.filename} />
+                          )}
+                          {isSelected && (
+                            <div className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-[#1B3A6B] text-white flex items-center justify-center">
+                              <Check className="h-3 w-3" />
+                            </div>
+                          )}
+                          <span className={`absolute bottom-1 left-1 text-[9px] font-bold px-1 py-0.5 rounded ${
+                            item.file_type === "video" ? "bg-purple-600 text-white" : "bg-blue-600 text-white"
+                          }`}>
+                            {item.file_type === "video" ? "REEL" : "IMAGE"}
+                          </span>
+                        </div>
+                        <div className="px-2 py-1.5">
+                          <p className="text-[10px] font-medium truncate">{item.filename}</p>
+                          {item.cadence_tag && (
+                            <span className="text-[9px] text-muted-foreground">{item.cadence_tag}</span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
