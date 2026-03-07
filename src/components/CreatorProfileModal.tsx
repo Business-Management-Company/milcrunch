@@ -1905,8 +1905,6 @@ export default function CreatorProfileModal({
           "flex flex-col overflow-hidden"
         )}
       >
-        {/* version marker — remove after confirming deploy */}
-        <div style={{fontSize:'10px',color:'red',padding:'2px 8px'}}>v2-platforms</div>
         {/* ── Top Platform Bar ── */}
         <div className="flex flex-wrap items-center gap-2 px-4 py-3 bg-gray-50 dark:bg-[#0F1117] border-b border-gray-100 dark:border-gray-800 shrink-0">
           {availablePlatforms.map((p) => {
