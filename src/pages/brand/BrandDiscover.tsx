@@ -185,36 +185,9 @@ function extractFromEnrichment(data: EnrichedProfileResponse): Partial<CreatorCa
     Number(instagram.engagement_percent) || Number(instagram.engagement_rate) || Number(instagram.er) || 0;
   if (erVal > 0) partial.engagementRate = Number(erVal.toFixed(2));
 
-  const creatorHas = result.creator_has as Record<string, boolean> | undefined;
-  const platforms: string[] = [];
-  if (creatorHas && typeof creatorHas === "object") {
-    // Add each platform the creator has
-    if (creatorHas.instagram) platforms.push("instagram");
-    if (creatorHas.tiktok) platforms.push("tiktok");
-    if (creatorHas.youtube) platforms.push("youtube");
-    if (creatorHas.twitter) platforms.push("twitter");
-    if (creatorHas.facebook) platforms.push("facebook");
-    if (creatorHas.linkedin) platforms.push("linkedin");
-    if (creatorHas.twitch) platforms.push("twitch");
-    if (creatorHas.podcast) platforms.push("podcast");
-  }
-  // Also detect platforms from actual data keys in the enrichment result
-  // (creator_has is often incomplete — IC RAW endpoint may not return all flags)
-  const ENRICH_PLATFORM_KEYS = ["instagram", "tiktok", "youtube", "twitter", "facebook", "linkedin"];
-  for (const p of ENRICH_PLATFORM_KEYS) {
-    if (!platforms.includes(p)) {
-      const pd = result[p];
-      if (pd && typeof pd === "object") {
-        const d = pd as Record<string, unknown>;
-        if (d.username || d.handle || d.follower_count || d.subscriber_count) {
-          platforms.push(p);
-        }
-      }
-    }
-  }
-  if (platforms.length > 0) {
-    partial.socialPlatforms = platforms;
-  }
+  // NOTE: Do NOT set partial.socialPlatforms here. The search result already
+  // has the correct multi-platform list from has_tiktok/has_youtube/etc flags.
+  // Setting it from enrichment's creator_has would overwrite with incomplete data.
 
   // Hashtags: try direct field (FULL endpoint), then aggregate from post_data (RAW endpoint)
   let hashtags = instagram.hashtags ?? instagram.frequently_used_hashtags ?? instagram.top_hashtags;
@@ -2256,25 +2229,16 @@ const BrandDiscover = () => {
   // Sort by confidence when selected (client-side sort) + platform filter
   const displayCreators = useMemo(() => {
     let filtered = creators;
-    // Client-side platform filter: only show creators who have selected platform(s) with followers > 0
+    // Client-side platform filter: show creators who have ANY selected platform
     if (platformFilter.size > 0) {
       filtered = filtered.filter((c) => {
-        const rawEnrich = enrichRawCache[c.id];
-        if (rawEnrich) {
-          const platStats = getPlatformStatsFromEnrichment(rawEnrich);
-          // OR logic: creator passes if they have ANY of the selected platforms
-          return Array.from(platformFilter).some((pf) =>
-            platStats.some((ps) => ps.platform === pf && ps.followers > 0)
-          );
-        }
-        // Fallback: check creator.platforms or socialPlatforms array
         const cardPlats = (c.socialPlatforms ?? c.platforms ?? []).map((p) => p.toLowerCase());
         return Array.from(platformFilter).some((pf) => cardPlats.includes(pf));
       });
     }
     if (sortBy !== "confidence") return filtered;
     return [...filtered].sort((a, b) => getConfidence(b).score - getConfidence(a).score);
-  }, [creators, sortBy, getConfidence, platformFilter, enrichRawCache]);
+  }, [creators, sortBy, getConfidence, platformFilter]);
 
   // Top Creator — highest follower count from results
   const topCreator = useMemo(() => {
@@ -3875,10 +3839,9 @@ const BrandDiscover = () => {
                                 const rawEnrich = enrichRawCache[baseCreator.id];
                                 const platStats = rawEnrich ? getPlatformStatsFromEnrichment(rawEnrich) : [];
                                 const platStatsMap = new Map(platStats.map((ps) => [ps.platform, ps]));
-                                const displayPlats = platStats.length > 0 ? platStats.map((ps) => ps.platform) : socialPlatforms;
-                                return displayPlats.length > 0 ? (
+                                return socialPlatforms.length > 0 ? (
                                   <div className="flex items-center gap-1.5">
-                                    {displayPlats.slice(0, 5).map((p) => {
+                                    {socialPlatforms.slice(0, 5).map((p) => {
                                       const ps = platStatsMap.get(p);
                                       return (
                                         <span key={p} className="inline-flex items-center gap-0.5">
@@ -4167,10 +4130,9 @@ const BrandDiscover = () => {
                           const rawEnrich = enrichRawCache[baseCreator.id];
                           const platStats = rawEnrich ? getPlatformStatsFromEnrichment(rawEnrich) : [];
                           const platStatsMap = new Map(platStats.map((ps) => [ps.platform, ps]));
-                          const displayPlats = platStats.length > 0 ? platStats.map((ps) => ps.platform) : socialPlatforms;
-                          return displayPlats.length > 0 ? (
+                          return socialPlatforms.length > 0 ? (
                             <div className="flex items-center gap-2 mb-3 flex-wrap" onClick={(e) => e.stopPropagation()}>
-                              {displayPlats.slice(0, 5).map((p) => {
+                              {socialPlatforms.slice(0, 5).map((p) => {
                                 const ps = platStatsMap.get(p);
                                 return (
                                   <span key={p} className="inline-flex items-center gap-0.5">
