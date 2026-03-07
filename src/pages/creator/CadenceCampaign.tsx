@@ -115,7 +115,42 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
     d.setDate(d.getDate() + 1);
     return d.toISOString().split("T")[0];
   });
+  const [endDate, setEndDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1 + 30 - 1);
+    return d.toISOString().split("T")[0];
+  });
   const [dailyTime, setDailyTime] = useState("09:00");
+
+  // Keep Duration / Start Date / End Date in sync
+  const handleDurationChange = (newDuration: number) => {
+    const clamped = Math.max(1, Math.min(365, newDuration));
+    setDuration(clamped);
+    const s = new Date(startDate + "T00:00:00");
+    if (!isNaN(s.getTime())) {
+      const e = new Date(s);
+      e.setDate(e.getDate() + clamped - 1);
+      setEndDate(e.toISOString().split("T")[0]);
+    }
+  };
+  const handleStartDateChange = (newStart: string) => {
+    setStartDate(newStart);
+    const s = new Date(newStart + "T00:00:00");
+    if (!isNaN(s.getTime())) {
+      const e = new Date(s);
+      e.setDate(e.getDate() + duration - 1);
+      setEndDate(e.toISOString().split("T")[0]);
+    }
+  };
+  const handleEndDateChange = (newEnd: string) => {
+    setEndDate(newEnd);
+    const s = new Date(startDate + "T00:00:00");
+    const e = new Date(newEnd + "T00:00:00");
+    if (!isNaN(s.getTime()) && !isNaN(e.getTime())) {
+      const diff = Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      setDuration(Math.max(1, Math.min(365, diff)));
+    }
+  };
 
   // Voice profile
   const [useVoiceProfile, setUseVoiceProfile] = useState(true);
@@ -1098,7 +1133,7 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
                 min={1}
                 max={365}
                 value={duration}
-                onChange={(e) => setDuration(Math.max(1, parseInt(e.target.value) || 1))}
+                onChange={(e) => handleDurationChange(parseInt(e.target.value) || 1)}
                 className="h-9 text-sm"
               />
             </div>
@@ -1107,19 +1142,28 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
               <Input
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => handleStartDateChange(e.target.value)}
                 className="h-9 text-sm"
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Daily Post Time</label>
+              <label className="text-xs text-muted-foreground mb-1 block">End Date</label>
               <Input
-                type="time"
-                value={dailyTime}
-                onChange={(e) => setDailyTime(e.target.value)}
+                type="date"
+                value={endDate}
+                onChange={(e) => handleEndDateChange(e.target.value)}
                 className="h-9 text-sm"
               />
             </div>
+          </div>
+          <div className="max-w-[calc(33.333%-0.5rem)]">
+            <label className="text-xs text-muted-foreground mb-1 block">Daily Post Time</label>
+            <Input
+              type="time"
+              value={dailyTime}
+              onChange={(e) => setDailyTime(e.target.value)}
+              className="h-9 text-sm"
+            />
           </div>
 
           {/* Platform selector */}
