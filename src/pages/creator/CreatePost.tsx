@@ -148,6 +148,7 @@ export default function CreatePost({ noLayout }: { noLayout?: boolean } = {}) {
 
   /* ── Post logic ── */
   const executePost = async (immediate: boolean) => {
+    console.log("[PostNow] handler fired, immediate:", immediate);
     if (!user?.id || !caption.trim()) { toast.error("Enter a caption."); return; }
     const selectedPlatforms = Array.from(selected) as UploadPostPlatform[];
     if (selectedPlatforms.length === 0) { toast.error("Select at least one platform."); return; }
@@ -155,6 +156,7 @@ export default function CreatePost({ noLayout }: { noLayout?: boolean } = {}) {
     setPosting(true);
     try {
       const upUser = await resolveUploadPostUsername(user.id);
+      console.log("[PostNow] resolved UploadPost user:", upUser, "platforms:", selectedPlatforms);
       const scheduled = (!immediate && scheduledDate) ? new Date(scheduledDate).toISOString() : undefined;
       const result = await createUploadPost({
         text: caption.trim(),

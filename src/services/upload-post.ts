@@ -396,6 +396,7 @@ export interface CreatePostResult {
 export async function createUploadPost(
   opts: CreatePostOptions
 ): Promise<CreatePostResult> {
+  console.log("[createUploadPost] called with:", { text: opts.text?.slice(0, 50), user: opts.user, platforms: opts.platforms, media_url: opts.media_url, media_type: opts.media_type });
   const hasMedia = !!opts.media_url?.trim();
   const isVideo = hasMedia && opts.media_type === "video";
 

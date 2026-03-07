@@ -13,7 +13,8 @@ import {
   Send,
 } from "lucide-react";
 import { toast } from "sonner";
-import { createUploadPost } from "@/services/upload-post";
+import { createUploadPost, type UploadPostPlatform } from "@/services/upload-post";
+import { resolveUploadPostUsername } from "@/lib/upload-post-sync";
 
 interface DraftRow {
   id: string;
@@ -70,20 +71,28 @@ export default function BrandDrafts() {
   };
 
   const handlePublish = async (draft: DraftRow) => {
-    if (!draft.account_ids?.length) {
-      toast.error("No platform accounts linked to this draft");
+    if (!draft.platforms?.length) {
+      toast.error("No platforms selected for this draft");
       return;
     }
     if (!draft.caption?.trim()) {
       toast.error("Draft has no caption");
       return;
     }
+    if (!user?.id) {
+      toast.error("Not logged in");
+      return;
+    }
     setPublishingId(draft.id);
     try {
+      const upUser = await resolveUploadPostUsername(user.id);
+      console.log("[BrandDrafts] Publishing draft", draft.id, "user:", upUser, "platforms:", draft.platforms);
       const result = await createUploadPost({
         text: draft.caption,
-        account_ids: draft.account_ids,
+        user: upUser,
+        platforms: draft.platforms as UploadPostPlatform[],
         media_url: draft.media_url || undefined,
+        media_type: (draft.media_type === "video" || draft.media_type === "photo") ? draft.media_type : undefined,
       });
       if (result.success) {
         await supabase.from("post_drafts").delete().eq("id", draft.id);
@@ -247,7 +256,7 @@ export default function BrandDrafts() {
                     size="sm"
                     className="h-8 text-xs gap-1.5 bg-[#1B3A6B] hover:bg-[#152d54] text-white"
                     onClick={() => handlePublish(draft)}
-                    disabled={isPublishing || !draft.account_ids?.length}
+                    disabled={isPublishing || !draft.platforms?.length}
                   >
                     {isPublishing ? (
                       <Loader2 className="h-3 w-3 animate-spin" />
