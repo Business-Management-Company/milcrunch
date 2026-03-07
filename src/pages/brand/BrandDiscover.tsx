@@ -186,9 +186,9 @@ function extractFromEnrichment(data: EnrichedProfileResponse): Partial<CreatorCa
   if (erVal > 0) partial.engagementRate = Number(erVal.toFixed(2));
 
   const creatorHas = result.creator_has as Record<string, boolean> | undefined;
+  const platforms: string[] = [];
   if (creatorHas && typeof creatorHas === "object") {
-    const platforms: string[] = [];
-    // Add each platform the creator has (don't hardcode instagram — it may not be their platform)
+    // Add each platform the creator has
     if (creatorHas.instagram) platforms.push("instagram");
     if (creatorHas.tiktok) platforms.push("tiktok");
     if (creatorHas.youtube) platforms.push("youtube");
@@ -197,8 +197,22 @@ function extractFromEnrichment(data: EnrichedProfileResponse): Partial<CreatorCa
     if (creatorHas.linkedin) platforms.push("linkedin");
     if (creatorHas.twitch) platforms.push("twitch");
     if (creatorHas.podcast) platforms.push("podcast");
-    // If creator_has exists but no platforms were truthy, fall back to instagram
-    if (platforms.length === 0) platforms.push("instagram");
+  }
+  // Also detect platforms from actual data keys in the enrichment result
+  // (creator_has is often incomplete — IC RAW endpoint may not return all flags)
+  const ENRICH_PLATFORM_KEYS = ["instagram", "tiktok", "youtube", "twitter", "facebook", "linkedin"];
+  for (const p of ENRICH_PLATFORM_KEYS) {
+    if (!platforms.includes(p)) {
+      const pd = result[p];
+      if (pd && typeof pd === "object") {
+        const d = pd as Record<string, unknown>;
+        if (d.username || d.handle || d.follower_count || d.subscriber_count) {
+          platforms.push(p);
+        }
+      }
+    }
+  }
+  if (platforms.length > 0) {
     partial.socialPlatforms = platforms;
   }
 
