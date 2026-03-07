@@ -436,7 +436,7 @@ Remember: Most veterans are telling the truth. Give them the benefit of the doub
 
   try {
     const { json: data } = await fetchAnthropicWithRetry({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-5-20250929",
       max_tokens: 4096,
       system: systemPrompt,
       messages: [{ role: "user", content: "Please perform the verification analysis and provide your assessment." }],
@@ -596,7 +596,7 @@ Respond with ONLY this JSON structure (no other text):
 
   try {
     const { json: data } = await fetchAnthropicWithRetry({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-5-20250929",
       max_tokens: 8192,
       system: systemPrompt,
       messages: [{ role: "user", content: prompt }],
@@ -1312,7 +1312,7 @@ ${params.aiAnalysis.slice(0, 2000)}`;
 
   try {
     const { json: data } = await fetchAnthropicWithRetry({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-5-20250929",
       max_tokens: 2048,
       messages: [{ role: "user", content: prompt }],
     });
@@ -1539,7 +1539,7 @@ ${params.serpSnippets.slice(0, 3000)}${params.notesField ? `\n\nADDITIONAL NOTES
 
   try {
     const { json: data } = await fetchAnthropicWithRetry({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-5-20250929",
       max_tokens: 3000,
       messages: [{ role: "user", content: prompt }],
     });
@@ -1577,7 +1577,7 @@ VERIFICATION ANALYSIS:
 ${params.aiAnalysis.slice(0, 6000)}`;
 
   const { json: data } = await fetchAnthropicWithRetry({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-4-5-20250929",
     max_tokens: 3000,
     messages: [{ role: "user", content: prompt }],
   });

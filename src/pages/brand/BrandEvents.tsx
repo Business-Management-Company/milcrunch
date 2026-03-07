@@ -188,7 +188,7 @@ const BrandEvents = () => {
         method: "POST",
         headers: { "Content-Type": "application/json", "anthropic-version": "2023-06-01" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-sonnet-4-5-20250929",
           max_tokens: 1024,
           system: `You are a helpful event strategy assistant for MilCrunch, a military and veteran event management platform. The user manages the following events:\n\n${JSON.stringify(eventsContext, null, 2)}\n\nToday's date is ${format(new Date(), "MMMM d, yyyy")}. Answer concisely and actionably. Use bullet points when listing. If you reference an event, use its exact title.`,
           messages: [{ role: "user", content: q }],

@@ -133,7 +133,7 @@ const CONTENT_TYPE_ICONS: Record<string, React.ReactNode> = {
 };
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
-const MODEL = "claude-sonnet-4-20250514";
+const MODEL = "claude-sonnet-4-5-20250929";
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */

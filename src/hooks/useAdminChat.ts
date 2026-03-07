@@ -5,7 +5,7 @@ import { getRoleChatConfig, type ChatRole } from "@/lib/ai-chat-roles";
 import { getAgentContext } from "@/lib/ai-agent-context";
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
-const MODEL = "claude-sonnet-4-20250514";
+const MODEL = "claude-sonnet-4-5-20250929";
 
 export interface ChatMessage {
   id: string;

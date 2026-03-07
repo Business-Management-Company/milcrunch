@@ -2435,7 +2435,7 @@ No markdown formatting, just the JSON array.`;
           "anthropic-version": "2023-06-01",
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-sonnet-4-5-20250929",
           max_tokens: 2048,
           messages: [{ role: "user", content: prompt }],
         }),

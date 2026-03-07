@@ -97,7 +97,7 @@ const CreatorAIChat = forwardRef<CreatorAIChatRef>(function CreatorAIChat(_, ref
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-sonnet-4-5-20250929",
           max_tokens: 800,
           system: CREATOR_SYSTEM_PROMPT,
           messages: trimmed,

@@ -74,7 +74,7 @@ export default function AIBannerModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-sonnet-4-5-20250929",
           max_tokens: 500,
           system:
             "You are an expert at writing DALL-E 3 image generation prompts for military event banners. Write vivid, detailed prompts that produce professional, high-quality event imagery. Respond with ONLY the prompt text, no explanation or preamble.",
