@@ -17,6 +17,7 @@ import {
   CalendarDays,
   List,
   Settings,
+  Plug,
   HelpCircle,
   LogOut,
   Menu,
@@ -63,6 +64,7 @@ const SECTIONS: { label: string; items: NavItem[] }[] = [
     label: "SETTINGS",
     items: [
       { icon: Settings, label: "Settings", href: "/creator/settings" },
+      { icon: Plug, label: "Integrations", href: "/creator/integrations" },
       { icon: HelpCircle, label: "Help", href: "/creator/help" },
     ],
   },
@@ -178,17 +180,6 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
       {/* Bottom area */}
       <div className="p-3 border-t border-white/10 space-y-1">
         <ThemeToggle variant="sidebar" />
-        {bioUrl && (
-          <a
-            href={bioUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 w-full rounded-lg px-3 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
-          >
-            <ExternalLink className="h-4 w-4" />
-            View My Bio Page
-          </a>
-        )}
         <Button
           variant="ghost"
           className="w-full justify-start text-white/70 hover:text-white hover:bg-white/5"
