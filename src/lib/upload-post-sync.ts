@@ -63,18 +63,22 @@ export async function syncConnectedAccountsFromUploadPost(userId: string): Promi
   console.log("[SYNC] Starting sync for userId:", userId);
   console.log("=".repeat(60));
 
-  // ── Step 1: Try single-user endpoint ──
-  console.log("[SYNC] Step 1: Trying GET /api/uploadposts/users/{username}...");
-  let profile = await getUploadPostUser(userId);
-  console.log("[SYNC] Step 1 result — profile:", profile ? "found" : "null");
+  // ── Step 1: Resolve the UploadPost slug (may differ from Supabase UUID) ──
+  const upSlug = await resolveUploadPostUsername(userId);
+  console.log("[SYNC] Resolved UploadPost slug:", upSlug);
 
-  // ── Step 2: Fallback to list endpoint ──
+  // ── Step 2: Try single-user endpoint with resolved slug ──
+  console.log("[SYNC] Step 2: Trying GET /api/uploadposts/users/{username}...");
+  let profile = await getUploadPostUser(upSlug);
+  console.log("[SYNC] Step 2 result — profile:", profile ? "found" : "null");
+
+  // ── Step 3: Fallback to list endpoint ──
   if (!profile) {
-    console.log("[SYNC] Step 2: Falling back to GET /api/uploadposts/users (list all)...");
+    console.log("[SYNC] Step 3: Falling back to GET /api/uploadposts/users (list all)...");
     const users = await listUploadPostUsers();
-    console.log("[SYNC] Step 2 — total users:", users.length);
-    profile = users.find((u) => u.username === userId) ?? null;
-    console.log("[SYNC] Step 2 found matching profile:", profile ? "yes" : "no");
+    console.log("[SYNC] Step 3 — total users:", users.length);
+    profile = users.find((u) => u.username === upSlug) ?? null;
+    console.log("[SYNC] Step 3 found matching profile:", profile ? "yes" : "no");
   }
 
   if (!profile) {
@@ -237,19 +241,65 @@ export async function seedDemoConnectedAccounts(userId: string): Promise<Connect
   return seeded.length > 0 ? seeded : buildFallbackRows(userId);
 }
 
-/** Ensure Upload-Post profile exists for this user; create if not. */
-export async function ensureUploadPostProfile(userId: string): Promise<{ ok: boolean; error?: string }> {
-  const users = await listUploadPostUsers();
-  if (users.some((u) => u.username === userId)) return { ok: true };
-  const result = await createUploadPostProfile(userId);
-  if (result.error) {
-    const msg = result.error.toLowerCase();
-    if (msg.includes("already in use") || msg.includes("already exists")) {
-      return { ok: true };
-    }
-    return { ok: false, error: result.error };
+/**
+ * Resolve the UploadPost profile username/slug for a Supabase user.
+ * UploadPost profiles may have been created with a custom slug (e.g. "johnny-rocket")
+ * rather than the Supabase UUID. This function finds the correct slug and caches it.
+ */
+export async function resolveUploadPostUsername(supabaseUserId: string): Promise<string> {
+  // 1. Check localStorage cache for instant return
+  const cacheKey = `up_slug_${supabaseUserId}`;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) {
+    console.log("[UploadPost] Resolved slug from cache:", cached);
+    return cached;
   }
-  return { ok: true };
+
+  // 2. List all UploadPost profiles
+  const users = await listUploadPostUsers();
+  console.log("[UploadPost] Listed profiles:", users.length, "usernames:", users.map((u) => u.username));
+
+  // 3. Try exact UUID match first
+  const byUuid = users.find((u) => u.username === supabaseUserId);
+  if (byUuid) {
+    console.log("[UploadPost] Found profile by UUID:", byUuid.username);
+    localStorage.setItem(cacheKey, byUuid.username);
+    return byUuid.username;
+  }
+
+  // 4. No UUID match — try to create a profile with the UUID
+  console.log("[UploadPost] No UUID match. Attempting to create profile with UUID:", supabaseUserId);
+  const createResult = await createUploadPostProfile(supabaseUserId);
+  if (!createResult.error) {
+    console.log("[UploadPost] Created new profile with UUID:", supabaseUserId);
+    localStorage.setItem(cacheKey, supabaseUserId);
+    return supabaseUserId;
+  }
+
+  // 5. Creation failed — use the first existing profile as fallback
+  //    (covers single-creator setups where profile was created manually)
+  if (users.length > 0) {
+    const fallback = users[0].username;
+    console.log("[UploadPost] Creation failed, using existing profile as fallback:", fallback);
+    localStorage.setItem(cacheKey, fallback);
+    return fallback;
+  }
+
+  // 6. No profiles at all and creation failed — return UUID as last resort
+  console.warn("[UploadPost] No profiles found and creation failed. Using UUID:", supabaseUserId);
+  return supabaseUserId;
+}
+
+/** Ensure Upload-Post profile exists for this user; create if not.
+ *  Returns the resolved UploadPost username/slug. */
+export async function ensureUploadPostProfile(userId: string): Promise<{ ok: boolean; username: string; error?: string }> {
+  try {
+    const username = await resolveUploadPostUsername(userId);
+    return { ok: true, username };
+  } catch (err) {
+    console.error("[UploadPost] ensureUploadPostProfile failed:", err);
+    return { ok: false, username: userId, error: (err as Error).message };
+  }
 }
 
 /** Sync aggregated stats from connected_accounts into featured_creators rows for this creator. */

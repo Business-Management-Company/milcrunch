@@ -20,6 +20,7 @@ import {
   syncConnectedAccountsFromUploadPost,
   getConnectedAccounts,
   ensureUploadPostProfile,
+  resolveUploadPostUsername,
   syncDirectoryMemberStats,
   type ConnectedAccountRow,
 } from "@/lib/upload-post-sync";
@@ -88,6 +89,7 @@ const CreatorSocials = () => {
   const [syncing, setSyncing] = useState(false);
   const [disconnectDialogOpen, setDisconnectDialogOpen] = useState(false);
   const [disconnectAccount, setDisconnectAccount] = useState<ConnectedAccountRow | null>(null);
+  const [upSlug, setUpSlug] = useState<string | null>(null);
   const initDone = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -159,8 +161,11 @@ const CreatorSocials = () => {
     console.log("[CreatorSocials] Mount — starting auto-sync for", userId);
     setLoading(true);
 
-    // Ensure profile exists (fire-and-forget, don't block sync)
-    ensureUploadPostProfile(userId).catch(() => {});
+    // Resolve UploadPost slug and store it for connect calls
+    ensureUploadPostProfile(userId).then((result) => {
+      console.log("[CreatorSocials] Resolved UploadPost slug:", result.username);
+      setUpSlug(result.username);
+    }).catch(() => {});
 
     // Sync immediately
     syncAccounts().finally(() => setLoading(false));
@@ -177,7 +182,7 @@ const CreatorSocials = () => {
   }, [userId, syncAccounts]);
 
   /* ── Open popup for a specific platform ── */
-  const handleConnect = useCallback((provider: string) => {
+  const handleConnect = useCallback(async (provider: string) => {
     if (!userId) {
       toast.error("Please sign in first.");
       return;
@@ -192,9 +197,14 @@ const CreatorSocials = () => {
       return;
     }
     setConnecting(true);
-    console.log("[CreatorSocials] handleConnect — provider:", provider, "userId:", userId, "redirectUrl:", REDIRECT_URL);
+
+    // Resolve the UploadPost slug (use cached value or fetch fresh)
+    const slug = upSlug ?? await resolveUploadPostUsername(userId);
+    if (!upSlug) setUpSlug(slug);
+    console.log("[CreatorSocials] handleConnect — provider:", provider, "slug:", slug, "redirectUrl:", REDIRECT_URL);
+
     generateConnectUrl({
-      userId,
+      userId: slug,
       redirectUrl: REDIRECT_URL,
       provider,
     }).then((res) => {
@@ -230,7 +240,7 @@ const CreatorSocials = () => {
       popup.close();
       toast.error("Could not generate connect link");
     });
-  }, [userId, syncAccounts]);
+  }, [userId, upSlug, syncAccounts]);
 
   /* ── Disconnect with confirmation ── */
   const confirmDisconnect = async () => {
@@ -245,7 +255,7 @@ const CreatorSocials = () => {
       .eq("user_id", userId)
       .eq("platform", disconnectAccount.platform);
     toast.success("Account disconnected");
-    await loadAccounts();
+    await refreshAccountsFromDB();
     setDisconnectDialogOpen(false);
     setDisconnectAccount(null);
   };
