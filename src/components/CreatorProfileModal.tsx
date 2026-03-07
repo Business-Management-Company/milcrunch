@@ -652,21 +652,23 @@ export default function CreatorProfileModal({
 
     // Query A: directory_members record for this creator
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('directory_members')
         .select('*')
-        .ilike('full_name', `%${creator.name?.split(' ')[0] || 'patriotic'}%`)
+        .ilike('creator_name', `%${creator.name?.split(' ')[0] || 'patriotic'}%`)
         .limit(1);
       console.log('FULL RECORD:', JSON.stringify(data, null, 2));
+      if (error) console.log('QUERY A ERROR:', error);
     })();
 
-    // Query B: social fields sample from directory_members
+    // Query B: social-related fields sample from directory_members
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('directory_members')
-        .select('instagram_handle, tiktok_handle, youtube_handle, twitter_handle, facebook_url, linkedin_url, instagram_followers, tiktok_followers, youtube_subscribers, twitter_followers, total_followers, platforms, social_links, social_accounts')
+        .select('creator_name, creator_handle, platform, platforms, platform_urls, follower_count, engagement_rate, enrichment_data, linkedin_url')
         .limit(3);
       console.log('SOCIAL FIELDS SAMPLE:', JSON.stringify(data, null, 2));
+      if (error) console.log('QUERY B ERROR:', error);
     })();
     // ── END TEMPORARY DEBUG ──
 
