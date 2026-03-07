@@ -849,10 +849,8 @@ export default function CreatorBioEditor() {
                     <span className="text-[10px] text-muted-foreground/70">PNG, JPG up to 10MB</span>
                   </button>
                   {heroImageUrl && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs h-7 text-destructive hover:text-destructive"
+                    <button
+                      className="text-xs font-medium text-red-600 hover:text-red-700 hover:underline transition-colors mt-1"
                       onClick={() => {
                         setHeroImageUrl(null);
                         setHeroDominantColor(null);
@@ -860,7 +858,7 @@ export default function CreatorBioEditor() {
                       }}
                     >
                       Remove hero image
-                    </Button>
+                    </button>
                   )}
                   {heroDominantColor && (
                     <div className="flex items-center gap-1.5">
@@ -1529,35 +1527,61 @@ export default function CreatorBioEditor() {
                     ...phoneScreenBg,
                   }}
                 >
-                  {/* Hero image */}
-                  {heroImageUrl && theme.showHeroImage && (
-                    <div className="w-full overflow-hidden" style={{ height: heroImageFormat === "portrait" ? "170px" : heroImageFormat === "square" ? "136px" : "102px" }}>
-                      <img src={heroImageUrl} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  )}
-
-                  {/* Profile header */}
-                  <div className={`px-4 ${heroImageUrl && theme.showHeroImage ? "pt-3" : "pt-12"} pb-2.5 flex flex-col items-center`}>
-                    {/* Avatar — 54px circular */}
-                    {theme.showProfileImage && avatarUrl ? (
-                      <img src={avatarUrl} alt="" className="h-[54px] w-[54px] rounded-full object-cover shadow-sm" style={{ border: `2px solid ${theme.themeColor}` }} />
-                    ) : theme.showProfileImage ? (
-                      <div className="h-[54px] w-[54px] rounded-full flex items-center justify-center text-lg font-semibold" style={{ backgroundColor: isDark ? "#2d3548" : "#e5e7eb", color: phoneSubtext }}>
-                        {(displayName || "?")[0].toUpperCase()}
+                  {/* Hero + Avatar composite header */}
+                  {(() => {
+                    const heroVisible = !!(heroImageUrl && theme.showHeroImage);
+                    const avatarVisible = theme.showProfileImage;
+                    /* Hero height: 160px when visible */
+                    /* Avatar: overlaps hero at top 130px (centered), so bottom of avatar at ~190px */
+                    /* When no hero: avatar sits at top with padding */
+                    const headerHeight = heroVisible
+                      ? (avatarVisible ? 200 : 168) /* 160 hero + avatar overlap + gap */
+                      : (avatarVisible ? 100 : 40);  /* just top padding + avatar */
+                    return (
+                      <div className="relative w-full" style={{ height: headerHeight }}>
+                        {/* Hero banner — absolute top */}
+                        {heroVisible && (
+                          <div className="absolute top-0 left-0 right-0 overflow-hidden" style={{ height: 160 }}>
+                            <img src={heroImageUrl!} alt="" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        {/* Avatar — overlapping hero or top-center */}
+                        {avatarVisible && (
+                          <div
+                            className="absolute left-1/2 -translate-x-1/2 z-[2]"
+                            style={{ top: heroVisible ? 130 : 28 }}
+                          >
+                            {avatarUrl ? (
+                              <img
+                                src={avatarUrl}
+                                alt=""
+                                className="h-[60px] w-[60px] rounded-full object-cover shadow-md"
+                                style={{ border: "3px solid #ffffff" }}
+                              />
+                            ) : (
+                              <div
+                                className="h-[60px] w-[60px] rounded-full flex items-center justify-center text-lg font-semibold shadow-md"
+                                style={{ backgroundColor: isDark ? "#2d3548" : "#e5e7eb", color: phoneSubtext, border: "3px solid #ffffff" }}
+                              >
+                                {(displayName || "?")[0].toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    ) : null}
-                    {/* Name — 15px bold */}
-                    <h3 className="mt-2 font-bold leading-tight" style={{ fontSize: "15px", color: phoneText, fontFamily: theme.fontFamily }}>
+                    );
+                  })()}
+
+                  {/* Name / Username / Badge / Bio — below composite header */}
+                  <div className="px-4 pb-2.5 flex flex-col items-center">
+                    <h3 className="font-bold leading-tight" style={{ fontSize: "15px", color: phoneText, fontFamily: theme.fontFamily }}>
                       {displayName || "Your Name"}
                     </h3>
-                    {/* Username — 11px gray */}
                     <p className="mt-0.5" style={{ fontSize: "11px", color: phoneSubtext }}>@{handle || "username"}</p>
-                    {/* Certified Voice badge */}
                     <div className="flex items-center gap-1 mt-1.5 px-2.5 py-0.5 rounded-full border" style={{ borderColor: theme.themeColor, color: theme.themeColor }}>
                       <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
                       <span className="text-[10px] font-medium">Certified Voice</span>
                     </div>
-                    {/* Bio */}
                     {profileBio && (
                       <p className="text-[11px] mt-1.5 text-center max-w-[240px] leading-relaxed line-clamp-3" style={{ color: phoneSubtext }}>
                         {profileBio}
