@@ -16,7 +16,7 @@ import { useNavigate } from "react-router-dom";
 import { PlatformIcon } from "@/lib/platform-icons";
 
 const ALL_PLATFORMS = [
-  "instagram", "facebook", "twitter", "linkedin",
+  "instagram", "facebook", "x", "linkedin",
   "tiktok", "youtube", "threads", "pinterest",
   "reddit", "bluesky", "google_business",
 ];

@@ -29,7 +29,7 @@ const GoogleDriveIcon = ({ className }: { className?: string }) => (
 
 /* All platforms that could be connected */
 const ALL_PLATFORMS = [
-  "instagram", "facebook", "twitter", "linkedin",
+  "instagram", "facebook", "x", "linkedin",
   "tiktok", "youtube", "threads", "pinterest",
   "reddit", "bluesky", "google_business",
 ];
