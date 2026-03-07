@@ -587,53 +587,10 @@ export default function CreatorProfileModal({
       return;
     }
 
-    // Use cached enrichment from background enrichment if available,
-    // but validate the data actually belongs to this creator.
-    // NOTE: BrandDiscover background enrichment uses RAW (0.03cr) which may lack
-    // creator_has. Show it immediately, then kick off a background FULL enrichment
-    // if creator_has is missing so multi-platform detection works.
-    if (cachedEnrichment) {
-      const cachedUsername = (cachedEnrichment.instagram?.username as string)?.toLowerCase();
-      if (cachedUsername && cachedUsername !== handle.toLowerCase()) {
-        console.warn("[Enrich] Cached enrichment username mismatch:", cachedUsername, "vs", handle, "— skipping cache");
-        // Don't use mismatched cached data — fall through to fresh fetch
-      } else {
-        console.log("[Enrich] Using prop-cached enrichment for:", handle, "| has creator_has:", !!cachedEnrichment.result?.creator_has);
-        setEnriched(cachedEnrichment);
-        setEnrichmentLoading(false);
-        setError(null);
-        setEnrichmentSource("prop");
-        // If cached data lacks creator_has (RAW enrichment), silently fetch FULL
-        // in background to get multi-platform flags, then update enriched state.
-        if (!cachedEnrichment.result?.creator_has) {
-          console.log("[Enrich] Prop-cached enrichment lacks creator_has — fetching FULL enrichment in background");
-          const bgController = new AbortController();
-          enrichCreatorProfile(handle, bgController.signal, "instagram", true)
-            .then((fullPayload) => {
-              if (fullPayload) {
-                console.log("[Enrich] Background FULL enrichment completed for:", handle, "creator_has:", fullPayload.result?.creator_has);
-                setEnriched(fullPayload);
-                setEnrichmentSource("api");
-                setEnrichCache(handle, "instagram", fullPayload);
-              }
-            })
-            .catch((err) => {
-              if ((err as Error)?.name !== "AbortError") {
-                console.warn("[Enrich] Background FULL enrichment failed:", err);
-              }
-            });
-          // Cleanup: abort if modal closes
-          controllerRef.current = bgController;
-        }
-        return () => { controllerRef.current?.abort(); controllerRef.current = null; };
-      }
-    }
-
+    // ── Fast enrichment: show any cached data immediately, fetch FULL in parallel ──
     console.log("[Enrich] useEffect fired, username:", handle);
 
     cancelledRef.current = false;
-
-    // Cancel any in-flight request from a previous run (e.g. deps changed)
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
@@ -645,10 +602,59 @@ export default function CreatorProfileModal({
 
     const platform = "instagram";
 
-    // Helper: fetch from IC API and update state
-    const fetchFromApi = async (showLoading: boolean) => {
+    // Validate that returned enrichment belongs to this creator
+    const validatePayload = (payload: EnrichedProfileResponse | null): boolean => {
+      if (!payload) return false;
+      const returnedUsername = (payload.instagram?.username as string)?.toLowerCase();
+      if (returnedUsername && returnedUsername !== handle.toLowerCase()) {
+        console.warn(`[Enrich] API returned profile for "${returnedUsername}" but requested "${handle}" — discarding`);
+        return false;
+      }
+      return true;
+    };
+
+    (async () => {
+      // ── Step 1: Show best available cached data immediately ──
+      // Try prop cache (from BrandDiscover background enrichment) first
+      let hasShownData = false;
+      if (cachedEnrichment) {
+        const cachedUsername = (cachedEnrichment.instagram?.username as string)?.toLowerCase();
+        if (!cachedUsername || cachedUsername === handle.toLowerCase()) {
+          console.log("[Enrich] Showing prop-cached enrichment for:", handle, "| has creator_has:", !!cachedEnrichment.result?.creator_has);
+          setEnriched(cachedEnrichment);
+          setEnrichmentLoading(false);
+          setEnrichmentSource("prop");
+          hasShownData = true;
+        }
+      }
+
+      // Also check Supabase cache — it may have richer FULL data
+      if (!hasShownData) {
+        const dbCached = await getEnrichCache(handle, platform, creator?.name || undefined);
+        if (cancelledRef.current || generationRef.current !== gen) return;
+        if (dbCached) {
+          console.log("[Enrich] Supabase cache hit for:", handle, "| has creator_has:", !!dbCached.result?.creator_has);
+          setEnriched(dbCached);
+          setEnrichmentLoading(false);
+          setEnrichmentSource("cache");
+          hasShownData = true;
+          // If cached data already has creator_has, skip the FULL API call
+          if (dbCached.result?.creator_has) {
+            console.log("[Enrich] Supabase cache has creator_has — skipping API call");
+            return;
+          }
+        }
+      } else if (cachedEnrichment?.result?.creator_has) {
+        // Prop cache already has creator_has — no need to fetch FULL
+        console.log("[Enrich] Prop cache has creator_has — skipping API call");
+        return;
+      }
+
+      // ── Step 2: Fetch FULL enrichment from API (in background if we already have data) ──
+      const showLoading = !hasShownData;
       if (showLoading) setEnrichmentLoading(true);
-      console.log("[Enrich] Calling IC API for:", handle);
+      console.log("[Enrich] Calling FULL IC API for:", handle, showLoading ? "(with loading)" : "(background)");
+
       const timeoutId = setTimeout(() => {
         console.log("[Enrich] TIMEOUT: Aborting after 45 seconds");
         controller.abort();
@@ -659,70 +665,42 @@ export default function CreatorProfileModal({
         clearTimeout(timeoutId);
         if (cancelledRef.current || generationRef.current !== gen) return;
 
-        // Validate the returned profile belongs to the requested creator
-        const returnedUsername = (payload?.instagram?.username as string)?.toLowerCase();
-        if (returnedUsername && returnedUsername !== handle.toLowerCase()) {
-          console.warn(`[Enrich] API returned profile for "${returnedUsername}" but requested "${handle}" — discarding`);
+        if (!validatePayload(payload)) {
           if (showLoading) {
             setEnrichmentLoading(false);
-            setEnriched(null);
-            setError(null);
-            setEnrichmentTimedOut(true);
+            if (!hasShownData) setEnrichmentTimedOut(true);
           }
           return;
         }
 
+        console.log("[Enrich] FULL enrichment completed for:", handle, "creator_has:", payload!.result?.creator_has);
         setEnrichmentLoading(false);
         setEnriched(payload);
         setError(null);
         setEnrichmentSource("api");
 
-        // Save to Supabase cache for future lookups
-        if (payload) {
-          setEnrichCache(handle, platform, payload);
-        }
+        // Save to Supabase cache
+        if (payload) setEnrichCache(handle, platform, payload);
       } catch (err) {
         clearTimeout(timeoutId);
         if (cancelledRef.current || generationRef.current !== gen) return;
         if (showLoading) {
           setEnrichmentLoading(false);
           if ((err as Error)?.name === "AbortError") {
-            setEnriched(null);
-            setEnrichmentTimedOut(true);
+            if (!hasShownData) setEnrichmentTimedOut(true);
             console.log("[Enrich] Request aborted (timeout or modal closed)");
           } else {
             console.error("[Enrich] Failed:", err);
-            setEnriched(null);
-            setEnrichmentTimedOut(true);
+            if (!hasShownData) setEnrichmentTimedOut(true);
           }
         }
       }
-    };
-
-    // Check Supabase cache first, show instantly if available, then refresh in background
-    (async () => {
-      const cached = await getEnrichCache(handle, platform, creator?.name || undefined);
-      if (cancelledRef.current || generationRef.current !== gen) return;
-
-      if (cached) {
-        console.log("[Enrich] Supabase cache hit for:", handle);
-        setEnriched(cached);
-        setEnrichmentLoading(false);
-        setEnrichmentSource("cache");
-        // Background refresh — don't show loading spinner, silently update data
-        fetchFromApi(false);
-        return;
-      }
-
-      // Cache miss — fetch from API with loading indicator
-      await fetchFromApi(true);
     })();
 
     return () => {
       cancelledRef.current = true;
       controllerRef.current?.abort();
       controllerRef.current = null;
-      // Do NOT set generationRef.current = 0 — it causes the winning request's .then to see gen !== ref and skip setEnriched (e.g. after Strict Mode first cleanup)
     };
   }, [open, creator?.id, creator?.username, username, cachedEnrichment]);
 
@@ -1911,6 +1889,20 @@ export default function CreatorProfileModal({
               </button>
             );
           })}
+          {/* Skeleton chips while enrichment is loading more platforms */}
+          {(enrichmentLoading || platformEnrichmentLoading.size > 0) && (
+            <>
+              {[1, 2].map((i) => (
+                <div key={`skel-${i}`} className="flex items-center gap-2 rounded-xl border-2 border-transparent bg-gray-100 dark:bg-gray-800 px-3 py-1.5 animate-pulse">
+                  <Skeleton className="h-5 w-5 rounded-full" />
+                  <div className="text-left min-w-0">
+                    <Skeleton className="h-3.5 w-14 rounded" />
+                    <Skeleton className="h-2.5 w-10 rounded mt-1" />
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
         </div>
 
         <div className="flex h-full flex-col md:flex-row overflow-hidden min-h-0">
