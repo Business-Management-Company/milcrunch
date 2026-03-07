@@ -190,10 +190,10 @@ const DESIGN_ITEMS: { id: DesignSubTab; label: string; icon: React.ComponentType
   { id: "branding", label: "Brand", icon: QrCode },
 ];
 
-/* ── Unified 12-color swatch set (used across all Design sub-tabs) ── */
+/* ── Unified 14-color swatch set (used across all Design sub-tabs) ── */
 const SWATCH_COLORS = [
-  "#000000", "#6B7280", "#991B1B", "#DC2626", "#EA580C", "#CA8A04",
-  "#DB2777", "#7C3AED", "#1E3A8A", "#2563EB", "#0D9488", "#16A34A",
+  "#FFFFFF", "#D1D5DB", "#9CA3AF", "#6B7280", "#000000", "#991B1B", "#DC2626",
+  "#EA580C", "#CA8A04", "#DB2777", "#7C3AED", "#1E3A8A", "#0D9488", "#16A34A",
 ];
 
 /* ── Font options ── */
@@ -210,8 +210,8 @@ const FONT_OPTIONS = [
 const LINK_SHAPES = [
   { value: "pill", label: "Pill", radius: "9999px" },
   { value: "rounded", label: "Rounded", radius: "12px" },
-  { value: "square", label: "Square", radius: "0px" },
-  { value: "squircle", label: "Squircle", radius: "20px" },
+  { value: "square", label: "Square", radius: "2px" },
+  { value: "squircle", label: "Squircle", radius: "18px" },
 ];
 
 /* ── Link style options ── */
@@ -302,7 +302,6 @@ export default function CreatorBioEditor() {
   const [loaded, setLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<EditorTab>("sections");
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("phone");
-  const [previewMode, setPreviewMode] = useState<"edit" | "preview">("preview");
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [pendingTemplate, setPendingTemplate] = useState<TemplateId | null>(null);
@@ -668,14 +667,33 @@ export default function CreatorBioEditor() {
   const phoneText = isDark ? "#ffffff" : "#111827";
   const phoneSubtext = isDark ? "#9ca3af" : "#6b7280";
 
-  /* Screen background — varies by bgMode; dark mode always overrides */
-  const phoneScreenBg: React.CSSProperties = isDark
-    ? { backgroundColor: "#0f1117" }
-    : theme.bgMode === "gradient"
-      ? { background: `linear-gradient(180deg, ${theme.themeColor}33 0%, ${theme.bgColor} 100%)` }
-      : theme.bgMode === "image" && theme.bgImageUrl
-        ? { backgroundImage: `url(${theme.bgImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
-        : { backgroundColor: theme.bgColor };
+  /* Screen background — varies by bgMode; shade and dark mode modify the result */
+  const phoneScreenBg: React.CSSProperties = (() => {
+    if (isDark) return { backgroundColor: "#0f1117" };
+    let base: React.CSSProperties;
+    if (theme.bgMode === "gradient") {
+      base = { background: `linear-gradient(180deg, ${theme.themeColor}33 0%, ${theme.bgColor} 100%)` };
+    } else if (theme.bgMode === "image" && theme.bgImageUrl) {
+      base = { backgroundImage: `url(${theme.bgImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" };
+    } else {
+      base = { backgroundColor: theme.bgColor };
+    }
+    // Apply shade overlays
+    if (theme.shade === "minimal") {
+      // Subtle white overlay — lighten bg slightly
+      base = { ...base, backgroundBlendMode: "lighten" as any };
+      if (base.backgroundColor) {
+        base.backgroundImage = `linear-gradient(rgba(255,255,255,0.10), rgba(255,255,255,0.10))`;
+        base.backgroundBlendMode = undefined;
+        base.background = `linear-gradient(rgba(255,255,255,0.10), rgba(255,255,255,0.10)), ${base.backgroundColor}`;
+        delete base.backgroundColor;
+      }
+    } else if (theme.shade === "light") {
+      // Force light/white background
+      base = { backgroundColor: "#ffffff" };
+    }
+    return base;
+  })();
 
   /* Link rendering helpers */
   const linkRadius = LINK_SHAPES.find((s) => s.value === theme.linkShape)?.radius ?? "9999px";
@@ -686,9 +704,9 @@ export default function CreatorBioEditor() {
       case "outline":
         return { ...base, border: `2px solid ${linkColor}`, color: linkColor, backgroundColor: "transparent" };
       case "soft-shadow":
-        return { ...base, backgroundColor: isDark ? "#1e2433" : "#ffffff", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", color: linkColor };
+        return { ...base, backgroundColor: isDark ? "#1e2433" : "#ffffff", boxShadow: "0 2px 8px rgba(0,0,0,0.12)", color: linkColor };
       case "hard-shadow":
-        return { ...base, backgroundColor: isDark ? "#1e2433" : "#ffffff", boxShadow: `4px 4px 0 0 ${linkColor}`, color: isDark ? "#ffffff" : "#111827" };
+        return { ...base, backgroundColor: isDark ? "#1e2433" : "#ffffff", boxShadow: `4px 4px 0px ${linkColor}`, border: `1px solid ${linkColor}`, color: isDark ? "#ffffff" : "#111827" };
       default: // fill
         return { ...base, backgroundColor: linkColor, color: "#ffffff" };
     }
@@ -1115,7 +1133,7 @@ export default function CreatorBioEditor() {
                   <div data-section="color" ref={(el) => { designSectionRefs.current["color"] = el; }} className="p-4 pb-2">
                     <h3 className="text-sm font-bold text-foreground mb-1">Theme Color</h3>
                     <p className="text-xs text-muted-foreground mb-3">Accent for headings, badges, and buttons.</p>
-                    <div className="grid grid-cols-6 gap-2 mb-3">
+                    <div className="grid grid-cols-7 gap-2 mb-3">
                       {SWATCH_COLORS.map((c) => (
                         <button
                           key={c}
@@ -1123,7 +1141,7 @@ export default function CreatorBioEditor() {
                           className={`h-9 w-9 rounded-full border-2 transition-all mx-auto ${
                             theme.themeColor.toLowerCase() === c.toLowerCase()
                               ? "border-foreground ring-2 ring-foreground/20 scale-110"
-                              : "border-transparent hover:scale-105"
+                              : `${c.toUpperCase() === "#FFFFFF" ? "border-gray-300" : "border-transparent"} hover:scale-105`
                           }`}
                           style={{ backgroundColor: c }}
                         />
@@ -1251,8 +1269,8 @@ export default function CreatorBioEditor() {
                         const previewStyle: React.CSSProperties = { borderRadius: linkRadius };
                         if (s.value === "fill") Object.assign(previewStyle, { backgroundColor: linkColor, color: "#fff" });
                         else if (s.value === "outline") Object.assign(previewStyle, { border: `2px solid ${linkColor}`, color: linkColor, backgroundColor: "transparent" });
-                        else if (s.value === "soft-shadow") Object.assign(previewStyle, { backgroundColor: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", color: linkColor });
-                        else Object.assign(previewStyle, { backgroundColor: "#fff", boxShadow: `4px 4px 0 0 ${linkColor}`, color: "#111827" });
+                        else if (s.value === "soft-shadow") Object.assign(previewStyle, { backgroundColor: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.12)", color: linkColor });
+                        else Object.assign(previewStyle, { backgroundColor: "#fff", boxShadow: `4px 4px 0px ${linkColor}`, border: `1px solid ${linkColor}`, color: "#111827" });
                         return (
                           <button
                             key={s.value}
@@ -1278,7 +1296,7 @@ export default function CreatorBioEditor() {
                   <div data-section="link-color" ref={(el) => { designSectionRefs.current["link-color"] = el; }} className="p-4 pb-2">
                     <h3 className="text-sm font-bold text-foreground mb-1">Link Color</h3>
                     <p className="text-xs text-muted-foreground mb-3">Color for your link buttons.</p>
-                    <div className="grid grid-cols-6 gap-2 mb-3">
+                    <div className="grid grid-cols-7 gap-2 mb-3">
                       {SWATCH_COLORS.map((c) => (
                         <button
                           key={c}
@@ -1286,7 +1304,7 @@ export default function CreatorBioEditor() {
                           className={`h-9 w-9 rounded-full border-2 transition-all mx-auto ${
                             theme.linkColor.toLowerCase() === c.toLowerCase()
                               ? "border-foreground ring-2 ring-foreground/20 scale-110"
-                              : "border-transparent hover:scale-105"
+                              : `${c.toUpperCase() === "#FFFFFF" ? "border-gray-300" : "border-transparent"} hover:scale-105`
                           }`}
                           style={{ backgroundColor: c }}
                         />
@@ -1336,7 +1354,7 @@ export default function CreatorBioEditor() {
                     {/* Solid — unified color swatches + hex */}
                     {theme.bgMode === "solid" && (
                       <div className="space-y-3">
-                        <div className="grid grid-cols-6 gap-2">
+                        <div className="grid grid-cols-7 gap-2">
                           {SWATCH_COLORS.map((c) => (
                             <button
                               key={c}
@@ -1563,7 +1581,7 @@ export default function CreatorBioEditor() {
           {/* ── PHONE PREVIEW ── */}
           <div className="hidden lg:flex flex-1 flex-col items-center bg-muted/20 p-4 overflow-y-auto">
             {/* Device & mode toggles */}
-            <div className="flex items-center justify-between w-full max-w-[600px] mb-4">
+            <div className="flex items-center justify-center w-full max-w-[600px] mb-4">
               <div className="flex items-center gap-0 rounded-full border border-border bg-card p-1">
                 {([
                   { id: "phone" as PreviewDevice, icon: Smartphone, label: "Mobile" },
@@ -1580,10 +1598,6 @@ export default function CreatorBioEditor() {
                     <DIcon className="h-3.5 w-3.5" />{label}
                   </button>
                 ))}
-              </div>
-              <div className="flex items-center gap-0 rounded-full border border-border bg-card p-1">
-                <button onClick={() => setPreviewMode("edit")} className={`px-4 h-[30px] rounded-full text-xs font-medium transition-colors ${previewMode === "edit" ? "bg-[#1B3A6B] text-white" : "text-gray-500 hover:text-foreground"}`}>Edit</button>
-                <button onClick={() => setPreviewMode("preview")} className={`px-4 h-[30px] rounded-full text-xs font-medium transition-colors ${previewMode === "preview" ? "bg-[#1B3A6B] text-white" : "text-gray-500 hover:text-foreground"}`}>Preview</button>
               </div>
             </div>
 
@@ -1647,10 +1661,9 @@ export default function CreatorBioEditor() {
                         if (!entry) return null;
                         const cfg = (section.config ?? {}) as Record<string, any>;
                         const cardBg = theme.cardStyle === "glass" ? (isDark ? "rgba(30,36,51,0.6)" : "rgba(255,255,255,0.7)") : isDark ? "#1e2433" : "#ffffff";
-                        const cardRadius = theme.cardStyle === "square" ? "6px" : "12px";
                         const cardShadow = theme.cardStyle === "shadow" ? "0 2px 8px rgba(0,0,0,0.08)" : theme.cardStyle === "glass" ? "0 0 0 1px rgba(255,255,255,0.1)" : "0 1px 3px rgba(0,0,0,0.04)";
                         const cardBackdrop = theme.cardStyle === "glass" ? "blur(12px)" : undefined;
-                        const cStyle: React.CSSProperties = { borderRadius: cardRadius, backgroundColor: cardBg, boxShadow: cardShadow, backdropFilter: cardBackdrop, padding: "12px" };
+                        const cStyle: React.CSSProperties = { borderRadius: linkRadius, backgroundColor: cardBg, boxShadow: cardShadow, backdropFilter: cardBackdrop, padding: "12px" };
 
                         /* Section Title / Divider */
                         if (section.type === "section_title") {
