@@ -104,26 +104,57 @@ async function resolveCreator(handle: string): Promise<BioCreator | null> {
     .limit(1)
     .maybeSingle();
 
-  if (!profile) return null;
+  if (profile) {
+    return {
+      display_name: (profile.creator_name as string) ?? handle,
+      avatar_url: (profile.avatar_url as string) ?? null,
+      hero_image_url: (profile.avatar_url as string) ?? null,
+      hero_image_format: "landscape" as HeroImageFormat,
+      hero_dominant_color: null,
+      bio_page_theme: "light",
+      bio: (profile.bio as string) || null,
+      category: null,
+      follower_count: null,
+      is_verified: false,
+      links: [],
+      tabs: DEFAULT_TABS.filter((t) => t.visible).sort((a, b) => a.order - b.order),
+      socialAccounts: [],
+      branch: (profile.branch as string) || null,
+      is_verified_veteran: false,
+      service_line: null,
+    };
+  }
 
-  return {
-    display_name: (profile.creator_name as string) ?? handle,
-    avatar_url: (profile.avatar_url as string) ?? null,
-    hero_image_url: (profile.avatar_url as string) ?? null,
-    hero_image_format: "landscape" as HeroImageFormat,
-    hero_dominant_color: null,
-    bio_page_theme: "light",
-    bio: (profile.bio as string) || null,
-    category: null,
-    follower_count: null,
-    is_verified: false,
-    links: [],
-    tabs: DEFAULT_TABS.filter((t) => t.visible).sort((a, b) => a.order - b.order),
-    socialAccounts: [],
-    branch: (profile.branch as string) || null,
-    is_verified_veteran: false,
-    service_line: null,
-  };
+  // Try auth user_metadata via serverless API (handles set during onboarding)
+  try {
+    const res = await fetch(`/api/resolve-handle?handle=${encodeURIComponent(h)}`);
+    if (res.ok) {
+      const data = await res.json();
+      const cl = normalizeCustomLinks(data.custom_links);
+      return {
+        display_name: data.display_name || handle,
+        avatar_url: data.avatar_url || null,
+        hero_image_url: data.hero_image_url || null,
+        hero_image_format: (data.hero_image_format || "landscape") as HeroImageFormat,
+        hero_dominant_color: data.hero_dominant_color || null,
+        bio_page_theme: data.bio_page_theme || "light",
+        bio: data.bio || null,
+        category: data.category || null,
+        follower_count: null,
+        is_verified: false,
+        links: cl.links,
+        tabs: cl.tabs.length > 0 ? cl.tabs : DEFAULT_TABS.filter((t) => t.visible).sort((a, b) => a.order - b.order),
+        socialAccounts: Array.isArray(data.social_accounts) ? data.social_accounts : [],
+        branch: data.branch || null,
+        is_verified_veteran: !!data.is_verified_veteran,
+        service_line: data.service_line || null,
+      };
+    }
+  } catch (err) {
+    console.error("[resolveCreator] resolve-handle API error:", err);
+  }
+
+  return null;
 }
 
 function socialIcon(platform: string, _className: string) {

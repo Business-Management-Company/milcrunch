@@ -46,6 +46,7 @@
     {"source": "/api/resend-verify-domain", "destination": "/api/resend-verify-domain"},
     {"source": "/api/resend/:path*", "destination": "https://api.resend.com/:path*"},
     {"source": "/api/uploadpost-proxy", "destination": "/api/uploadpost-proxy"},
+    {"source": "/api/resolve-handle", "destination": "/api/resolve-handle"},
     {"source": "/((?!api/).*)", "destination": "/index.html"}
   ]
 }
