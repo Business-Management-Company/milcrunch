@@ -148,10 +148,10 @@ export default function CreatorDashboard() {
 
   return (
     <CreatorLayout>
-      <div className="space-y-6">
+      <div className="w-full max-w-full overflow-x-hidden space-y-6">
 
         {/* ── 1. GREETING ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 max-w-full">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-[#1B3A6B] dark:text-white">
               {getGreeting()}, {firstName}
@@ -234,7 +234,7 @@ export default function CreatorDashboard() {
         </div>
 
         {/* ── 4. CONNECTED PLATFORMS ── */}
-        <Card className="rounded-xl">
+        <Card className="rounded-xl max-w-full overflow-hidden">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold">My Social Channels</CardTitle>
           </CardHeader>
@@ -282,7 +282,7 @@ export default function CreatorDashboard() {
         </Card>
 
         {/* ── 5. BOTTOM ROW ── */}
-        <div className="grid lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
           {/* Recent Posts */}
           <Card className="rounded-xl">
