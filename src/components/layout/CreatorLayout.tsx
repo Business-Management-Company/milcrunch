@@ -125,11 +125,11 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
         className={cn(
           "flex items-center gap-3 px-3 py-2.5 text-sm transition-colors rounded-r-lg",
           active
-            ? "bg-[#C8A84B]/[0.08] text-[#C8A84B] font-medium border-l-[3px] border-[#C8A84B]"
-            : "text-white/70 hover:text-white hover:bg-white/5 border-l-[3px] border-transparent"
+            ? "bg-[#C8A84B]/15 text-white font-medium border-l-[3px] border-[#C8A84B]"
+            : "text-[#CBD5E1] hover:text-white hover:bg-white/8 border-l-[3px] border-transparent"
         )}
       >
-        <item.icon className={cn("h-5 w-5 shrink-0", active && "text-[#C8A84B]")} />
+        <item.icon className={cn("h-5 w-5 shrink-0", active ? "text-white" : "text-[#CBD5E1]")} />
         <span>{item.label}</span>
       </Link>
     );
@@ -161,7 +161,7 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
               </span>
             )}
           </div>
-          {handle && <p className="text-xs text-white/40 truncate">@{handle}</p>}
+          {handle && <p className="text-xs text-[#94A3B8] truncate">@{handle}</p>}
         </div>
       </div>
 
@@ -169,8 +169,8 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
       <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-5">
         {SECTIONS.map((section) => (
           <div key={section.label}>
-            <p className="px-3 mb-3 flex items-center text-[12px] font-semibold uppercase text-[#C8A84B]" style={{ letterSpacing: "0.15em" }}>
-              <span className="mr-1.5">—</span>{section.label}
+            <p className="px-3 mb-3 flex items-center text-[12px] font-bold uppercase text-[#C8A84B]" style={{ letterSpacing: "0.15em" }}>
+              <span className="mr-1.5 text-[#D4AF37]">—</span>{section.label}
             </p>
             <div className="space-y-0.5">{section.items.map(navLink)}</div>
           </div>
@@ -178,11 +178,11 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
       </nav>
 
       {/* Bottom area */}
-      <div className="p-3 border-t border-white/10 space-y-1">
+      <div className="p-3 border-t border-white/15 bg-white/5 space-y-1">
         <ThemeToggle variant="sidebar" />
         <Button
           variant="ghost"
-          className="w-full justify-start text-white/70 hover:text-white hover:bg-white/5"
+          className="w-full justify-start text-[#CBD5E1] hover:text-white hover:bg-white/8"
           onClick={handleSignOut}
         >
           <LogOut className="h-4 w-4 mr-2" />
