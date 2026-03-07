@@ -8,7 +8,7 @@ import { getConnectedAccounts, type ConnectedAccountRow } from "@/lib/upload-pos
 import { createUploadPost } from "@/services/upload-post";
 import {
   Loader2, Check, X, Plus, Upload, Pencil, ChevronLeft,
-  Calendar, Clock, Sparkles,
+  Calendar, Clock, Sparkles, Search, UserCircle,
   Instagram, Youtube, Facebook, Linkedin, Twitter, Link2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -62,6 +62,14 @@ const CADENCE_COLORS = [
   "#EC4899", "#06B6D4", "#F97316", "#6366F1", "#14B8A6",
 ];
 
+const VIDEO_EXTENSIONS = [".mp4", ".mov", ".webm"];
+const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif"];
+
+function isVideoFile(file: File): boolean {
+  const ext = file.name.toLowerCase();
+  return VIDEO_EXTENSIONS.some((e) => ext.endsWith(e)) || file.type.startsWith("video/");
+}
+
 interface CadenceRule {
   id: string;
   name: string;
@@ -71,7 +79,7 @@ interface CadenceRule {
 }
 
 interface GeneratedPost {
-  date: string; // ISO date
+  date: string;
   dayOfWeek: DayOfWeek;
   cadenceName: string;
   cadenceColor: string;
@@ -79,13 +87,43 @@ interface GeneratedPost {
   hashtags: string;
   mediaFile: File | null;
   mediaPreviewUrl: string | null;
+  mediaIsVideo: boolean;
   accountIds: string[];
-  scheduledAt: string; // ISO datetime
+  scheduledAt: string;
 }
 
-export default function CadenceCampaign() {
-  const { user } = useAuth();
+interface CreatorSearchResult {
+  id: string;
+  user_id: string | null;
+  creator_name: string;
+  creator_handle: string;
+  avatar_url: string | null;
+  platform: string;
+}
+
+interface CadenceCampaignProps {
+  /** Pre-fill with a specific creator (used from CreatorProfileModal) */
+  prefilledCreatorId?: string;
+  prefilledCreatorName?: string;
+}
+
+export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorName }: CadenceCampaignProps = {}) {
+  const { user, role, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
+
+  // "Post As" mode
+  const canPostOnBehalf = isSuperAdmin || role === "brand" || role === "admin";
+  const [postAsMode, setPostAsMode] = useState<"myself" | "creator">(prefilledCreatorId ? "creator" : "myself");
+  const [creatorSearch, setCreatorSearch] = useState(prefilledCreatorName ?? "");
+  const [creatorResults, setCreatorResults] = useState<CreatorSearchResult[]>([]);
+  const [searchingCreators, setSearchingCreators] = useState(false);
+  const [selectedCreator, setSelectedCreator] = useState<CreatorSearchResult | null>(
+    prefilledCreatorId && prefilledCreatorName
+      ? { id: prefilledCreatorId, user_id: prefilledCreatorId, creator_name: prefilledCreatorName, creator_handle: "", avatar_url: null, platform: "" }
+      : null
+  );
+  const [showCreatorDropdown, setShowCreatorDropdown] = useState(false);
+  const creatorSearchRef = useRef<HTMLDivElement>(null);
 
   // Connected accounts
   const [accounts, setAccounts] = useState<ConnectedAccountRow[]>([]);
@@ -131,14 +169,51 @@ export default function CadenceCampaign() {
 
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  // ── Fetch accounts ──
+  // The effective user whose accounts to load
+  const effectiveUserId = postAsMode === "creator" && selectedCreator?.user_id
+    ? selectedCreator.user_id
+    : user?.id;
+
+  // ── Creator search ──
   useEffect(() => {
-    if (!user?.id) return;
+    if (postAsMode !== "creator" || creatorSearch.trim().length < 2) {
+      setCreatorResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setSearchingCreators(true);
+      const term = `%${creatorSearch.trim()}%`;
+      const { data } = await supabase
+        .from("directory_members")
+        .select("id, user_id, creator_name, creator_handle, avatar_url, platform")
+        .or(`creator_name.ilike.${term},creator_handle.ilike.${term}`)
+        .limit(8);
+      setCreatorResults((data ?? []) as CreatorSearchResult[]);
+      setSearchingCreators(false);
+      setShowCreatorDropdown(true);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [creatorSearch, postAsMode]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (creatorSearchRef.current && !creatorSearchRef.current.contains(e.target as Node)) {
+        setShowCreatorDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // ── Fetch accounts for effective user ──
+  useEffect(() => {
+    if (!effectiveUserId) return;
     setLoadingAccounts(true);
     supabase
       .from("creator_social_connections")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", effectiveUserId)
       .order("platform")
       .then(({ data }) => {
         if (data && data.length > 0) {
@@ -155,15 +230,18 @@ export default function CadenceCampaign() {
           setLoadingAccounts(false);
           return;
         }
-        getConnectedAccounts(user.id).then((accs) => {
+        getConnectedAccounts(effectiveUserId).then((accs) => {
           if (accs.length > 0) {
             setAccounts(accs);
             setSelectedPlatforms(new Set(accs.map((a) => a.platform)));
+          } else {
+            setAccounts([]);
+            setSelectedPlatforms(new Set());
           }
           setLoadingAccounts(false);
         });
       });
-  }, [user?.id]);
+  }, [effectiveUserId]);
 
   // ── Fetch voice profile ──
   useEffect(() => {
@@ -251,7 +329,6 @@ export default function CadenceCampaign() {
   cadences.forEach((c) => c.days.forEach((d) => coveredDays.add(d)));
   const allDaysCovered = DAYS_OF_WEEK.every((d) => coveredDays.has(d));
 
-  // Check for day conflicts (same day assigned to multiple cadences)
   const dayAssignments: Record<string, string[]> = {};
   cadences.forEach((c) => c.days.forEach((d) => {
     if (!dayAssignments[d]) dayAssignments[d] = [];
@@ -260,27 +337,24 @@ export default function CadenceCampaign() {
 
   const connectedPlatforms = new Set(accounts.map((a) => a.platform));
 
-  // ── Get day-of-week string from a Date ──
   const getDayOfWeek = (date: Date): DayOfWeek => {
-    const idx = date.getDay(); // 0=Sun
     const map: DayOfWeek[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    return map[idx];
+    return map[date.getDay()];
   };
 
   // ── AI Generation ──
   const handleGenerate = async () => {
     if (!user?.id) return;
-    // Validate
     if (!campaignName.trim()) { toast.error("Enter a campaign name"); return; }
     if (selectedPlatforms.size === 0) { toast.error("Select at least one platform"); return; }
     if (!allDaysCovered) { toast.error("All 7 days must be covered by cadences"); return; }
+    if (postAsMode === "creator" && !selectedCreator) { toast.error("Select a creator to post on behalf of"); return; }
     for (const c of cadences) {
       if (!c.name.trim()) { toast.error("Give each cadence a name"); return; }
       if (!c.brief.trim()) { toast.error(`Add a brief/prompt for "${c.name}"`); return; }
       if (c.days.size === 0) { toast.error(`Assign days to "${c.name}"`); return; }
     }
 
-    // Save voice profile if changed
     if (voiceStyle.trim()) {
       await saveVoiceProfile();
     }
@@ -293,13 +367,10 @@ export default function CadenceCampaign() {
     const posts: GeneratedPost[] = [];
     setGenTotal(duration);
 
-    // Build cadence lookup by day
     const cadenceByDay: Record<string, CadenceRule> = {};
     cadences.forEach((c) => c.days.forEach((d) => { cadenceByDay[d] = c; }));
-    // Track file rotation per cadence
     const fileCounters: Record<string, number> = {};
 
-    // Get account IDs for selected platforms
     const accountIds = accounts
       .filter((a) => selectedPlatforms.has(a.platform))
       .map((a) => a.platform_user_id)
@@ -312,22 +383,29 @@ export default function CadenceCampaign() {
       const cadence = cadenceByDay[dow];
       if (!cadence) continue;
 
-      // Pick media file (rotate)
       let mediaFile: File | null = null;
       let mediaPreviewUrl: string | null = null;
+      let mediaIsVideo = false;
       if (cadence.files.length > 0) {
         const counter = fileCounters[cadence.id] ?? 0;
         mediaFile = cadence.files[counter % cadence.files.length];
         mediaPreviewUrl = URL.createObjectURL(mediaFile);
+        mediaIsVideo = isVideoFile(mediaFile);
         fileCounters[cadence.id] = counter + 1;
       }
 
       const scheduledAt = `${date.toISOString().split("T")[0]}T${dailyTime}:00`;
       const cadenceColor = CADENCE_COLORS[cadences.indexOf(cadence) % CADENCE_COLORS.length];
 
-      // Call Claude API
+      // Build AI prompt with media type context
+      const mediaTypeContext = mediaFile
+        ? isVideoFile(mediaFile)
+          ? "This is a VIDEO REEL — write a punchy opening hook in the first line under 8 words, then the caption."
+          : "This is an IMAGE POST — write a descriptive engaging caption."
+        : "";
+
       try {
-        const systemPrompt = `You are a social media content writer for a military creator. Generate ONE post caption for the '${cadence.name}' content series. Brief: ${cadence.brief}. ${voiceStyle ? `Creator voice: ${voiceStyle}.` : ""} ${samplePost ? `Sample post style: ${samplePost}.` : ""} ${mediaFile ? `Media filename hint: ${mediaFile.name}.` : ""} Include 5-8 relevant hashtags at the end. Return only the caption text and hashtags, nothing else.`;
+        const systemPrompt = `You are a social media content writer for a military creator. Generate ONE post caption for the '${cadence.name}' content series. Brief: ${cadence.brief}. ${voiceStyle ? `Creator voice: ${voiceStyle}.` : ""} ${samplePost ? `Sample post style: ${samplePost}.` : ""} ${mediaFile ? `Media filename hint: ${mediaFile.name}.` : ""} ${mediaTypeContext} Include 5-8 relevant hashtags at the end. Return only the caption text and hashtags, nothing else.`;
 
         const res = await fetch("/api/anthropic", {
           method: "POST",
@@ -344,7 +422,6 @@ export default function CadenceCampaign() {
         if (res.ok) {
           const data = await res.json();
           const fullText = data.content?.[0]?.text ?? "";
-          // Split caption and hashtags
           const hashtagMatch = fullText.match(/(#\S+(?:\s+#\S+)*)\s*$/);
           if (hashtagMatch) {
             hashtagsText = hashtagMatch[1];
@@ -357,29 +434,19 @@ export default function CadenceCampaign() {
         }
 
         posts.push({
-          date: date.toISOString().split("T")[0],
-          dayOfWeek: dow,
-          cadenceName: cadence.name,
-          cadenceColor,
-          caption: captionText,
-          hashtags: hashtagsText,
-          mediaFile,
-          mediaPreviewUrl,
-          accountIds,
-          scheduledAt,
+          date: date.toISOString().split("T")[0], dayOfWeek: dow,
+          cadenceName: cadence.name, cadenceColor,
+          caption: captionText, hashtags: hashtagsText,
+          mediaFile, mediaPreviewUrl, mediaIsVideo,
+          accountIds, scheduledAt,
         });
       } catch {
         posts.push({
-          date: date.toISOString().split("T")[0],
-          dayOfWeek: dow,
-          cadenceName: cadence.name,
-          cadenceColor,
+          date: date.toISOString().split("T")[0], dayOfWeek: dow,
+          cadenceName: cadence.name, cadenceColor,
           caption: `[${cadence.name}] — AI generation error, please edit manually.`,
-          hashtags: "",
-          mediaFile: null,
-          mediaPreviewUrl: null,
-          accountIds,
-          scheduledAt,
+          hashtags: "", mediaFile: null, mediaPreviewUrl: null, mediaIsVideo: false,
+          accountIds, scheduledAt,
         });
       }
 
@@ -399,13 +466,24 @@ export default function CadenceCampaign() {
     setScheduleProgress(0);
     let success = 0;
 
-    // Save campaign to Supabase
+    // Determine user IDs for the campaign record
+    const creatorId = postAsMode === "creator" && selectedCreator?.user_id
+      ? selectedCreator.user_id
+      : user?.id ?? null;
+    const createdBy = user?.id ?? null;
+    const createdForName = postAsMode === "creator" && selectedCreator
+      ? selectedCreator.creator_name
+      : null;
+
     let campaignId: string | null = null;
     if (user?.id) {
       const { data: campData } = await supabase
         .from("cadence_campaigns")
         .insert({
-          user_id: user.id,
+          user_id: creatorId,
+          created_by: createdBy,
+          creator_id: creatorId,
+          created_for_name: createdForName,
           name: campaignName,
           duration_days: duration,
           start_date: startDate,
@@ -428,13 +506,12 @@ export default function CadenceCampaign() {
       const text = post.caption + (post.hashtags ? "\n\n" + post.hashtags : "");
 
       try {
-        // Upload media to Supabase storage if present
         let mediaUrl: string | undefined;
         if (post.mediaFile && user?.id && campaignId) {
-          const filePath = `${user.id}/${campaignId}/${post.cadenceName}/${post.mediaFile.name}`;
+          const storagePath = `${creatorId ?? user.id}/${campaignId}/${post.cadenceName}/${post.mediaFile.name}`;
           const { data: uploadData } = await supabase.storage
             .from("cadence-media")
-            .upload(filePath, post.mediaFile, { upsert: true });
+            .upload(storagePath, post.mediaFile, { upsert: true });
           if (uploadData?.path) {
             const { data: urlData } = supabase.storage
               .from("cadence-media")
@@ -443,18 +520,36 @@ export default function CadenceCampaign() {
           }
         }
 
-        const result = await createUploadPost({
-          text,
-          account_ids: post.accountIds,
-          media_url: mediaUrl,
-          scheduled_at: new Date(post.scheduledAt).toISOString(),
-        });
+        // Route based on media type: video → Reels/Shorts endpoint, image → standard post
+        let result;
+        if (post.mediaIsVideo && mediaUrl) {
+          // Video: use the Reels/Shorts-compatible endpoint
+          // Filter to video-capable platform accounts (Instagram, TikTok, YouTube)
+          const videoCapablePlatforms = ["instagram", "tiktok", "youtube"];
+          const videoAccountIds = accounts
+            .filter((a) => selectedPlatforms.has(a.platform) && videoCapablePlatforms.includes(a.platform))
+            .map((a) => a.platform_user_id)
+            .filter((id): id is string => !!id);
+          const postAccountIds = videoAccountIds.length > 0 ? videoAccountIds : post.accountIds;
+          result = await createUploadPost({
+            text,
+            account_ids: postAccountIds,
+            media_url: mediaUrl,
+            scheduled_at: new Date(post.scheduledAt).toISOString(),
+          });
+        } else {
+          result = await createUploadPost({
+            text,
+            account_ids: post.accountIds,
+            media_url: mediaUrl,
+            scheduled_at: new Date(post.scheduledAt).toISOString(),
+          });
+        }
 
-        // Save cadence_post record
         if (user?.id && campaignId) {
           await supabase.from("cadence_posts").insert({
             campaign_id: campaignId,
-            user_id: user.id,
+            user_id: creatorId,
             scheduled_at: new Date(post.scheduledAt).toISOString(),
             cadence_name: post.cadenceName,
             caption: post.caption,
@@ -467,13 +562,12 @@ export default function CadenceCampaign() {
 
         if (result.success) success++;
       } catch {
-        // continue to next post
+        // continue
       }
 
       setScheduleProgress(i + 1);
     }
 
-    // Update campaign status
     if (campaignId) {
       await supabase.from("cadence_campaigns").update({ status: "scheduled" }).eq("id", campaignId);
     }
@@ -488,9 +582,8 @@ export default function CadenceCampaign() {
     const weeks: (GeneratedPost | null)[][] = [];
     let currentWeek: (GeneratedPost | null)[] = [];
 
-    // Pad start to Monday
     const firstDate = new Date(generatedPosts[0].date + "T00:00:00");
-    const firstDow = firstDate.getDay(); // 0=Sun
+    const firstDow = firstDate.getDay();
     const mondayOffset = firstDow === 0 ? 6 : firstDow - 1;
     for (let i = 0; i < mondayOffset; i++) currentWeek.push(null);
 
@@ -506,7 +599,6 @@ export default function CadenceCampaign() {
         weeks.push(currentWeek);
         currentWeek = [];
       }
-      // Fill gaps
       while (currentWeek.length < mondayIdx) currentWeek.push(null);
 
       const matchingPost = generatedPosts[postIdx];
@@ -532,7 +624,12 @@ export default function CadenceCampaign() {
       <div className="max-w-2xl mx-auto px-4 py-12 text-center space-y-6">
         <Sparkles className="h-12 w-12 text-blue-500 mx-auto animate-pulse" />
         <h2 className="text-xl font-bold">Generating {genTotal} posts...</h2>
-        <p className="text-sm text-muted-foreground">Using AI to create captions for your {campaignName} campaign</p>
+        <p className="text-sm text-muted-foreground">
+          Using AI to create captions for your {campaignName} campaign
+          {postAsMode === "creator" && selectedCreator && (
+            <span className="block mt-1">for <strong>{selectedCreator.creator_name}</strong></span>
+          )}
+        </p>
         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
           <div
             className="bg-[#1B3A6B] h-full rounded-full transition-all duration-300"
@@ -567,11 +664,20 @@ export default function CadenceCampaign() {
                 <Button variant="ghost" size="sm" onClick={() => setEditingIdx(null)}><X className="h-4 w-4" /></Button>
               </div>
               <div className="space-y-4">
-                <div className="inline-block px-2 py-0.5 rounded text-xs text-white font-medium" style={{ backgroundColor: generatedPosts[editingIdx].cadenceColor }}>
-                  {generatedPosts[editingIdx].cadenceName}
+                <div className="flex items-center gap-2">
+                  <div className="inline-block px-2 py-0.5 rounded text-xs text-white font-medium" style={{ backgroundColor: generatedPosts[editingIdx].cadenceColor }}>
+                    {generatedPosts[editingIdx].cadenceName}
+                  </div>
+                  {generatedPosts[editingIdx].mediaIsVideo && (
+                    <span className="inline-block px-2 py-0.5 rounded text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 font-medium">REEL</span>
+                  )}
                 </div>
                 {generatedPosts[editingIdx].mediaPreviewUrl && (
-                  <img src={generatedPosts[editingIdx].mediaPreviewUrl!} className="w-full h-40 object-cover rounded-lg" alt="" />
+                  generatedPosts[editingIdx].mediaIsVideo ? (
+                    <video src={generatedPosts[editingIdx].mediaPreviewUrl!} className="w-full h-40 object-cover rounded-lg" controls />
+                  ) : (
+                    <img src={generatedPosts[editingIdx].mediaPreviewUrl!} className="w-full h-40 object-cover rounded-lg" alt="" />
+                  )
                 )}
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">Caption</label>
@@ -604,7 +710,12 @@ export default function CadenceCampaign() {
             <Button variant="ghost" size="sm" onClick={() => setStep(1)}><ChevronLeft className="h-4 w-4 mr-1" />Back</Button>
             <div>
               <h2 className="text-lg font-bold">Review Your {generatedPosts.length}-Day Campaign</h2>
-              <p className="text-sm text-muted-foreground">{campaignName}</p>
+              <p className="text-sm text-muted-foreground">
+                {campaignName}
+                {postAsMode === "creator" && selectedCreator && (
+                  <span> &middot; for {selectedCreator.creator_name}</span>
+                )}
+              </p>
             </div>
           </div>
           <Button
@@ -613,15 +724,9 @@ export default function CadenceCampaign() {
             disabled={scheduling}
           >
             {scheduling ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Scheduling... {scheduleProgress}/{generatedPosts.length}
-              </>
+              <><Loader2 className="h-4 w-4 animate-spin mr-2" />Scheduling... {scheduleProgress}/{generatedPosts.length}</>
             ) : (
-              <>
-                <Calendar className="h-4 w-4 mr-2" />
-                Schedule All
-              </>
+              <><Calendar className="h-4 w-4 mr-2" />Schedule All</>
             )}
           </Button>
         </div>
@@ -629,6 +734,19 @@ export default function CadenceCampaign() {
         <div className="flex flex-1 overflow-hidden">
           {/* Sidebar summary */}
           <div className="w-64 shrink-0 border-r border-border p-4 space-y-4 overflow-y-auto hidden lg:block">
+            {postAsMode === "creator" && selectedCreator && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Creating for</p>
+                <div className="flex items-center gap-2">
+                  {selectedCreator.avatar_url ? (
+                    <img src={selectedCreator.avatar_url} className="h-6 w-6 rounded-full object-cover" alt="" />
+                  ) : (
+                    <UserCircle className="h-6 w-6 text-muted-foreground" />
+                  )}
+                  <p className="text-sm font-medium truncate">{selectedCreator.creator_name}</p>
+                </div>
+              </div>
+            )}
             <div>
               <p className="text-xs text-muted-foreground mb-1">Total posts</p>
               <p className="text-2xl font-bold">{generatedPosts.length}</p>
@@ -668,13 +786,11 @@ export default function CadenceCampaign() {
 
           {/* Calendar grid */}
           <div className="flex-1 overflow-y-auto p-4">
-            {/* Day headers */}
             <div className="grid grid-cols-7 gap-1 mb-1">
               {DAYS_OF_WEEK.map((d) => (
                 <div key={d} className="text-center text-xs font-medium text-muted-foreground py-1">{d}</div>
               ))}
             </div>
-            {/* Weeks */}
             <div className="space-y-1">
               {weeks.map((week, wi) => (
                 <div key={wi} className="grid grid-cols-7 gap-1">
@@ -702,7 +818,14 @@ export default function CadenceCampaign() {
                             </button>
                           </div>
                           {post.mediaPreviewUrl && (
-                            <img src={post.mediaPreviewUrl} className="w-full h-12 object-cover rounded mb-1" alt="" />
+                            post.mediaIsVideo ? (
+                              <div className="relative w-full h-12 rounded mb-1 bg-gray-900 flex items-center justify-center overflow-hidden">
+                                <video src={post.mediaPreviewUrl} className="w-full h-full object-cover" muted />
+                                <span className="absolute bottom-0.5 right-0.5 text-[8px] bg-purple-600 text-white px-1 rounded">REEL</span>
+                              </div>
+                            ) : (
+                              <img src={post.mediaPreviewUrl} className="w-full h-12 object-cover rounded mb-1" alt="" />
+                            )
                           )}
                           <p className="text-[11px] text-muted-foreground line-clamp-2 leading-tight">
                             {post.caption.slice(0, 60)}{post.caption.length > 60 ? "..." : ""}
@@ -734,6 +857,102 @@ export default function CadenceCampaign() {
             <span className="flex items-center justify-center h-5 w-5 rounded-full bg-[#1B3A6B] text-white text-[10px] font-bold">A</span>
             Campaign Basics
           </h2>
+
+          {/* ── Post As selector ── */}
+          {canPostOnBehalf && (
+            <div>
+              <label className="text-xs text-muted-foreground mb-2 block">Post as</label>
+              <div className="flex gap-2 mb-3">
+                <button
+                  onClick={() => { setPostAsMode("myself"); setSelectedCreator(null); setCreatorSearch(""); }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                    postAsMode === "myself"
+                      ? "bg-[#1B3A6B] text-white"
+                      : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  }`}
+                >
+                  <UserCircle className="h-3.5 w-3.5 inline mr-1.5 -mt-0.5" />
+                  Myself
+                </button>
+                <button
+                  onClick={() => setPostAsMode("creator")}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                    postAsMode === "creator"
+                      ? "bg-[#1B3A6B] text-white"
+                      : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  }`}
+                >
+                  <Search className="h-3.5 w-3.5 inline mr-1.5 -mt-0.5" />
+                  On behalf of a creator
+                </button>
+              </div>
+
+              {postAsMode === "creator" && (
+                <div className="relative" ref={creatorSearchRef}>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      value={creatorSearch}
+                      onChange={(e) => { setCreatorSearch(e.target.value); setSelectedCreator(null); }}
+                      onFocus={() => creatorResults.length > 0 && setShowCreatorDropdown(true)}
+                      placeholder="Search creator by name or handle..."
+                      className="h-9 text-sm pl-9"
+                    />
+                    {searchingCreators && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
+                  </div>
+
+                  {/* Selected creator badge */}
+                  {selectedCreator && (
+                    <div className="mt-2 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 dark:bg-green-900/10 dark:border-green-800/40 px-3 py-2">
+                      {selectedCreator.avatar_url ? (
+                        <img src={selectedCreator.avatar_url} className="h-7 w-7 rounded-full object-cover" alt="" />
+                      ) : (
+                        <UserCircle className="h-7 w-7 text-green-600" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-green-800 dark:text-green-300 truncate">{selectedCreator.creator_name}</p>
+                        {selectedCreator.creator_handle && (
+                          <p className="text-xs text-green-600 dark:text-green-400 truncate">@{selectedCreator.creator_handle}</p>
+                        )}
+                      </div>
+                      <button onClick={() => { setSelectedCreator(null); setCreatorSearch(""); }} className="text-green-600 hover:text-green-800">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Search dropdown */}
+                  {showCreatorDropdown && creatorResults.length > 0 && !selectedCreator && (
+                    <div className="absolute z-20 mt-1 w-full rounded-lg border border-border bg-card shadow-lg max-h-60 overflow-y-auto">
+                      {creatorResults.map((c) => (
+                        <button
+                          key={c.id}
+                          onClick={() => {
+                            setSelectedCreator(c);
+                            setCreatorSearch(c.creator_name);
+                            setShowCreatorDropdown(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-muted transition-colors"
+                        >
+                          {c.avatar_url ? (
+                            <img src={c.avatar_url} className="h-8 w-8 rounded-full object-cover shrink-0" alt="" />
+                          ) : (
+                            <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0">
+                              <span className="text-xs font-bold text-gray-500">{(c.creator_name || "?").charAt(0).toUpperCase()}</span>
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{c.creator_name}</p>
+                            <p className="text-xs text-muted-foreground truncate">@{c.creator_handle} &middot; {c.platform}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Campaign Name</label>
@@ -779,15 +998,26 @@ export default function CadenceCampaign() {
 
           {/* Platform selector */}
           <div>
-            <label className="text-xs text-muted-foreground mb-2 block">Platforms</label>
+            <label className="text-xs text-muted-foreground mb-2 block">
+              Platforms
+              {postAsMode === "creator" && selectedCreator && (
+                <span className="ml-1 text-green-600 dark:text-green-400">({selectedCreator.creator_name}'s accounts)</span>
+              )}
+            </label>
             {loadingAccounts ? (
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             ) : accounts.length === 0 ? (
               <div className="rounded-xl border border-dashed border-border p-4 text-center">
-                <p className="text-sm text-muted-foreground mb-2">Connect social accounts first</p>
-                <Button size="sm" onClick={() => navigate("/creator/socials")}>
-                  <Link2 className="h-4 w-4 mr-2" />Connect Accounts
-                </Button>
+                <p className="text-sm text-muted-foreground mb-2">
+                  {postAsMode === "creator" && selectedCreator
+                    ? `${selectedCreator.creator_name} has no connected social accounts`
+                    : "Connect social accounts first"}
+                </p>
+                {postAsMode === "myself" && (
+                  <Button size="sm" onClick={() => navigate("/creator/socials")}>
+                    <Link2 className="h-4 w-4 mr-2" />Connect Accounts
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="flex flex-wrap gap-3">
@@ -799,7 +1029,7 @@ export default function CadenceCampaign() {
                   return (
                     <button
                       key={platform}
-                      onClick={() => connected ? togglePlatform(platform) : navigate("/creator/socials")}
+                      onClick={() => connected ? togglePlatform(platform) : (postAsMode === "myself" ? navigate("/creator/socials") : undefined)}
                       className="relative group"
                       title={connected ? platform : `Connect ${platform}`}
                     >
@@ -965,7 +1195,7 @@ export default function CadenceCampaign() {
                   <div className="flex items-center gap-2">
                     <input
                       type="file"
-                      accept="image/jpeg,image/png,video/mp4"
+                      accept="image/jpeg,image/png,image/gif,video/mp4,video/quicktime,video/webm"
                       multiple
                       ref={(el) => { fileInputRefs.current[cadence.id] = el; }}
                       onChange={(e) => handleCadenceFiles(cadence.id, e)}
@@ -976,13 +1206,12 @@ export default function CadenceCampaign() {
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-border text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                     >
                       <Upload className="h-3.5 w-3.5" />
-                      Upload jpg/png/mp4
+                      Upload jpg/png/mp4/mov
                     </button>
                     {cadence.files.length > 0 && (
                       <span className="text-xs text-muted-foreground">{cadence.files.length} file{cadence.files.length > 1 ? "s" : ""}</span>
                     )}
                   </div>
-                  {/* Thumbnails */}
                   {cadence.files.length > 0 && (
                     <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
                       {cadence.files.map((file, fi) => (
@@ -994,8 +1223,11 @@ export default function CadenceCampaign() {
                               alt={file.name}
                             />
                           ) : (
-                            <div className="h-16 w-16 rounded-lg bg-gray-100 dark:bg-gray-800 border border-border flex items-center justify-center">
-                              <span className="text-[10px] text-muted-foreground">MP4</span>
+                            <div className="h-16 w-16 rounded-lg bg-gray-100 dark:bg-gray-800 border border-border flex flex-col items-center justify-center">
+                              <span className="text-[10px] text-muted-foreground font-medium">
+                                {file.name.split(".").pop()?.toUpperCase() ?? "VID"}
+                              </span>
+                              <span className="text-[8px] text-purple-500 font-medium mt-0.5">REEL</span>
                             </div>
                           )}
                           <button
@@ -1023,7 +1255,7 @@ export default function CadenceCampaign() {
         {/* Generate button */}
         <Button
           className="w-full h-11 bg-[#1B3A6B] hover:bg-[#152d54] text-white text-sm font-semibold"
-          disabled={!allDaysCovered || generating || accounts.length === 0}
+          disabled={!allDaysCovered || generating || accounts.length === 0 || (postAsMode === "creator" && !selectedCreator)}
           onClick={handleGenerate}
         >
           {generating ? (

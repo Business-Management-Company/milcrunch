@@ -495,6 +495,9 @@ export default function CreatorProfileModal({
   const [eventsList, setEventsList] = useState<{ id: string; title: string; start_date: string }[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [invitingEvent, setInvitingEvent] = useState(false);
+  // Campaigns for this creator
+  const [creatorCampaigns, setCreatorCampaigns] = useState<any[]>([]);
+  const [campaignsLoading, setCampaignsLoading] = useState(false);
   // Resizable sidebar
   const [sidebarWidth, setSidebarWidth] = useState(330);
   const isDraggingRef = useRef(false);
@@ -1569,6 +1572,24 @@ export default function CreatorProfileModal({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [similarAccounts.length]);
 
+  // ── Fetch campaigns for this creator ──
+  useEffect(() => {
+    if (!open || !creator) return;
+    setCampaignsLoading(true);
+    const handle = creator.username ?? creator.name;
+    supabase
+      .from("cadence_campaigns")
+      .select("*")
+      .or(`created_for_name.ilike.%${handle}%`)
+      .order("created_at", { ascending: false })
+      .limit(20)
+      .then(({ data }) => {
+        setCreatorCampaigns(data ?? []);
+        setCampaignsLoading(false);
+      })
+      .catch(() => setCampaignsLoading(false));
+  }, [open, creator?.username, creator?.name]);
+
   // ── Audience data hooks — use platform-specific data when available ──
 
   // Helper: resolve the active platform's data record for audience stats
@@ -2486,6 +2507,12 @@ export default function CreatorProfileModal({
                       >
                         <Users className="h-4 w-4 mr-1.5" /> Similar Accounts
                       </TabsTrigger>
+                      <TabsTrigger
+                        value="campaigns"
+                        className="rounded-full px-4 py-2 text-sm font-medium cursor-pointer transition-colors border-none shadow-none bg-gray-100 text-gray-700 hover:bg-gray-200 data-[state=active]:bg-[#1B2A4A] data-[state=active]:text-white data-[state=active]:shadow-none"
+                      >
+                        <CalendarPlus className="h-4 w-4 mr-1.5" /> Campaigns
+                      </TabsTrigger>
                     </TabsList>
                     <TabsContent value="analytics" className="mt-5 space-y-5">
                       {/* Engagement Per Post */}
@@ -3021,6 +3048,86 @@ export default function CreatorProfileModal({
                               })}
                             </tbody>
                           </table>
+                        </div>
+                      )}
+                    </TabsContent>
+                    <TabsContent value="campaigns" className="mt-5">
+                      {campaignsLoading ? (
+                        <div className="space-y-3">
+                          {[1, 2, 3].map((i) => (
+                            <div key={i} className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
+                              <Skeleton className="h-4 w-32 mb-2 animate-pulse" />
+                              <Skeleton className="h-3 w-48 animate-pulse" />
+                            </div>
+                          ))}
+                        </div>
+                      ) : creatorCampaigns.length === 0 ? (
+                        <div className="text-center py-8">
+                          <CalendarPlus className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-40" />
+                          <p className="text-sm text-muted-foreground mb-4">No campaigns found for this creator.</p>
+                          <Button
+                            size="sm"
+                            className="bg-[#1B3A6B] hover:bg-[#152d54] text-white"
+                            onClick={() => {
+                              onOpenChange(false);
+                              navigate(`/creator/create-post?tab=cadence&creatorName=${encodeURIComponent(creator?.name ?? "")}&creatorId=${encodeURIComponent(creator?.id ?? "")}`);
+                            }}
+                          >
+                            <CalendarPlus className="h-4 w-4 mr-2" />
+                            Create Campaign for {creator?.name?.split(" ")[0] ?? "Creator"}
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full mb-2"
+                            onClick={() => {
+                              onOpenChange(false);
+                              navigate(`/creator/create-post?tab=cadence&creatorName=${encodeURIComponent(creator?.name ?? "")}&creatorId=${encodeURIComponent(creator?.id ?? "")}`);
+                            }}
+                          >
+                            <CalendarPlus className="h-4 w-4 mr-2" />
+                            Create Campaign for {creator?.name?.split(" ")[0] ?? "Creator"}
+                          </Button>
+                          <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117]">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b border-gray-100 dark:border-gray-800 text-left text-[11px] text-gray-500 uppercase tracking-wider">
+                                  <th className="py-2.5 px-3">Campaign</th>
+                                  <th className="py-2.5 px-3">Status</th>
+                                  <th className="py-2.5 px-3">Duration</th>
+                                  <th className="py-2.5 px-3">Start</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                                {creatorCampaigns.map((camp) => (
+                                  <tr key={camp.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                    <td className="py-2.5 px-3">
+                                      <p className="font-medium text-gray-900 dark:text-white">{camp.name}</p>
+                                      {camp.created_for_name && (
+                                        <p className="text-xs text-muted-foreground">for {camp.created_for_name}</p>
+                                      )}
+                                    </td>
+                                    <td className="py-2.5 px-3">
+                                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                                        camp.status === "scheduled" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                                        camp.status === "scheduling" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" :
+                                        "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                                      }`}>
+                                        {camp.status}
+                                      </span>
+                                    </td>
+                                    <td className="py-2.5 px-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{camp.duration_days}d</td>
+                                    <td className="py-2.5 px-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                      {camp.start_date ? new Date(camp.start_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
                       )}
                     </TabsContent>

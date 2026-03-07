@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import CreatorLayout from "@/components/layout/CreatorLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,9 +98,15 @@ const AI_IDEAS = [
 export default function CreatePost() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [activeTab, setActiveTab] = useState<"single" | "cadence">("single");
+  // Read query params for deep-linking from CreatorProfileModal
+  const qTab = searchParams.get("tab");
+  const qCreatorName = searchParams.get("creatorName") ?? undefined;
+  const qCreatorId = searchParams.get("creatorId") ?? undefined;
+
+  const [activeTab, setActiveTab] = useState<"single" | "cadence">(qTab === "cadence" ? "cadence" : "single");
   const [accounts, setAccounts] = useState<ConnectedAccountRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [caption, setCaption] = useState("");
@@ -269,7 +276,12 @@ export default function CreatePost() {
         </div>
 
         {/* ── CADENCE CAMPAIGN TAB ── */}
-        {activeTab === "cadence" && <CadenceCampaign />}
+        {activeTab === "cadence" && (
+          <CadenceCampaign
+            prefilledCreatorId={qCreatorId}
+            prefilledCreatorName={qCreatorName}
+          />
+        )}
 
         {/* ── SINGLE POST TAB ── */}
         {activeTab === "single" && <>
