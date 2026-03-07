@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState, useEffect, useCallback, useRef, useLayoutEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -24,6 +24,8 @@ import {
   ExternalLink,
   FileText,
   ImageIcon,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -34,14 +36,23 @@ interface CreatorLayoutProps {
 
 type NavItem = { icon: typeof LayoutDashboard; label: string; href: string };
 
-const SECTIONS: { label: string; items: NavItem[] }[] = [
+interface NavSection {
+  key: string;
+  label: string;
+  items: NavItem[];
+  defaultCollapsed?: boolean;
+}
+
+const SECTIONS: NavSection[] = [
   {
+    key: "main",
     label: "MAIN",
     items: [
       { icon: LayoutDashboard, label: "Dashboard", href: "/creator/dashboard" },
     ],
   },
   {
+    key: "content",
     label: "CONTENT",
     items: [
       { icon: Link2, label: "My Bio Page", href: "/creator/bio" },
@@ -53,6 +64,7 @@ const SECTIONS: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
+    key: "opportunities",
     label: "OPPORTUNITIES",
     items: [
       { icon: CalendarDays, label: "Events", href: "/creator/events" },
@@ -61,7 +73,9 @@ const SECTIONS: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
+    key: "settings",
     label: "SETTINGS",
+    defaultCollapsed: true,
     items: [
       { icon: Settings, label: "Settings", href: "/creator/settings" },
       { icon: Plug, label: "Integrations", href: "/creator/integrations" },
@@ -70,6 +84,22 @@ const SECTIONS: { label: string; items: NavItem[] }[] = [
   },
 ];
 
+const STORAGE_KEY = "creator_sidebar_collapsed";
+
+function loadCollapsedSections(defaults: Record<string, boolean>): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return { ...defaults, ...JSON.parse(raw) };
+  } catch { /* corrupt */ }
+  return defaults;
+}
+
+function saveCollapsedSections(state: Record<string, boolean>) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch { /* quota */ }
+}
+
 const CreatorLayout = ({ children }: CreatorLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -77,6 +107,8 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+  const scrollPos = useRef(0);
 
   const role = (creatorProfile?.role as string) || "creator";
   if (["super_admin", "admin", "brand"].includes(role)) {
@@ -102,6 +134,39 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  // Scroll position preservation (matches admin sidebar)
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const onScroll = () => { scrollPos.current = nav.scrollTop; };
+    nav.addEventListener("scroll", onScroll, { passive: true });
+    return () => nav.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (navRef.current) navRef.current.scrollTop = scrollPos.current;
+  }, [location.pathname]);
+
+  // Collapsible sections (matches admin sidebar)
+  const defaults: Record<string, boolean> = {};
+  for (const s of SECTIONS) {
+    if (s.defaultCollapsed) defaults[s.key] = true;
+  }
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(
+    () => loadCollapsedSections(defaults)
+  );
+  const toggleSection = useCallback((key: string) => {
+    const scrollTop = navRef.current?.scrollTop ?? 0;
+    setCollapsedSections((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      saveCollapsedSections(next);
+      return next;
+    });
+    requestAnimationFrame(() => {
+      if (navRef.current) navRef.current.scrollTop = scrollTop;
+    });
+  }, []);
+
   const handleSignOut = async () => {
     await signOut();
     navigate("/login");
@@ -115,28 +180,10 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
 
   const branch = (user?.user_metadata?.branch as string) || (creatorProfile as any)?.branch || "";
 
-  const navLink = (item: NavItem) => {
-    const active = location.pathname === item.href;
-    return (
-      <Link
-        key={item.href}
-        to={item.href}
-        onClick={() => setMobileOpen(false)}
-        className={cn(
-          "flex items-center gap-3 px-3 py-2.5 text-sm transition-colors rounded-r-lg",
-          active
-            ? "bg-[#C8A84B]/15 text-white font-medium border-l-[3px] border-[#C8A84B]"
-            : "text-[#CBD5E1] hover:text-white hover:bg-white/8 border-l-[3px] border-transparent"
-        )}
-      >
-        <item.icon className={cn("h-5 w-5 shrink-0", active ? "text-white" : "text-[#CBD5E1]")} />
-        <span>{item.label}</span>
-      </Link>
-    );
-  };
+  const isActive = (href: string) => location.pathname === href;
 
   const sidebar = (
-    <div className="flex flex-col h-full bg-[#1B3A6B]">
+    <div className="flex flex-col h-full bg-[#0f1f3d]">
       {/* Logo */}
       <div className="p-4 border-b border-white/10">
         <Link to="/creator/dashboard" className="flex items-center min-w-0">
@@ -145,44 +192,88 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
       </div>
 
       {/* User avatar area */}
-      <div className={cn(
-        "p-3 flex items-center gap-3 min-w-0",
-        branch ? "border-b border-white/10" : "border-b-2 border-[#C8A84B]/30"
-      )}>
-        <div className="w-10 h-10 rounded-full bg-white/10 ring-1 ring-[#C8A84B]/30 flex items-center justify-center shrink-0 text-lg font-semibold text-white">
+      <div className="p-3 flex items-center gap-3 min-w-0 border-b border-white/10">
+        <div className="w-10 h-10 rounded-full bg-white/10 ring-1 ring-white/20 flex items-center justify-center shrink-0 text-lg font-semibold text-white">
           {(displayName || "C").charAt(0).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <p className="font-medium text-white truncate">{displayName}</p>
             {branch && (
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#C8A84B]/80 bg-[#C8A84B]/10 px-1.5 py-0.5 rounded shrink-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-white/10 px-1.5 py-0.5 rounded shrink-0">
                 {branch}
               </span>
             )}
           </div>
-          {handle && <p className="text-xs text-[#94A3B8] truncate">@{handle}</p>}
+          {handle && <p className="text-xs text-slate-500 truncate">@{handle}</p>}
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-5">
-        {SECTIONS.map((section) => (
-          <div key={section.label}>
-            <p className="px-3 mb-3 flex items-center text-[12px] font-bold uppercase text-[#C8A84B]" style={{ letterSpacing: "0.15em" }}>
-              <span className="mr-1.5 text-[#D4AF37]">—</span>{section.label}
-            </p>
-            <div className="space-y-0.5">{section.items.map(navLink)}</div>
-          </div>
-        ))}
+      <nav ref={navRef} className="flex-1 overflow-y-auto py-4" style={{ scrollBehavior: "auto" }}>
+        {SECTIONS.map((section, idx) => {
+          const isSectionCollapsed = !!collapsedSections[section.key];
+          const Chevron = isSectionCollapsed ? ChevronRight : ChevronDown;
+
+          return (
+            <div key={section.key}>
+              {/* Section header — collapsible, matches admin nav */}
+              <button
+                type="button"
+                onClick={() => toggleSection(section.key)}
+                className={cn(
+                  "flex items-center justify-between w-full px-4 pb-2 group",
+                  idx === 0 ? "pt-2" : "pt-5 border-t border-white/10"
+                )}
+              >
+                <span className="text-xs font-bold uppercase tracking-widest text-slate-300">
+                  {section.label}
+                </span>
+                <Chevron className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-200 transition-colors" />
+              </button>
+
+              {/* Section items */}
+              {!isSectionCollapsed && (
+                <ul className="space-y-0.5">
+                  {section.items.map((item) => {
+                    const active = isActive(item.href);
+                    return (
+                      <li key={item.href} className="group/nav">
+                        <Link
+                          to={item.href}
+                          onClick={() => setMobileOpen(false)}
+                          className={cn(
+                            "flex items-center gap-3 px-4 py-2 mx-2 rounded-lg text-sm transition-colors",
+                            active
+                              ? "bg-white/10 text-white font-semibold border-l-2 border-white"
+                              : "text-slate-300 font-normal hover:bg-white/5 hover:text-white"
+                          )}
+                        >
+                          <item.icon
+                            className={cn(
+                              "h-4 w-4 shrink-0",
+                              active ? "text-white" : "text-slate-400 group-hover/nav:text-white"
+                            )}
+                            strokeWidth={1.75}
+                          />
+                          <span className="truncate">{item.label}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          );
+        })}
       </nav>
 
       {/* Bottom area */}
-      <div className="p-3 border-t border-white/15 bg-white/5 space-y-1">
+      <div className="px-5 py-4 border-t border-white/10 space-y-1">
         <ThemeToggle variant="sidebar" />
         <Button
           variant="ghost"
-          className="w-full justify-start text-[#CBD5E1] hover:text-white hover:bg-white/8"
+          className="w-full justify-start text-slate-300 hover:text-white hover:bg-white/5"
           onClick={handleSignOut}
         >
           <LogOut className="h-4 w-4 mr-2" />
@@ -202,7 +293,7 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
   return (
     <div className="min-h-screen bg-background flex">
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-60 flex-col border-r border-[#152d54] bg-[#1B3A6B] fixed left-0 top-0 bottom-0 z-30">
+      <aside className="hidden md:flex w-60 flex-col border-r border-[#0f1f3d] bg-[#0f1f3d] fixed left-0 top-0 bottom-0 z-30">
         {sidebar}
       </aside>
 
@@ -215,7 +306,7 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 p-0 bg-[#1B3A6B] border-[#152d54]">
+            <SheetContent side="left" className="w-72 p-0 bg-[#0f1f3d] border-[#0f1f3d]">
               {sidebar}
             </SheetContent>
           </Sheet>
