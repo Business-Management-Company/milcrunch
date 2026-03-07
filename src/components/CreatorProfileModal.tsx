@@ -2322,14 +2322,15 @@ export default function CreatorProfileModal({
               </div>
             )}
 
-            {/* Platforms row — show all platforms the creator has (from search result socialPlatforms) */}
+            {/* Platforms row — use creator.socialPlatforms directly (same source as discovery cards) */}
             {(() => {
-              if (availablePlatforms.length === 0) return null;
+              const cardPlatforms = creator?.socialPlatforms ?? creator?.platforms ?? [];
+              if (cardPlatforms.length === 0) return null;
               return (
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Platforms</p>
                   <div className="flex flex-wrap gap-2">
-                    {availablePlatforms.map((p) => {
+                    {cardPlatforms.map((p) => {
                       const isActive = selectedPlatform.toLowerCase() === p.toLowerCase();
                       const brandRing = p === "instagram" ? "ring-[#E1306C]" : p === "tiktok" ? "ring-[#00C9B7]" : p === "youtube" ? "ring-[#FF0000]" : p === "twitter" ? "ring-gray-900 dark:ring-white" : p === "facebook" ? "ring-[#1877F2]" : p === "linkedin" ? "ring-[#0A66C2]" : "ring-gray-900";
                       return (
