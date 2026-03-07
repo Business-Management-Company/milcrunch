@@ -168,6 +168,8 @@ interface ThemeSettings {
   linkStyle: string;
   linkColor: string;
   showBranding: boolean;
+  showProfileImage: boolean;
+  showHeroImage: boolean;
   template?: string;
 }
 
@@ -319,10 +321,11 @@ export default function CreatorBioEditor() {
 
   /* ── Theme state ── */
   const [theme, setTheme] = useState<ThemeSettings>({
-    themeColor: "#3b82f6", bgMode: "solid", bgColor: "#ffffff",
+    themeColor: "#1B3A6B", bgMode: "solid", bgColor: "#ffffff",
     cardStyle: "round", fontFamily: "Inter", darkMode: false,
     shade: "none", linkShape: "pill", linkStyle: "fill",
-    linkColor: "#3b82f6", showBranding: true,
+    linkColor: "#1B3A6B", showBranding: true,
+    showProfileImage: true, showHeroImage: true,
   });
   const updateTheme = (patch: Partial<ThemeSettings>) =>
     setTheme((prev) => ({ ...prev, ...patch }));
@@ -674,7 +677,7 @@ export default function CreatorBioEditor() {
               {saving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
               <Button
                 size="sm"
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-[#1B3A6B] hover:bg-[#152e55] text-white"
                 onClick={() => { persistSections(sections); toast.success("Published!"); }}
               >
                 Publish
@@ -693,7 +696,7 @@ export default function CreatorBioEditor() {
                   className={`flex items-center gap-1.5 rounded-full px-5 py-3 font-medium transition-all whitespace-nowrap ${
                     active ? "text-white shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
-                  style={{ fontSize: "15px", ...(active ? { background: "linear-gradient(135deg, #ec4899 0%, #9333ea 100%)" } : {}) }}
+                  style={{ fontSize: "15px", ...(active ? { backgroundColor: "#1B3A6B" } : {}) }}
                 >
                   <Icon className="h-4 w-4" />
                   {tab.label}
@@ -735,7 +738,18 @@ export default function CreatorBioEditor() {
 
                 {/* 1. Profile Image Upload */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Profile Image</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-muted-foreground">Profile Image</label>
+                    <Switch
+                      checked={theme.showProfileImage}
+                      onCheckedChange={(v) => {
+                        const updated = { ...theme, showProfileImage: v };
+                        setTheme(updated);
+                        persistTheme(updated);
+                      }}
+                      className="scale-75 origin-right data-[state=checked]:bg-[#1B3A6B]"
+                    />
+                  </div>
                   <input
                     ref={avatarInputRef}
                     type="file"
@@ -744,8 +758,10 @@ export default function CreatorBioEditor() {
                     className="hidden"
                   />
                   <button
-                    onClick={() => avatarInputRef.current?.click()}
-                    className="w-full rounded-lg border-2 border-dashed border-border hover:border-blue-400 transition-colors p-4 flex flex-col items-center gap-2"
+                    onClick={() => theme.showProfileImage && avatarInputRef.current?.click()}
+                    className={`w-full rounded-lg border-2 border-dashed transition-colors p-4 flex flex-col items-center gap-2 ${
+                      theme.showProfileImage ? "border-border hover:border-[#C8A84B]" : "border-border/50 opacity-50 cursor-not-allowed"
+                    }`}
                   >
                     {profileAvatar ? (
                       <img
@@ -779,7 +795,7 @@ export default function CreatorBioEditor() {
                         }}
                         className={`flex-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors capitalize ${
                           imageStyle === style
-                            ? "bg-[#3B82F6] text-white"
+                            ? "bg-[#1B3A6B] text-white"
                             : "text-muted-foreground hover:text-foreground"
                         }`}
                       >
@@ -791,7 +807,18 @@ export default function CreatorBioEditor() {
 
                 {/* 3. Hero / Cover Image Upload */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Hero / Cover Image</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-muted-foreground">Hero / Cover Image</label>
+                    <Switch
+                      checked={theme.showHeroImage}
+                      onCheckedChange={(v) => {
+                        const updated = { ...theme, showHeroImage: v };
+                        setTheme(updated);
+                        persistTheme(updated);
+                      }}
+                      className="scale-75 origin-right data-[state=checked]:bg-[#1B3A6B]"
+                    />
+                  </div>
                   <input
                     ref={heroInputRef}
                     type="file"
@@ -800,8 +827,10 @@ export default function CreatorBioEditor() {
                     className="hidden"
                   />
                   <button
-                    onClick={() => heroInputRef.current?.click()}
-                    className="w-full rounded-lg border-2 border-dashed border-border hover:border-blue-400 transition-colors p-4 flex flex-col items-center gap-2"
+                    onClick={() => theme.showHeroImage && heroInputRef.current?.click()}
+                    className={`w-full rounded-lg border-2 border-dashed transition-colors p-4 flex flex-col items-center gap-2 ${
+                      theme.showHeroImage ? "border-border hover:border-[#C8A84B]" : "border-border/50 opacity-50 cursor-not-allowed"
+                    }`}
                   >
                     {heroImageUrl ? (
                       <img
@@ -855,7 +884,7 @@ export default function CreatorBioEditor() {
                         }}
                         className={`flex-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors capitalize ${
                           heroImageFormat === fmt
-                            ? "bg-[#3B82F6] text-white"
+                            ? "bg-[#1B3A6B] text-white"
                             : "text-muted-foreground hover:text-foreground"
                         }`}
                       >
@@ -928,7 +957,7 @@ export default function CreatorBioEditor() {
                                 <p className="text-[11px] text-muted-foreground truncate">@{acc.platform_username}</p>
                               )}
                             </div>
-                            <div className="h-2 w-2 rounded-full bg-green-500 shrink-0" title="Connected" />
+                            <div className="h-2 w-2 rounded-full bg-[#C8A84B] shrink-0" title="Connected" />
                           </div>
                         );
                       })}
@@ -976,11 +1005,11 @@ export default function CreatorBioEditor() {
                         onClick={() => scrollToDesignSection(item.id)}
                         className={`flex flex-col items-center justify-center gap-1 w-[68px] h-[72px] rounded-xl transition-colors ${
                           active
-                            ? "text-green-700 dark:text-green-400"
+                            ? "text-[#1B3A6B] dark:text-[#C8A84B]"
                             : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         }`}
                       >
-                        <div className={`h-[28px] w-[28px] rounded-full flex items-center justify-center transition-colors ${active ? "bg-green-200 dark:bg-green-800/40" : ""}`}>
+                        <div className={`h-[28px] w-[28px] rounded-full flex items-center justify-center transition-colors ${active ? "bg-[#1B3A6B]/15 dark:bg-[#C8A84B]/20" : ""}`}>
                           <Icon className="h-[14px] w-[14px]" />
                         </div>
                         <span className="text-[11px] font-medium leading-none">{item.label}</span>
@@ -1047,7 +1076,7 @@ export default function CreatorBioEditor() {
                           }}
                           className={`w-full flex items-center gap-3 rounded-xl border-2 p-3 transition-all ${
                             theme.shade === s.value
-                              ? "border-green-500 ring-2 ring-green-500/20"
+                              ? "border-[#1B3A6B] ring-2 ring-[#1B3A6B]/20"
                               : "border-border hover:border-muted-foreground/30"
                           }`}
                         >
@@ -1064,7 +1093,7 @@ export default function CreatorBioEditor() {
                             <p className="text-xs font-medium text-foreground">{s.label}</p>
                           </div>
                           {theme.shade === s.value && (
-                            <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                            <div className="h-5 w-5 rounded-full bg-[#1B3A6B] flex items-center justify-center shrink-0">
                               <svg className="h-3 w-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
                             </div>
                           )}
@@ -1085,7 +1114,7 @@ export default function CreatorBioEditor() {
                           onClick={() => { updateTheme({ fontFamily: f.value }); persistTheme({ ...theme, fontFamily: f.value }); }}
                           className={`w-full flex items-center justify-between rounded-xl border-2 px-4 py-3 transition-all ${
                             theme.fontFamily === f.value
-                              ? "border-green-500 ring-2 ring-green-500/20 bg-green-50 dark:bg-green-900/10"
+                              ? "border-[#1B3A6B] ring-2 ring-[#1B3A6B]/20 bg-[#1B3A6B]/5 dark:bg-[#1B3A6B]/10"
                               : "border-border hover:border-muted-foreground/30"
                           }`}
                         >
@@ -1108,7 +1137,7 @@ export default function CreatorBioEditor() {
                           onClick={() => { updateTheme({ linkShape: s.value }); persistTheme({ ...theme, linkShape: s.value }); }}
                           className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
                             theme.linkShape === s.value
-                              ? "border-green-500 ring-2 ring-green-500/20"
+                              ? "border-[#1B3A6B] ring-2 ring-[#1B3A6B]/20"
                               : "border-border hover:border-muted-foreground/30"
                           }`}
                         >
@@ -1140,7 +1169,7 @@ export default function CreatorBioEditor() {
                             onClick={() => { updateTheme({ linkStyle: s.value }); persistTheme({ ...theme, linkStyle: s.value }); }}
                             className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
                               theme.linkStyle === s.value
-                                ? "border-green-500 ring-2 ring-green-500/20"
+                                ? "border-[#1B3A6B] ring-2 ring-[#1B3A6B]/20"
                                 : "border-border hover:border-muted-foreground/30"
                             }`}
                           >
@@ -1207,7 +1236,7 @@ export default function CreatorBioEditor() {
                           key={mode}
                           onClick={() => { updateTheme({ bgMode: mode }); persistTheme({ ...theme, bgMode: mode }); }}
                           className={`flex-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors capitalize ${
-                            theme.bgMode === mode ? "bg-green-600 text-white" : "text-muted-foreground hover:text-foreground"
+                            theme.bgMode === mode ? "bg-[#1B3A6B] text-white" : "text-muted-foreground hover:text-foreground"
                           }`}
                         >
                           {mode}
@@ -1278,7 +1307,7 @@ export default function CreatorBioEditor() {
                         />
                         <button
                           onClick={() => bgImageInputRef.current?.click()}
-                          className="w-full rounded-xl border-2 border-dashed border-border hover:border-green-400 transition-colors p-4 flex flex-col items-center gap-2"
+                          className="w-full rounded-xl border-2 border-dashed border-border hover:border-[#C8A84B] transition-colors p-4 flex flex-col items-center gap-2"
                         >
                           {theme.bgImageUrl ? (
                             <img src={theme.bgImageUrl} alt="Background" className="w-full h-20 object-cover rounded-lg" />
@@ -1355,7 +1384,7 @@ export default function CreatorBioEditor() {
                       }`}
                     >
                       <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 cursor-grab" />
-                      <div className="flex items-center justify-center h-8 w-8 rounded-md bg-primary/10 text-primary shrink-0">
+                      <div className="flex items-center justify-center h-8 w-8 rounded-md bg-[#1B3A6B]/10 text-[#1B3A6B] shrink-0">
                         {getSectionIcon(entry)}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1402,7 +1431,7 @@ export default function CreatorBioEditor() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white h-9 text-xs" onClick={copyUrl}>
+                  <Button className="w-full bg-[#1B3A6B] hover:bg-[#152e55] text-white h-9 text-xs" onClick={copyUrl}>
                     <Copy className="h-3.5 w-3.5 mr-2" />Copy My Page Link
                   </Button>
                   <Button variant="outline" className="w-full h-9 text-xs" onClick={() => { if (navigator.share) navigator.share({ title: displayName, url: bioUrl }); else copyUrl(); }}>
@@ -1424,7 +1453,7 @@ export default function CreatorBioEditor() {
                 )}
                 <div className="rounded-lg border border-dashed border-border p-4 space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center justify-center h-8 w-8 rounded-md bg-violet-100 text-violet-600 shrink-0"><CreditCard className="h-4 w-4" /></div>
+                    <div className="flex items-center justify-center h-8 w-8 rounded-md bg-[#1B3A6B]/10 text-[#C8A84B] shrink-0"><CreditCard className="h-4 w-4" /></div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <p className="text-xs font-medium">NFC Creator Card</p>
@@ -1455,7 +1484,7 @@ export default function CreatorBioEditor() {
                     key={id}
                     onClick={() => setPreviewDevice(id)}
                     className={`flex items-center gap-1.5 px-4 h-[30px] rounded-full text-xs font-medium transition-colors ${
-                      previewDevice === id ? "bg-[#3B82F6] text-white" : "text-gray-500 hover:text-foreground"
+                      previewDevice === id ? "bg-[#1B3A6B] text-white" : "text-gray-500 hover:text-foreground"
                     }`}
                   >
                     <DIcon className="h-3.5 w-3.5" />{label}
@@ -1463,8 +1492,8 @@ export default function CreatorBioEditor() {
                 ))}
               </div>
               <div className="flex items-center gap-0 rounded-full border border-border bg-card p-1">
-                <button onClick={() => setPreviewMode("edit")} className={`px-4 h-[30px] rounded-full text-xs font-medium transition-colors ${previewMode === "edit" ? "bg-[#3B82F6] text-white" : "text-gray-500 hover:text-foreground"}`}>Edit</button>
-                <button onClick={() => setPreviewMode("preview")} className={`px-4 h-[30px] rounded-full text-xs font-medium transition-colors ${previewMode === "preview" ? "bg-[#3B82F6] text-white" : "text-gray-500 hover:text-foreground"}`}>Preview</button>
+                <button onClick={() => setPreviewMode("edit")} className={`px-4 h-[30px] rounded-full text-xs font-medium transition-colors ${previewMode === "edit" ? "bg-[#1B3A6B] text-white" : "text-gray-500 hover:text-foreground"}`}>Edit</button>
+                <button onClick={() => setPreviewMode("preview")} className={`px-4 h-[30px] rounded-full text-xs font-medium transition-colors ${previewMode === "preview" ? "bg-[#1B3A6B] text-white" : "text-gray-500 hover:text-foreground"}`}>Preview</button>
               </div>
             </div>
 
@@ -1501,22 +1530,22 @@ export default function CreatorBioEditor() {
                   }}
                 >
                   {/* Hero image */}
-                  {heroImageUrl && (
+                  {heroImageUrl && theme.showHeroImage && (
                     <div className="w-full overflow-hidden" style={{ height: heroImageFormat === "portrait" ? "170px" : heroImageFormat === "square" ? "136px" : "102px" }}>
                       <img src={heroImageUrl} alt="" className="w-full h-full object-cover" />
                     </div>
                   )}
 
                   {/* Profile header */}
-                  <div className={`px-4 ${heroImageUrl ? "pt-3" : "pt-12"} pb-2.5 flex flex-col items-center`}>
+                  <div className={`px-4 ${heroImageUrl && theme.showHeroImage ? "pt-3" : "pt-12"} pb-2.5 flex flex-col items-center`}>
                     {/* Avatar — 54px circular */}
-                    {avatarUrl ? (
+                    {theme.showProfileImage && avatarUrl ? (
                       <img src={avatarUrl} alt="" className="h-[54px] w-[54px] rounded-full object-cover shadow-sm" style={{ border: `2px solid ${theme.themeColor}` }} />
-                    ) : (
+                    ) : theme.showProfileImage ? (
                       <div className="h-[54px] w-[54px] rounded-full flex items-center justify-center text-lg font-semibold" style={{ backgroundColor: isDark ? "#2d3548" : "#e5e7eb", color: phoneSubtext }}>
                         {(displayName || "?")[0].toUpperCase()}
                       </div>
-                    )}
+                    ) : null}
                     {/* Name — 15px bold */}
                     <h3 className="mt-2 font-bold leading-tight" style={{ fontSize: "15px", color: phoneText, fontFamily: theme.fontFamily }}>
                       {displayName || "Your Name"}
@@ -1706,7 +1735,7 @@ export default function CreatorBioEditor() {
             <div className="fixed top-0 right-0 h-full w-96 bg-white dark:bg-gray-900 shadow-2xl z-50 flex flex-col">
               {/* Header */}
               <div className="flex items-center gap-3 px-5 py-4 border-b border-border shrink-0">
-                <div className="flex items-center justify-center h-8 w-8 rounded-md bg-primary/10 text-primary shrink-0">
+                <div className="flex items-center justify-center h-8 w-8 rounded-md bg-[#1B3A6B]/10 text-[#1B3A6B] shrink-0">
                   {getSectionIcon(entry)}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -1848,7 +1877,7 @@ export default function CreatorBioEditor() {
                           <div className="flex gap-2">
                             <Button
                               size="sm"
-                              className="bg-blue-600 hover:bg-blue-700 text-white h-7 text-xs flex-1"
+                              className="bg-[#1B3A6B] hover:bg-[#152e55] text-white h-7 text-xs flex-1"
                               onClick={() => { persistSections(sections); toast.success("Link saved!"); }}
                             >
                               Save
@@ -2057,7 +2086,7 @@ export default function CreatorBioEditor() {
               {/* Footer */}
               <div className="px-5 py-3 border-t border-border shrink-0">
                 <Button
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                  className="w-full bg-[#1B3A6B] hover:bg-[#152e55] text-white text-xs"
                   onClick={() => {
                     persistSections(sections);
                     toast.success("Changes saved!");
@@ -2089,7 +2118,7 @@ export default function CreatorBioEditor() {
                     alreadyAdded ? "border-border/40 bg-muted/30 opacity-50 cursor-not-allowed" : "border-border hover:bg-accent hover:border-accent-foreground/20 cursor-pointer"
                   }`}
                 >
-                  <div className="flex items-center justify-center h-10 w-10 rounded-md bg-primary/10 text-primary shrink-0">{getSectionIcon(entry)}</div>
+                  <div className="flex items-center justify-center h-10 w-10 rounded-md bg-[#1B3A6B]/10 text-[#1B3A6B] shrink-0">{getSectionIcon(entry)}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-sm">{entry.label}</span>
@@ -2163,7 +2192,7 @@ export default function CreatorBioEditor() {
                       key={tpl.id}
                       onClick={() => setPendingTemplate(tpl.id)}
                       className={`relative rounded-2xl overflow-hidden transition-all text-left ${
-                        selected ? "ring-3 ring-blue-500 ring-offset-2" : "ring-1 ring-border hover:ring-foreground/30"
+                        selected ? "ring-3 ring-[#1B3A6B] ring-offset-2" : "ring-1 ring-border hover:ring-foreground/30"
                       }`}
                       style={{ height: 360 }}
                     >
@@ -2252,7 +2281,7 @@ export default function CreatorBioEditor() {
 
                       {/* Selection checkmark */}
                       {selected && (
-                        <div className="absolute top-2.5 right-2.5 h-6 w-6 rounded-full bg-blue-500 flex items-center justify-center shadow-lg">
+                        <div className="absolute top-2.5 right-2.5 h-6 w-6 rounded-full bg-[#1B3A6B] flex items-center justify-center shadow-lg">
                           <Check className="h-3.5 w-3.5 text-white" />
                         </div>
                       )}
@@ -2265,7 +2294,7 @@ export default function CreatorBioEditor() {
             {/* Footer */}
             <div className="px-6 py-4 border-t border-border shrink-0">
               <Button
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11 text-sm font-medium"
+                className="w-full bg-[#1B3A6B] hover:bg-[#152e55] text-white h-11 text-sm font-medium"
                 disabled={!pendingTemplate}
                 onClick={() => {
                   if (pendingTemplate) {
