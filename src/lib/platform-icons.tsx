@@ -9,6 +9,34 @@
 
 import { Globe } from "lucide-react";
 
+/** Normalize common platform aliases to canonical keys. */
+export const PLATFORM_ALIASES: Record<string, string> = {
+  ig: "instagram",
+  insta: "instagram",
+  fb: "facebook",
+  tt: "tiktok",
+  yt: "youtube",
+  tw: "twitter",
+  twitter: "x",
+  "x (twitter)": "x",
+  "x(twitter)": "x",
+  li: "linkedin",
+  pin: "pinterest",
+  snap: "snapchat",
+  sc: "snapchat",
+  bsky: "bluesky",
+  gbp: "google_business",
+  "google business profile": "google_business",
+  googlebusiness: "google_business",
+  podcast: "podcasts",
+};
+
+/** Normalize a platform string to its canonical key. */
+export function normalizePlatform(raw: string): string {
+  const key = raw.toLowerCase().trim();
+  return PLATFORM_ALIASES[key] ?? key;
+}
+
 /** Platform brand colors (used as circle background) */
 export const PLATFORM_COLORS: Record<string, string> = {
   instagram: "#E1306C",
@@ -194,7 +222,7 @@ export function PlatformIcon({
   size?: number;
   className?: string;
 }) {
-  const key = platform.toLowerCase().trim();
+  const key = normalizePlatform(platform);
   const bgColor = PLATFORM_COLORS[key];
   const isInstagram = key === "instagram";
   const isGoogle = key === "google" || key === "google business" || key === "google_business";

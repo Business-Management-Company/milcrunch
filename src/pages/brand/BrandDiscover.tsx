@@ -33,7 +33,7 @@ import { saveCreatorAvatar } from "@/lib/directories";
 import { getPlatformsFromEnrichmentData, getPlatformStatsFromEnrichment, formatCompactFollowers } from "@/lib/enrichment-platforms";
 import { parseSmartQuery } from "@/lib/smart-search-parser";
 import { isNaturalLanguageQuery, parseNaturalLanguageSearch, followersToRange, engagementToOption } from "@/lib/nl-search-parser";
-import { PlatformIcon as BrandPlatformIcon } from "@/lib/platform-icons";
+import { PlatformIcon as BrandPlatformIcon, normalizePlatform } from "@/lib/platform-icons";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
@@ -153,9 +153,14 @@ const PLATFORM_URLS: Record<string, (u: string) => string> = {
   instagram: (u) => `https://instagram.com/${u}`,
   tiktok: (u) => `https://tiktok.com/@${u}`,
   youtube: (u) => `https://youtube.com/@${u}`,
+  x: (u) => `https://x.com/${u}`,
   twitter: (u) => `https://x.com/${u}`,
   facebook: (u) => `https://facebook.com/${u}`,
   linkedin: (u) => `https://linkedin.com/in/${u}`,
+  threads: (u) => `https://threads.net/@${u}`,
+  pinterest: (u) => `https://pinterest.com/${u}`,
+  reddit: (u) => `https://reddit.com/user/${u}`,
+  bluesky: (u) => `https://bsky.app/profile/${u}`,
 };
 
 function PlatformIcon({ platform, username, size = 20 }: { platform: string; username?: string; size?: number }) {
@@ -192,7 +197,8 @@ function extractFromEnrichment(data: EnrichedProfileResponse): Partial<CreatorCa
   if (creatorHas && typeof creatorHas === "object") {
     const plats: string[] = ["instagram"]; // always include IG since enrichment is IG-based
     for (const [k, v] of Object.entries(creatorHas)) {
-      if (v && !plats.includes(k.toLowerCase())) plats.push(k.toLowerCase());
+      const normalized = normalizePlatform(k);
+      if (v && !plats.includes(normalized)) plats.push(normalized);
     }
     partial.socialPlatforms = plats;
   }

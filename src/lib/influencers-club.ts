@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { scoreMilitaryRelevance, isMilitaryQuery } from "@/lib/military-scoring";
+import { normalizePlatform } from "@/lib/platform-icons";
 
 // Use relative /api/* paths; Vercel rewrites forward to upstream. Auth must be in the request
 // (Vercel does not inject headers), so we always send Authorization in every fetch.
@@ -173,29 +174,29 @@ function mapAccountToCard(account: ApiAccount, index: number): CreatorCard {
   const socialPlatforms: string[] = [];
   if (p?.platforms) {
     if (Array.isArray(p.platforms)) {
-      socialPlatforms.push(...(p.platforms as string[]).map((x) => String(x).toLowerCase()));
+      socialPlatforms.push(...(p.platforms as string[]).map((x) => normalizePlatform(String(x))));
     } else if (typeof p.platforms === "string") {
-      socialPlatforms.push(p.platforms.toLowerCase());
+      socialPlatforms.push(normalizePlatform(p.platforms));
     }
   }
   if (p?.social_links && Array.isArray(p.social_links)) {
     (p.social_links as { platform?: string }[]).forEach((s) => {
-      const plat = String(s?.platform ?? "").toLowerCase();
+      const plat = normalizePlatform(String(s?.platform ?? ""));
       if (plat && !socialPlatforms.includes(plat)) socialPlatforms.push(plat);
     });
   }
-  const hasFlags = {
-    instagram: true,
-    tiktok: Boolean(p?.has_tiktok),
-    youtube: Boolean(p?.has_youtube),
-    twitter: Boolean(p?.has_twitter),
-    facebook: Boolean(p?.has_facebook),
-    linkedin: Boolean(p?.has_linkedin),
-    podcast: Boolean(p?.has_podcast),
-    twitch: Boolean(p?.has_twitch),
-  };
-  ["instagram", "tiktok", "youtube", "twitter", "facebook", "linkedin", "podcast", "twitch"].forEach((plat) => {
-    if (hasFlags[plat as keyof typeof hasFlags] && !socialPlatforms.includes(plat)) {
+  const hasFlags: [string, boolean][] = [
+    ["instagram", true],
+    ["tiktok", Boolean(p?.has_tiktok)],
+    ["youtube", Boolean(p?.has_youtube)],
+    ["x", Boolean(p?.has_twitter)],
+    ["facebook", Boolean(p?.has_facebook)],
+    ["linkedin", Boolean(p?.has_linkedin)],
+    ["podcasts", Boolean(p?.has_podcast)],
+    ["twitch", Boolean(p?.has_twitch)],
+  ];
+  hasFlags.forEach(([plat, has]) => {
+    if (has && !socialPlatforms.includes(plat)) {
       socialPlatforms.push(plat);
     }
   });
@@ -204,7 +205,7 @@ function mapAccountToCard(account: ApiAccount, index: number): CreatorCard {
     ["instagram", ["instagram_url", "instagram_followers"]],
     ["tiktok", ["tiktok_url", "tiktok_followers"]],
     ["youtube", ["youtube_url", "youtube_subscribers", "youtube_followers"]],
-    ["twitter", ["twitter_url", "twitter_followers", "x_url"]],
+    ["x", ["twitter_url", "twitter_followers", "x_url"]],
     ["facebook", ["facebook_url", "facebook_followers"]],
     ["linkedin", ["linkedin_url", "linkedin_followers"]],
   ];

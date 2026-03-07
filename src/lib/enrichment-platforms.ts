@@ -40,9 +40,14 @@ const PLATFORM_CONFIG: Record<string, { label: string; pillClass: string; urlBui
     pillClass: "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200",
     urlBuilder: (u) => `https://x.com/${u}`,
   },
+  x: {
+    label: "X",
+    pillClass: "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200",
+    urlBuilder: (u) => `https://x.com/${u}`,
+  },
 };
 
-const PLATFORM_ORDER = ["instagram", "tiktok", "youtube", "facebook", "twitter"];
+const PLATFORM_ORDER = ["instagram", "tiktok", "youtube", "facebook", "twitter", "x"];
 
 /**
  * Extract verified social platforms from IC enrichment_data.
