@@ -64,7 +64,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { approveForDirectory, detectBranch, extractAvatarFromEnrichment, extractBannerImage } from "@/lib/featured-creators";
 import { getCrossPlatformSummary, formatCompactFollowers } from "@/lib/enrichment-platforms";
 import CreateListModal from "@/components/CreateListModal";
-import { PlatformIcon } from "@/lib/platform-icons";
+import { PlatformIcon, normalizePlatform } from "@/lib/platform-icons";
 
 
 const BRANCH_STYLES: Record<string, string> = {
@@ -589,18 +589,43 @@ export default function CreatorProfileModal({
 
     // Use cached enrichment from background enrichment if available,
     // but validate the data actually belongs to this creator.
+    // NOTE: BrandDiscover background enrichment uses RAW (0.03cr) which may lack
+    // creator_has. Show it immediately, then kick off a background FULL enrichment
+    // if creator_has is missing so multi-platform detection works.
     if (cachedEnrichment) {
       const cachedUsername = (cachedEnrichment.instagram?.username as string)?.toLowerCase();
       if (cachedUsername && cachedUsername !== handle.toLowerCase()) {
         console.warn("[Enrich] Cached enrichment username mismatch:", cachedUsername, "vs", handle, "— skipping cache");
         // Don't use mismatched cached data — fall through to fresh fetch
       } else {
-        console.log("[Enrich] Using prop-cached enrichment for:", handle);
+        console.log("[Enrich] Using prop-cached enrichment for:", handle, "| has creator_has:", !!cachedEnrichment.result?.creator_has);
         setEnriched(cachedEnrichment);
         setEnrichmentLoading(false);
         setError(null);
         setEnrichmentSource("prop");
-        return;
+        // If cached data lacks creator_has (RAW enrichment), silently fetch FULL
+        // in background to get multi-platform flags, then update enriched state.
+        if (!cachedEnrichment.result?.creator_has) {
+          console.log("[Enrich] Prop-cached enrichment lacks creator_has — fetching FULL enrichment in background");
+          const bgController = new AbortController();
+          enrichCreatorProfile(handle, bgController.signal, "instagram", true)
+            .then((fullPayload) => {
+              if (fullPayload) {
+                console.log("[Enrich] Background FULL enrichment completed for:", handle, "creator_has:", fullPayload.result?.creator_has);
+                setEnriched(fullPayload);
+                setEnrichmentSource("api");
+                setEnrichCache(handle, "instagram", fullPayload);
+              }
+            })
+            .catch((err) => {
+              if ((err as Error)?.name !== "AbortError") {
+                console.warn("[Enrich] Background FULL enrichment failed:", err);
+              }
+            });
+          // Cleanup: abort if modal closes
+          controllerRef.current = bgController;
+        }
+        return () => { controllerRef.current?.abort(); controllerRef.current = null; };
       }
     }
 
@@ -706,6 +731,7 @@ export default function CreatorProfileModal({
   // Detects platforms from: creator card fields, enrichment result (creator_has, accounts, platform data keys).
   // Uses platform-specific handles from accounts array for accurate per-platform enrichment.
   useEffect(() => {
+    console.log("[Enrich] Multi-platform useEffect FIRED — enriched:", !!enriched, "open:", open, "creator:", creator?.username, "enrichedKeys:", enriched ? Object.keys(enriched) : "none", "result keys:", enriched?.result ? Object.keys(enriched.result) : "none", "creator_has:", enriched?.result?.creator_has, "source:", enrichmentSource);
     if (!enriched || !open || !creator) return;
     const handle = (creator.username ?? "").replace(/^@/, "").trim();
     if (!handle) return;
@@ -717,14 +743,14 @@ export default function CreatorProfileModal({
     // 1. From creator card
     const cardPlats = creator.socialPlatforms ?? creator.platforms;
     if (Array.isArray(cardPlats)) {
-      for (const p of cardPlats) { if (typeof p === "string") detected.add(p.toLowerCase()); }
+      for (const p of cardPlats) { if (typeof p === "string") detected.add(normalizePlatform(p)); }
     }
 
     // 2. From enrichment result.creator_has boolean flags
     const has = rt.creator_has as Record<string, boolean> | undefined;
     if (has && typeof has === "object") {
       for (const [k, v] of Object.entries(has)) {
-        if (v) detected.add(k.toLowerCase());
+        if (v) detected.add(normalizePlatform(k));
       }
     }
 
@@ -732,8 +758,8 @@ export default function CreatorProfileModal({
     const accounts = rt.accounts as { platform?: string; username?: string; handle?: string; url?: string }[] | undefined;
     if (Array.isArray(accounts)) {
       for (const acc of accounts) {
-        const p = acc.platform?.toLowerCase();
-        if (!p) continue;
+        if (!acc.platform) continue;
+        const p = normalizePlatform(acc.platform);
         detected.add(p);
         const u = (acc.username || acc.handle || "").replace(/^@/, "").trim();
         if (u && !handleMap.has(p)) handleMap.set(p, u);
@@ -744,7 +770,7 @@ export default function CreatorProfileModal({
     const plinks = rt.platform_links as Record<string, string> | undefined;
     if (plinks && typeof plinks === "object") {
       for (const [k, url] of Object.entries(plinks)) {
-        const p = k.toLowerCase();
+        const p = normalizePlatform(k);
         if (!url || typeof url !== "string") continue;
         detected.add(p);
         if (!handleMap.has(p)) {
@@ -758,11 +784,12 @@ export default function CreatorProfileModal({
     }
 
     // 5. From enrichment result platform data keys — use data directly if it has stats
-    const KNOWN_PLATFORMS = ["tiktok", "youtube", "twitter", "facebook", "linkedin"];
+    // IC API nests platform data under result.tiktok, result.youtube, result.twitter etc.
+    const KNOWN_PLATFORMS = ["tiktok", "youtube", "twitter", "x", "facebook", "linkedin"];
     for (const p of KNOWN_PLATFORMS) {
       const platObj = (rt as Record<string, unknown>)[p];
       if (platObj && typeof platObj === "object") {
-        detected.add(p);
+        detected.add(normalizePlatform(p));
         const pd = platObj as Record<string, unknown>;
         // Extract handle from existing platform data
         const u = ((pd.username ?? pd.handle ?? pd.custom_url) as string || "").replace(/^@/, "").trim();
