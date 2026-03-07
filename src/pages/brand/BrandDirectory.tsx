@@ -76,6 +76,7 @@ import {
   type DirectoryMember,
 } from "@/lib/directories";
 import { formatFollowerCount, getInitials, extractAvatarFromEnrichment } from "@/lib/featured-creators";
+import { getPlatformStatsFromEnrichment, formatCompactFollowers } from "@/lib/enrichment-platforms";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLists } from "@/contexts/ListContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -810,7 +811,16 @@ const BrandDirectory = () => {
       });
     }
     switch (sortField) {
-      case "followers": list.sort((a, b) => (b.follower_count ?? 0) - (a.follower_count ?? 0)); break;
+      case "followers": {
+        // Sort by total reach (sum of all platform followers from enrichment) if available, else fallback to follower_count
+        const getReach = (m: DirectoryMember) => {
+          const stats = getPlatformStatsFromEnrichment(m.enrichment_data);
+          const total = stats.reduce((sum, ps) => sum + ps.followers, 0);
+          return total > 0 ? total : (m.follower_count ?? 0);
+        };
+        list.sort((a, b) => getReach(b) - getReach(a));
+        break;
+      }
       case "engagement": list.sort((a, b) => (b.engagement_rate ?? 0) - (a.engagement_rate ?? 0)); break;
       case "added": list.sort((a, b) => new Date(b.added_at).getTime() - new Date(a.added_at).getTime()); break;
       default: list.sort((a, b) => a.sort_order - b.sort_order);
@@ -1401,23 +1411,35 @@ const BrandDirectory = () => {
                 const branchStyle = BRANCH_STYLES[m.branch ?? ""] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
                 const isToggling = togglingIds.has(m.id);
                 const platforms = getAllPlatforms(m);
+                const platStats = getPlatformStatsFromEnrichment(m.enrichment_data);
+                const platStatsMap = new Map(platStats.map((ps) => [ps.platform, ps]));
+                const totalReach = platStats.reduce((sum, ps) => sum + ps.followers, 0);
+                const displayFollowers = totalReach > 0 ? totalReach : m.follower_count;
                 return (
                   <Card key={m.id} className={cn("p-5 bg-white dark:bg-[#1A1D27] border-border flex flex-col items-center text-center cursor-pointer hover:shadow-lg transition-shadow", !m.approved && "opacity-60")} onClick={() => openCreatorDrawer(m)} onMouseEnter={() => handleRowMouseEnter(m)} onMouseLeave={handleRowMouseLeave}>
                     <DirAvatar m={m} size="lg" />
                     <h3 className="font-semibold text-[#000741] dark:text-white text-sm truncate max-w-full">{m.creator_name}</h3>
                     <p className="text-xs text-[#1e3a5f] mb-1 truncate max-w-full">@{m.creator_handle}</p>
-                    {/* Platform icons */}
+                    {/* Platform icons with follower counts */}
                     {platforms.length > 0 && (
-                      <div className="flex items-center gap-1 mb-1.5">
-                        {platforms.slice(0, 6).map((p) => (
-                          <span
-                            key={p}
-                            className={cn("w-5 h-5 rounded-full flex items-center justify-center", PLATFORM_COLOR[p] ?? "bg-gray-500 text-white")}
-                            title={p.charAt(0).toUpperCase() + p.slice(1)}
-                          >
-                            <span className="scale-[0.65]">{PLATFORM_ICON[p] ?? <ExternalLink className="h-3.5 w-3.5" />}</span>
-                          </span>
-                        ))}
+                      <div className="flex items-center gap-1.5 mb-1.5 flex-wrap justify-center">
+                        {platforms.slice(0, 5).map((p) => {
+                          const ps = platStatsMap.get(p);
+                          return (
+                            <span
+                              key={p}
+                              className="inline-flex items-center gap-0.5"
+                              title={`${(p.charAt(0).toUpperCase() + p.slice(1))}${ps?.followers ? `: ${formatCompactFollowers(ps.followers)} followers` : ""}`}
+                            >
+                              <span className={cn("w-5 h-5 rounded-full flex items-center justify-center shrink-0", PLATFORM_COLOR[p] ?? "bg-gray-500 text-white")}>
+                                <span className="scale-[0.65]">{PLATFORM_ICON[p] ?? <ExternalLink className="h-3.5 w-3.5" />}</span>
+                              </span>
+                              {ps && ps.followers > 0 && (
+                                <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-400">{formatCompactFollowers(ps.followers)}</span>
+                              )}
+                            </span>
+                          );
+                        })}
                       </div>
                     )}
                     {(() => {
@@ -1433,7 +1455,7 @@ const BrandDirectory = () => {
                       ) : null;
                     })()}
                     <div className="flex items-center gap-4 text-xs mb-3">
-                      <div><span className="font-bold text-[#000741] dark:text-white">{formatFollowerCount(m.follower_count)}</span><span className="text-muted-foreground ml-1">followers</span></div>
+                      <div><span className="font-bold text-[#000741] dark:text-white">{formatFollowerCount(displayFollowers)}</span><span className="text-muted-foreground ml-1">{totalReach > 0 ? "total reach" : "followers"}</span></div>
                       <div className="flex items-center gap-1"><Heart className="h-3 w-3 text-pink-500 fill-pink-500" /><span className="font-bold text-[#000741] dark:text-white">{m.avg_likes != null && String(m.avg_likes) !== "0" ? (/^\d+$/.test(String(m.avg_likes)) ? formatFollowerCount(Number(m.avg_likes)) : m.avg_likes) : "—"}</span><span className="text-muted-foreground ml-1">avg likes</span></div>
                     </div>
                     <div className="flex items-center gap-2 mt-auto pt-2 border-t border-gray-100 dark:border-gray-800 w-full justify-center flex-wrap" onClick={(e) => e.stopPropagation()}>
@@ -1616,17 +1638,21 @@ const BrandDirectory = () => {
                       <td className="p-3">
                         {(() => {
                           const rowPlatforms = getAllPlatforms(m);
+                          const rowPlatStats = getPlatformStatsFromEnrichment(m.enrichment_data);
+                          const rowStatsMap = new Map(rowPlatStats.map((ps) => [ps.platform, ps]));
                           return rowPlatforms.length > 0 ? (
-                            <div className="flex items-center gap-1">
-                              {rowPlatforms.slice(0, 5).map((p) => (
-                                <span
-                                  key={p}
-                                  className={cn("w-5 h-5 rounded-full flex items-center justify-center", PLATFORM_COLOR[p] ?? "bg-gray-500 text-white")}
-                                  title={p.charAt(0).toUpperCase() + p.slice(1)}
-                                >
-                                  <span className="scale-[0.65]">{PLATFORM_ICON[p] ?? <ExternalLink className="h-3.5 w-3.5" />}</span>
-                                </span>
-                              ))}
+                            <div className="flex items-center gap-1.5">
+                              {rowPlatforms.slice(0, 5).map((p) => {
+                                const ps = rowStatsMap.get(p);
+                                return (
+                                  <span key={p} className="inline-flex items-center gap-0.5" title={`${p}${ps?.followers ? `: ${formatCompactFollowers(ps.followers)}` : ""}`}>
+                                    <span className={cn("w-5 h-5 rounded-full flex items-center justify-center shrink-0", PLATFORM_COLOR[p] ?? "bg-gray-500 text-white")}>
+                                      <span className="scale-[0.65]">{PLATFORM_ICON[p] ?? <ExternalLink className="h-3.5 w-3.5" />}</span>
+                                    </span>
+                                    {ps && ps.followers > 0 && <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">{formatCompactFollowers(ps.followers)}</span>}
+                                  </span>
+                                );
+                              })}
                             </div>
                           ) : <span className="text-gray-300 dark:text-gray-600">—</span>;
                         })()}

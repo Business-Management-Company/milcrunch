@@ -66,6 +66,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { approveForDirectory, detectBranch, extractAvatarFromEnrichment, extractBannerImage } from "@/lib/featured-creators";
+import { getCrossPlatformSummary, formatCompactFollowers } from "@/lib/enrichment-platforms";
 import CreateListModal from "@/components/CreateListModal";
 
 /** TikTok branded SVG icon with teal/pink accent */
@@ -1995,6 +1996,41 @@ export default function CreatorProfileModal({
                 </div>
               </div>
             )}
+
+            {/* Cross-Platform Summary */}
+            {(() => {
+              const summary = getCrossPlatformSummary(enriched);
+              if (summary.platformStats.length < 2) return null;
+              return (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Cross-Platform Reach</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 p-2.5">
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Reach</p>
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">{formatCompactFollowers(summary.totalReach)}</p>
+                    </div>
+                    {summary.avgEngagement != null && (
+                      <div className="rounded-lg bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 p-2.5">
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">Avg Engagement</p>
+                        <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{summary.avgEngagement.toFixed(2)}%</p>
+                      </div>
+                    )}
+                  </div>
+                  {summary.mostEngagedPlatform && (
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5">
+                      Most engaged: <span className="font-semibold text-gray-700 dark:text-gray-300">{summary.mostEngagedPlatform}</span>
+                    </p>
+                  )}
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {summary.platformStats.map((ps) => (
+                      <span key={ps.platform} className="inline-flex items-center gap-1 rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 text-[11px] text-gray-600 dark:text-gray-400">
+                        {ps.label}: <span className="font-semibold">{formatCompactFollowers(ps.followers)}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Enrichment status */}
             {showEnrichmentLoading && (

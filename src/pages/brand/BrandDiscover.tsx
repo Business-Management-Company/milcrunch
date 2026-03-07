@@ -30,7 +30,7 @@ import { useLists } from "@/contexts/ListContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { approveForDirectory, detectBranch, extractAvatarFromEnrichment, extractBannerImage, fetchShowcaseCreators, type ShowcaseCreator } from "@/lib/featured-creators";
 import { saveCreatorAvatar } from "@/lib/directories";
-import { getPlatformsFromEnrichmentData } from "@/lib/enrichment-platforms";
+import { getPlatformsFromEnrichmentData, getPlatformStatsFromEnrichment, formatCompactFollowers } from "@/lib/enrichment-platforms";
 import { parseSmartQuery } from "@/lib/smart-search-parser";
 import { isNaturalLanguageQuery, parseNaturalLanguageSearch, followersToRange, engagementToOption } from "@/lib/nl-search-parser";
 import { toast } from "sonner";
@@ -3858,15 +3858,27 @@ const BrandDiscover = () => {
                             </td>
                             {/* Social Links */}
                             <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center gap-1">
-                                {socialPlatforms.length > 0 ? (
-                                  socialPlatforms.slice(0, 5).map((p) => (
-                                    <PlatformIcon key={p} platform={p} username={creator.username} />
-                                  ))
+                              {(() => {
+                                const rawEnrich = enrichRawCache[baseCreator.id];
+                                const platStats = rawEnrich ? getPlatformStatsFromEnrichment(rawEnrich) : [];
+                                const platStatsMap = new Map(platStats.map((ps) => [ps.platform, ps]));
+                                const displayPlats = socialPlatforms.length > 0 ? socialPlatforms : (platStats.length > 0 ? platStats.map((ps) => ps.platform) : []);
+                                return displayPlats.length > 0 ? (
+                                  <div className="flex items-center gap-1.5">
+                                    {displayPlats.slice(0, 5).map((p) => {
+                                      const ps = platStatsMap.get(p);
+                                      return (
+                                        <span key={p} className="inline-flex items-center gap-0.5">
+                                          <PlatformIcon platform={p} username={ps?.username ?? creator.username} />
+                                          {ps && ps.followers > 0 && <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">{formatCompactFollowers(ps.followers)}</span>}
+                                        </span>
+                                      );
+                                    })}
+                                  </div>
                                 ) : (
                                   <span className="text-gray-300 dark:text-gray-600">—</span>
-                                )}
-                              </div>
+                                );
+                              })()}
                             </td>
                             {/* Followers */}
                             <td className="p-3 text-right font-semibold text-[#000741] dark:text-white tabular-nums">{formatFollowers(creator.followers)}</td>
@@ -4137,14 +4149,28 @@ const BrandDiscover = () => {
                           </div>
                         </div>
 
-                        {/* Social Platform Icons */}
-                        {socialPlatforms.length > 0 && (
-                          <div className="flex items-center gap-1.5 mb-3" onClick={(e) => e.stopPropagation()}>
-                            {socialPlatforms.slice(0, 6).map((p) => (
-                              <PlatformIcon key={p} platform={p} username={creator.username} />
-                            ))}
-                          </div>
-                        )}
+                        {/* Social Platform Icons with follower counts */}
+                        {(() => {
+                          const rawEnrich = enrichRawCache[baseCreator.id];
+                          const platStats = rawEnrich ? getPlatformStatsFromEnrichment(rawEnrich) : [];
+                          const platStatsMap = new Map(platStats.map((ps) => [ps.platform, ps]));
+                          const displayPlats = socialPlatforms.length > 0 ? socialPlatforms : (platStats.length > 0 ? platStats.map((ps) => ps.platform) : []);
+                          return displayPlats.length > 0 ? (
+                            <div className="flex items-center gap-2 mb-3 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                              {displayPlats.slice(0, 5).map((p) => {
+                                const ps = platStatsMap.get(p);
+                                return (
+                                  <span key={p} className="inline-flex items-center gap-0.5">
+                                    <PlatformIcon platform={p} username={ps?.username ?? creator.username} />
+                                    {ps && ps.followers > 0 && (
+                                      <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">{formatCompactFollowers(ps.followers)}</span>
+                                    )}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          ) : null;
+                        })()}
 
                         {/* Email / contact */}
                         {creator.username && (
