@@ -247,17 +247,22 @@ export async function seedDemoConnectedAccounts(userId: string): Promise<Connect
  * rather than the Supabase UUID. This function finds the correct slug and caches it.
  */
 export async function resolveUploadPostUsername(supabaseUserId: string): Promise<string> {
-  // 1. Check localStorage cache for instant return
+  // 1. Check localStorage cache — but skip if it cached the UUID (that's the bug)
   const cacheKey = `up_slug_${supabaseUserId}`;
   const cached = localStorage.getItem(cacheKey);
-  if (cached) {
+  if (cached && cached !== supabaseUserId) {
     console.log("[UploadPost] Resolved slug from cache:", cached);
     return cached;
+  }
+  // Clear stale UUID-as-slug cache entries
+  if (cached === supabaseUserId) {
+    console.log("[UploadPost] Clearing stale UUID cache entry");
+    localStorage.removeItem(cacheKey);
   }
 
   // 2. List all UploadPost profiles
   const users = await listUploadPostUsers();
-  console.log("[UploadPost] Listed profiles:", users.length, "usernames:", users.map((u) => u.username));
+  console.log("[UploadPost] Listed profiles:", users.length, "full list:", JSON.stringify(users.map((u) => ({ username: u.username, keys: Object.keys(u) }))));
 
   // 3. Try exact UUID match first
   const byUuid = users.find((u) => u.username === supabaseUserId);
@@ -267,25 +272,25 @@ export async function resolveUploadPostUsername(supabaseUserId: string): Promise
     return byUuid.username;
   }
 
-  // 4. No UUID match — try to create a profile with the UUID
-  console.log("[UploadPost] No UUID match. Attempting to create profile with UUID:", supabaseUserId);
+  // 4. No UUID match — if existing profiles exist, use the first one
+  //    (covers setups where profile was created with a custom slug like "johnny-rocket")
+  if (users.length > 0) {
+    const slug = users[0].username;
+    console.log("[UploadPost] No UUID match, using existing profile:", slug);
+    localStorage.setItem(cacheKey, slug);
+    return slug;
+  }
+
+  // 5. No profiles at all — create one with the UUID
+  console.log("[UploadPost] No profiles found. Creating profile with UUID:", supabaseUserId);
   const createResult = await createUploadPostProfile(supabaseUserId);
   if (!createResult.error) {
-    console.log("[UploadPost] Created new profile with UUID:", supabaseUserId);
+    console.log("[UploadPost] Created new profile:", supabaseUserId);
     localStorage.setItem(cacheKey, supabaseUserId);
     return supabaseUserId;
   }
 
-  // 5. Creation failed — use the first existing profile as fallback
-  //    (covers single-creator setups where profile was created manually)
-  if (users.length > 0) {
-    const fallback = users[0].username;
-    console.log("[UploadPost] Creation failed, using existing profile as fallback:", fallback);
-    localStorage.setItem(cacheKey, fallback);
-    return fallback;
-  }
-
-  // 6. No profiles at all and creation failed — return UUID as last resort
+  // 6. Creation also failed — return UUID as last resort
   console.warn("[UploadPost] No profiles found and creation failed. Using UUID:", supabaseUserId);
   return supabaseUserId;
 }
