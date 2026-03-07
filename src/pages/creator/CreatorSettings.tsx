@@ -14,34 +14,21 @@ import {
   Loader2,
   RefreshCw,
   ExternalLink,
-  Instagram,
-  Youtube,
-  Facebook,
-  Linkedin,
-  X,
 } from "lucide-react";
-
-const TikTokIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V9.05a8.16 8.16 0 004.76 1.52V7.12a4.84 4.84 0 01-1-.43z" />
-  </svg>
-);
+import { PlatformIcon } from "@/lib/platform-icons";
 
 interface PlatformDef {
   id: string;
   name: string;
-  icon: React.ReactNode;
-  color: string;
-  bgColor: string;
 }
 
 const PLATFORMS: PlatformDef[] = [
-  { id: "instagram", name: "Instagram", icon: <Instagram className="w-5 h-5" />, color: "text-pink-500", bgColor: "bg-pink-50" },
-  { id: "tiktok", name: "TikTok", icon: <TikTokIcon className="w-5 h-5" />, color: "text-gray-900", bgColor: "bg-gray-100" },
-  { id: "youtube", name: "YouTube", icon: <Youtube className="w-5 h-5" />, color: "text-red-600", bgColor: "bg-red-50" },
-  { id: "x", name: "Twitter / X", icon: <X className="w-5 h-5" />, color: "text-gray-900", bgColor: "bg-gray-100" },
-  { id: "facebook", name: "Facebook", icon: <Facebook className="w-5 h-5" />, color: "text-blue-600", bgColor: "bg-blue-50" },
-  { id: "linkedin", name: "LinkedIn", icon: <Linkedin className="w-5 h-5" />, color: "text-blue-700", bgColor: "bg-blue-50" },
+  { id: "instagram", name: "Instagram" },
+  { id: "tiktok", name: "TikTok" },
+  { id: "youtube", name: "YouTube" },
+  { id: "x", name: "Twitter / X" },
+  { id: "facebook", name: "Facebook" },
+  { id: "linkedin", name: "LinkedIn" },
 ];
 
 function formatFollowers(n: number | null | undefined): string {
@@ -89,9 +76,7 @@ export default function CreatorSettings() {
                   const conn = accounts.find((a) => a.platform === p.id);
                   return (
                     <div key={p.id} className="flex items-center gap-3 p-3 rounded-lg border border-border">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${p.bgColor} ${p.color}`}>
-                        {p.icon}
-                      </div>
+                      <PlatformIcon platform={p.id} size={20} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium">{p.name}</p>
                         {conn ? (
