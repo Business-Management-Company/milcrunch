@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import CreatorLayout from "@/components/layout/CreatorLayout";
+import CreatorAIChat, { CreatorAIChatRef } from "@/components/creator/CreatorAIChat";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,6 +43,7 @@ function getFirstName(displayName: string | null): string {
 
 export default function CreatorDashboard() {
   const { user, creatorProfile } = useAuth();
+  const chatRef = useRef<CreatorAIChatRef>(null);
   const [handle, setHandle] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<{ platform: string; platform_username: string | null; followers_count: number | null }[]>([]);
   const [pageViews, setPageViews] = useState(0);
@@ -184,7 +186,7 @@ export default function CreatorDashboard() {
                 <Sparkles className="h-5 w-5 text-[#C8A84B] shrink-0" />
                 <span className="text-sm text-muted-foreground">What do you need help with today?</span>
               </div>
-              <Button size="sm" className="bg-[#1B3A6B] hover:bg-[#152d54] text-white h-11 px-5 shrink-0">
+              <Button size="sm" className="bg-[#1B3A6B] hover:bg-[#152d54] text-white h-11 px-5 shrink-0" onClick={() => chatRef.current?.open()}>
                 Get Started
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
@@ -195,6 +197,7 @@ export default function CreatorDashboard() {
                   {row.map((chip) => (
                     <button
                       key={chip}
+                      onClick={() => chatRef.current?.openWithMessage(chip)}
                       className="px-3 py-1.5 rounded-full border border-border text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                     >
                       {chip}
@@ -374,6 +377,7 @@ export default function CreatorDashboard() {
           </Card>
         </div>
       </div>
+      <CreatorAIChat ref={chatRef} />
     </CreatorLayout>
   );
 }
