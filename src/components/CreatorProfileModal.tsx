@@ -2322,18 +2322,14 @@ export default function CreatorProfileModal({
               </div>
             )}
 
-            {/* Platforms row — only show platforms with follower data */}
+            {/* Platforms row — show all platforms the creator has (from search result socialPlatforms) */}
             {(() => {
-              const platformsWithData = availablePlatforms.filter((p) => {
-                const pd = p === "instagram" ? igRecord : p === "tiktok" ? tiktokData : p === "youtube" ? youtubeData : p === "twitter" ? twitterData : p === "facebook" ? facebookData : p === "linkedin" ? linkedinData : null;
-                return Number((pd as Record<string, unknown>)?.follower_count ?? (pd as Record<string, unknown>)?.subscriber_count ?? 0) > 0;
-              });
-              if (platformsWithData.length === 0) return null;
+              if (availablePlatforms.length === 0) return null;
               return (
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Platforms</p>
                   <div className="flex flex-wrap gap-2">
-                    {platformsWithData.map((p) => {
+                    {availablePlatforms.map((p) => {
                       const isActive = selectedPlatform.toLowerCase() === p.toLowerCase();
                       const brandRing = p === "instagram" ? "ring-[#E1306C]" : p === "tiktok" ? "ring-[#00C9B7]" : p === "youtube" ? "ring-[#FF0000]" : p === "twitter" ? "ring-gray-900 dark:ring-white" : p === "facebook" ? "ring-[#1877F2]" : p === "linkedin" ? "ring-[#0A66C2]" : "ring-gray-900";
                       return (
