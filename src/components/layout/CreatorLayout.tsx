@@ -140,7 +140,7 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
       {/* Logo */}
       <div className="p-4 border-b border-white/10">
         <Link to="/creator/dashboard" className="flex items-center min-w-0">
-          <HexLogo variant="light" iconSize={20} textClass="text-lg" />
+          <HexLogo variant="dark" iconSize={20} textClass="text-lg" />
         </Link>
       </div>
 
@@ -219,7 +219,7 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
               {sidebar}
             </SheetContent>
           </Sheet>
-          <span className="ml-2"><HexLogo variant="light" iconSize={20} textClass="text-lg" /></span>
+          <span className="ml-2"><HexLogo variant="dark" iconSize={20} textClass="text-lg" /></span>
         </div>
       )}
 

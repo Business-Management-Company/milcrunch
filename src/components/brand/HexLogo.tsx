@@ -1,5 +1,9 @@
 /** MilCrunch tower + moat logo icon + "MilCrunch" wordmark in Sora 800. */
-export function HexIcon({ size = 24, className }: { size?: number; className?: string }) {
+export function HexIcon({ size = 24, className, variant = "light" }: { size?: number; className?: string; variant?: "dark" | "light" }) {
+  // "dark" = gold icon on dark bg, "light" = amber icon on light bg
+  const accent = variant === "dark" ? "#C8A84B" : "#f59e0b";
+  const bgOuter = variant === "dark" ? "#0f1a2e" : "#0d1525";
+  const bgInner = variant === "dark" ? "#152d54" : "#0f1a2e";
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -8,17 +12,17 @@ export function HexIcon({ size = 24, className }: { size?: number; className?: s
       height={size}
       className={className}
     >
-      <circle cx="50" cy="50" r="47" fill="none" stroke="#f59e0b" strokeWidth="3"/>
-      <circle cx="50" cy="50" r="44" fill="#0d1525"/>
-      <circle cx="50" cy="50" r="35" fill="#0f1a2e"/>
-      <rect x="30" y="38" width="40" height="28" rx="2" fill="#f59e0b"/>
-      <rect x="30" y="30" width="8" height="10" rx="1.5" fill="#f59e0b"/>
-      <rect x="41" y="30" width="8" height="10" rx="1.5" fill="#f59e0b"/>
-      <rect x="52" y="30" width="8" height="10" rx="1.5" fill="#f59e0b"/>
-      <rect x="62" y="30" width="8" height="10" rx="1.5" fill="#f59e0b"/>
-      <rect x="42" y="52" width="16" height="14" rx="8" fill="#0f1a2e"/>
-      <rect x="34" y="42" width="3.5" height="9" rx="1.5" fill="#0f1a2e"/>
-      <rect x="62" y="42" width="5" height="9" rx="1.5" fill="#0f1a2e"/>
+      <circle cx="50" cy="50" r="47" fill="none" stroke={accent} strokeWidth="3"/>
+      <circle cx="50" cy="50" r="44" fill={bgOuter}/>
+      <circle cx="50" cy="50" r="35" fill={bgInner}/>
+      <rect x="30" y="38" width="40" height="28" rx="2" fill={accent}/>
+      <rect x="30" y="30" width="8" height="10" rx="1.5" fill={accent}/>
+      <rect x="41" y="30" width="8" height="10" rx="1.5" fill={accent}/>
+      <rect x="52" y="30" width="8" height="10" rx="1.5" fill={accent}/>
+      <rect x="62" y="30" width="8" height="10" rx="1.5" fill={accent}/>
+      <rect x="42" y="52" width="16" height="14" rx="8" fill={bgInner}/>
+      <rect x="34" y="42" width="3.5" height="9" rx="1.5" fill={bgInner}/>
+      <rect x="62" y="42" width="5" height="9" rx="1.5" fill={bgInner}/>
     </svg>
   );
 }
@@ -43,7 +47,7 @@ export default function HexLogo({
 
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
-      <HexIcon size={iconSize} />
+      <HexIcon size={iconSize} variant={variant === "dark" ? "dark" : "light"} />
       <span
         className={`${textColor} ${textClass} tracking-tight`}
         style={{ fontFamily: "'Sora', sans-serif", fontWeight: 800 }}
