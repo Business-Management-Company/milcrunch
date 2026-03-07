@@ -427,9 +427,36 @@ export async function searchCreators(
   const list = Array.isArray(accounts) ? accounts : [];
   const total = Number((rawResponse as { total?: number }).total ?? list.length);
   if (list[0]) {
-    console.log("[Discovery] Full account data:", JSON.stringify(list[0], null, 2));
+    console.log('RAW SEARCH RESULT item[0]:', JSON.stringify(list[0], null, 2));
+    // Log cross-platform flags for first 3 results to see what IC search returns
+    list.slice(0, 3).forEach((acc, i) => {
+      const prof = acc.profile as Record<string, unknown> | undefined;
+      console.log(`[Discovery] item[${i}] platform signals:`, {
+        user_id: acc.user_id,
+        username: prof?.username,
+        full_name: prof?.full_name,
+        platform: prof?.platform,
+        platforms: prof?.platforms,
+        has_tiktok: prof?.has_tiktok,
+        has_youtube: prof?.has_youtube,
+        has_twitter: prof?.has_twitter,
+        has_facebook: prof?.has_facebook,
+        has_linkedin: prof?.has_linkedin,
+        tiktok_url: prof?.tiktok_url,
+        youtube_url: prof?.youtube_url,
+        tiktok_followers: prof?.tiktok_followers,
+        youtube_subscribers: prof?.youtube_subscribers,
+      });
+    });
   }
   const rawCreators: CreatorCard[] = list.map((acc, i) => mapAccountToCard(acc, i));
+  // Log mapped platform arrays for first 3 results
+  rawCreators.slice(0, 3).forEach((c, i) => {
+    console.log(`[Discovery] MAPPED card[${i}]:`, {
+      name: c.name, username: c.username,
+      platforms: c.platforms, socialPlatforms: c.socialPlatforms,
+    });
+  });
 
   // Apply military relevance scoring
   const scored = await scoreMilitaryRelevance(rawCreators);
