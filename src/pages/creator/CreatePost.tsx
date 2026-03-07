@@ -119,14 +119,12 @@ export default function CreatePost({ noLayout }: { noLayout?: boolean } = {}) {
             created_at: r.connected_at, updated_at: r.connected_at,
           }));
           setAccounts(mapped);
-          setSelected(new Set(mapped.map((a: any) => a.platform)));
           setLoading(false);
           return;
         }
         getConnectedAccounts(user.id).then((accs) => {
           if (accs.length > 0) {
             setAccounts(accs);
-            setSelected(new Set(accs.map((a) => a.platform)));
           }
           setLoading(false);
         });

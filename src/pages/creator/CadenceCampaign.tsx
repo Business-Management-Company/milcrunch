@@ -243,14 +243,12 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
             created_at: r.connected_at, updated_at: r.connected_at,
           }));
           setAccounts(mapped);
-          setSelectedPlatforms(new Set(mapped.map((a: any) => a.platform)));
           setLoadingAccounts(false);
           return;
         }
         getConnectedAccounts(effectiveUserId).then((accs) => {
           if (accs.length > 0) {
             setAccounts(accs);
-            setSelectedPlatforms(new Set(accs.map((a) => a.platform)));
           } else {
             setAccounts([]);
             setSelectedPlatforms(new Set());
