@@ -3859,7 +3859,13 @@ const BrandDiscover = () => {
                             {/* Social Links */}
                             <td className="p-3" onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center gap-1">
-                                <span className="text-gray-300 dark:text-gray-600">—</span>
+                                {socialPlatforms.length > 0 ? (
+                                  socialPlatforms.slice(0, 5).map((p) => (
+                                    <PlatformIcon key={p} platform={p} username={creator.username} />
+                                  ))
+                                ) : (
+                                  <span className="text-gray-300 dark:text-gray-600">—</span>
+                                )}
                               </div>
                             </td>
                             {/* Followers */}
@@ -4130,6 +4136,15 @@ const BrandDiscover = () => {
                             <span className="font-bold text-gray-900 dark:text-white tabular-nums">{creator.postsPerMonth ?? "—"}</span>
                           </div>
                         </div>
+
+                        {/* Social Platform Icons */}
+                        {socialPlatforms.length > 0 && (
+                          <div className="flex items-center gap-1.5 mb-3" onClick={(e) => e.stopPropagation()}>
+                            {socialPlatforms.slice(0, 6).map((p) => (
+                              <PlatformIcon key={p} platform={p} username={creator.username} />
+                            ))}
+                          </div>
+                        )}
 
                         {/* Email / contact */}
                         {creator.username && (
