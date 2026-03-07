@@ -3875,7 +3875,7 @@ const BrandDiscover = () => {
                                 const rawEnrich = enrichRawCache[baseCreator.id];
                                 const platStats = rawEnrich ? getPlatformStatsFromEnrichment(rawEnrich) : [];
                                 const platStatsMap = new Map(platStats.map((ps) => [ps.platform, ps]));
-                                const displayPlats = socialPlatforms.length > 0 ? socialPlatforms : (platStats.length > 0 ? platStats.map((ps) => ps.platform) : []);
+                                const displayPlats = platStats.length > 0 ? platStats.map((ps) => ps.platform) : socialPlatforms;
                                 return displayPlats.length > 0 ? (
                                   <div className="flex items-center gap-1.5">
                                     {displayPlats.slice(0, 5).map((p) => {
@@ -4167,7 +4167,7 @@ const BrandDiscover = () => {
                           const rawEnrich = enrichRawCache[baseCreator.id];
                           const platStats = rawEnrich ? getPlatformStatsFromEnrichment(rawEnrich) : [];
                           const platStatsMap = new Map(platStats.map((ps) => [ps.platform, ps]));
-                          const displayPlats = socialPlatforms.length > 0 ? socialPlatforms : (platStats.length > 0 ? platStats.map((ps) => ps.platform) : []);
+                          const displayPlats = platStats.length > 0 ? platStats.map((ps) => ps.platform) : socialPlatforms;
                           return displayPlats.length > 0 ? (
                             <div className="flex items-center gap-2 mb-3 flex-wrap" onClick={(e) => e.stopPropagation()}>
                               {displayPlats.slice(0, 5).map((p) => {
