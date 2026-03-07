@@ -48,7 +48,7 @@ const PLATFORMS: Platform[] = [
   { key: "linkedin",        label: "LinkedIn",        description: "Share professional content and track engagement",               provider: "linkedin"        },
   { key: "youtube",         label: "YouTube",         description: "Sync your YouTube channel videos, views, and subscribers",      provider: "youtube"         },
   { key: "facebook",        label: "Facebook",        description: "Connect your Facebook Page to sync insights and analytics",     provider: "facebook"        },
-  { key: "x",               label: "X (Twitter)",     description: "Track tweets, engagement, and follower growth",                 provider: "twitter"         },
+  { key: "x",               label: "X (Twitter)",     description: "Track tweets, engagement, and follower growth",                 provider: "x"              },
   { key: "threads",         label: "Threads",         description: "Connect your Threads account to post and track",               provider: "threads"         },
   { key: "pinterest",       label: "Pinterest",       description: "Share pins and track saves, clicks, and impressions",           provider: "pinterest"       },
   { key: "reddit",          label: "Reddit",          description: "Post to subreddits and track karma and engagement",             provider: "reddit"          },
@@ -192,17 +192,21 @@ const CreatorSocials = () => {
       return;
     }
     setConnecting(true);
+    console.log("[CreatorSocials] handleConnect — provider:", provider, "userId:", userId, "redirectUrl:", REDIRECT_URL);
     generateConnectUrl({
       userId,
       redirectUrl: REDIRECT_URL,
       provider,
     }).then((res) => {
       setConnecting(false);
+      console.log("[CreatorSocials] generateConnectUrl result:", JSON.stringify(res, null, 2));
       if (!res.access_url) {
+        console.error("[CreatorSocials] No access_url returned. Full response:", JSON.stringify(res));
         popup.close();
-        toast.error(res.error ?? "Could not generate connect link");
+        toast.error(res.error ?? "Could not generate connect link — no platforms available. Check UploadPost dashboard.");
         return;
       }
+      console.log("[CreatorSocials] Opening connect URL:", res.access_url);
       popup.location.href = res.access_url;
       if (pollRef.current) clearInterval(pollRef.current);
       pollRef.current = setInterval(() => {

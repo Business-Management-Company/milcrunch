@@ -100,14 +100,15 @@ export interface GenerateConnectOptions {
   provider?: string;
 }
 
-/** All supported UploadPost platforms for the connect UI. */
+/** All supported UploadPost platforms for the connect UI.
+ *  IMPORTANT: UploadPost uses "x" (not "twitter") per their API docs. */
 const ALL_PLATFORMS = [
   "tiktok",
   "instagram",
   "linkedin",
   "youtube",
   "facebook",
-  "twitter",
+  "x",
   "threads",
   "pinterest",
   "reddit",
@@ -147,9 +148,11 @@ export async function generateConnectUrl(
   );
 
   if (status < 400 && data.access_url) {
-    console.log("[UploadPost] JWT URL:", data.access_url, "| provider:", opts.provider ?? "all");
+    console.log("[UploadPost] ✅ JWT connect URL:", data.access_url);
+    console.log("[UploadPost] Provider requested:", opts.provider ?? "all", "| Platforms sent:", body.platforms);
     return data;
   }
+  console.warn("[UploadPost] generate-jwt returned status", status, "without access_url. Response:", JSON.stringify(data));
 
   // 409 = user already exists — create profile then retry once
   if (status === 409) {
