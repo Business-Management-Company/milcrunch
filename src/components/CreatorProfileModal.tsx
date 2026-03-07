@@ -647,31 +647,6 @@ export default function CreatorProfileModal({
       return;
     }
 
-    // ── TEMPORARY DEBUG: log raw creator data ──
-    console.log('CREATOR RAW DATA:', JSON.stringify(creator, null, 2));
-
-    // Query A: directory_members record for this creator
-    (async () => {
-      const { data, error } = await supabase
-        .from('directory_members')
-        .select('*')
-        .ilike('creator_name', `%${creator.name?.split(' ')[0] || 'patriotic'}%`)
-        .limit(1);
-      console.log('FULL RECORD:', JSON.stringify(data, null, 2));
-      if (error) console.log('QUERY A ERROR:', error);
-    })();
-
-    // Query B: social-related fields sample from directory_members
-    (async () => {
-      const { data, error } = await supabase
-        .from('directory_members')
-        .select('creator_name, creator_handle, platform, platforms, platform_urls, follower_count, engagement_rate, enrichment_data, linkedin_url')
-        .limit(3);
-      console.log('SOCIAL FIELDS SAMPLE:', JSON.stringify(data, null, 2));
-      if (error) console.log('QUERY B ERROR:', error);
-    })();
-    // ── END TEMPORARY DEBUG ──
-
     const rawHandle = creator.username;
     const handle = typeof rawHandle === "string" ? rawHandle.replace(/^@/, "").trim() : "";
     if (!handle) {
@@ -741,10 +716,6 @@ export default function CreatorProfileModal({
           return;
         }
 
-        // ── TEMPORARY DEBUG: log enrichment response ──
-        console.log('ENRICHMENT RAW DATA:', JSON.stringify(payload, null, 2));
-        // ── END TEMPORARY DEBUG ──
-
         setEnrichmentLoading(false);
         setEnriched(payload);
         setError(null);
@@ -779,9 +750,6 @@ export default function CreatorProfileModal({
 
       if (cached) {
         console.log("[Enrich] Supabase cache hit for:", handle);
-        // ── TEMPORARY DEBUG: log cached enrichment ──
-        console.log('ENRICHMENT RAW DATA (cached):', JSON.stringify(cached, null, 2));
-        // ── END TEMPORARY DEBUG ──
         setEnriched(cached);
         setEnrichmentLoading(false);
         setEnrichmentSource("cache");
@@ -1894,26 +1862,30 @@ export default function CreatorProfileModal({
         {/* ── Top Platform Bar ── */}
         <div className="flex flex-wrap items-center gap-2 px-4 py-3 bg-gray-50 dark:bg-[#0F1117] border-b border-gray-100 dark:border-gray-800 shrink-0">
           {availablePlatforms.map((p) => {
-            const isActive = selectedPlatform.toLowerCase() === p.toLowerCase();
             const platData = p === "instagram" ? igRecord : p === "tiktok" ? tiktokData : p === "youtube" ? youtubeData : p === "twitter" ? twitterData : p === "facebook" ? facebookData : p === "linkedin" ? linkedinData : null;
             const pFollowers = Number((platData as Record<string, unknown>)?.follower_count ?? (platData as Record<string, unknown>)?.subscriber_count ?? 0);
+            if (pFollowers <= 0) return null;
+            const isActive = selectedPlatform.toLowerCase() === p.toLowerCase();
             const pEngagement = Number((platData as Record<string, unknown>)?.engagement_percent ?? (platData as Record<string, unknown>)?.engagement_rate ?? 0);
-            const brandColor = p === "instagram" ? "text-[#E1306C]" : p === "tiktok" ? "text-[#00C9B7]" : p === "youtube" ? "text-[#FF0000]" : p === "twitter" ? "text-gray-900 dark:text-white" : p === "facebook" ? "text-[#1877F2]" : p === "linkedin" ? "text-[#0A66C2]" : "text-gray-900 dark:text-white";
+            const brandBorder = p === "instagram" ? "border-[#E1306C]" : p === "tiktok" ? "border-[#00C9B7]" : p === "youtube" ? "border-[#FF0000]" : p === "twitter" ? "border-gray-900 dark:border-white" : p === "facebook" ? "border-[#1877F2]" : p === "linkedin" ? "border-[#0A66C2]" : "border-gray-900";
+            const brandText = p === "instagram" ? "text-[#E1306C]" : p === "tiktok" ? "text-[#00C9B7]" : p === "youtube" ? "text-[#FF0000]" : p === "twitter" ? "text-gray-900 dark:text-white" : p === "facebook" ? "text-[#1877F2]" : p === "linkedin" ? "text-[#0A66C2]" : "text-gray-900 dark:text-white";
             return (
               <button
                 key={p}
                 type="button"
                 onClick={() => { userSelectedPlatformRef.current = true; setSelectedPlatform(p.toLowerCase()); }}
                 className={cn(
-                  "flex items-center gap-2 rounded-xl border-2 px-3 py-1.5 transition-colors",
-                  isActive ? "border-[#3B82F6] bg-blue-50/50 dark:bg-blue-950/20" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] hover:border-gray-300"
+                  "flex items-center gap-2 rounded-xl border-2 px-3 py-1.5 transition-all",
+                  isActive
+                    ? `${brandBorder} bg-white dark:bg-[#1A1D27] shadow-sm`
+                    : "border-transparent bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
                 )}
               >
                 <PlatformBrandIcon platform={p} className="h-5 w-5 shrink-0" />
                 <div className="text-left min-w-0">
                   <p className="text-sm leading-tight whitespace-nowrap">
-                    <span className={cn("font-bold", brandColor)}>{pFollowers > 0 ? formatNumber(pFollowers) : "—"}</span>
-                    <span className="text-gray-500 ml-1 text-xs font-normal">{p === "youtube" ? "subscribers" : "followers"}</span>
+                    <span className={cn("font-bold", brandText)}>{formatNumber(pFollowers)}</span>
+                    <span className="text-gray-500 ml-1 text-xs font-normal">{p === "youtube" ? "subs" : "followers"}</span>
                   </p>
                   <p className="text-[11px] text-green-600 leading-tight font-medium">{pEngagement > 0 ? `${formatPercent(pEngagement)} eng` : "—"}</p>
                 </div>
@@ -2030,40 +2002,7 @@ export default function CreatorProfileModal({
               </div>
             )}
 
-            {/* Cross-Platform Summary */}
-            {(() => {
-              const summary = getCrossPlatformSummary(enriched);
-              if (summary.platformStats.length < 2) return null;
-              return (
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Cross-Platform Reach</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 p-2.5">
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Reach</p>
-                      <p className="text-lg font-bold text-gray-900 dark:text-white">{formatCompactFollowers(summary.totalReach)}</p>
-                    </div>
-                    {summary.avgEngagement != null && (
-                      <div className="rounded-lg bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 p-2.5">
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">Avg Engagement</p>
-                        <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{summary.avgEngagement.toFixed(2)}%</p>
-                      </div>
-                    )}
-                  </div>
-                  {summary.mostEngagedPlatform && (
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5">
-                      Most engaged: <span className="font-semibold text-gray-700 dark:text-gray-300">{summary.mostEngagedPlatform}</span>
-                    </p>
-                  )}
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {summary.platformStats.map((ps) => (
-                      <span key={ps.platform} className="inline-flex items-center gap-1 rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 text-[11px] text-gray-600 dark:text-gray-400">
-                        {ps.label}: <span className="font-semibold">{formatCompactFollowers(ps.followers)}</span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
+            {/* Cross-Platform Summary is shown below in the dedicated section */}
 
             {/* Enrichment status */}
             {showEnrichmentLoading && (
@@ -2393,29 +2332,39 @@ export default function CreatorProfileModal({
               </div>
             )}
 
-            {/* Platforms row */}
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Platforms</p>
-              <div className="flex flex-wrap gap-2">
-                {availablePlatforms.map((p) => {
-                  const isActive = selectedPlatform.toLowerCase() === p.toLowerCase();
-                  return (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => { userSelectedPlatformRef.current = true; setSelectedPlatform(p.toLowerCase()); }}
-                      className={cn(
-                        "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
-                        isActive ? "bg-[#3B82F6]/10 ring-2 ring-[#3B82F6]" : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
-                      )}
-                      title={PLATFORM_LABELS[p.toLowerCase()] ?? p}
-                    >
-                      <PlatformBrandIcon platform={p} className="h-4 w-4" />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            {/* Platforms row — only show platforms with follower data */}
+            {(() => {
+              const platformsWithData = availablePlatforms.filter((p) => {
+                const pd = p === "instagram" ? igRecord : p === "tiktok" ? tiktokData : p === "youtube" ? youtubeData : p === "twitter" ? twitterData : p === "facebook" ? facebookData : p === "linkedin" ? linkedinData : null;
+                return Number((pd as Record<string, unknown>)?.follower_count ?? (pd as Record<string, unknown>)?.subscriber_count ?? 0) > 0;
+              });
+              if (platformsWithData.length === 0) return null;
+              return (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Platforms</p>
+                  <div className="flex flex-wrap gap-2">
+                    {platformsWithData.map((p) => {
+                      const isActive = selectedPlatform.toLowerCase() === p.toLowerCase();
+                      const brandRing = p === "instagram" ? "ring-[#E1306C]" : p === "tiktok" ? "ring-[#00C9B7]" : p === "youtube" ? "ring-[#FF0000]" : p === "twitter" ? "ring-gray-900 dark:ring-white" : p === "facebook" ? "ring-[#1877F2]" : p === "linkedin" ? "ring-[#0A66C2]" : "ring-gray-900";
+                      return (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => { userSelectedPlatformRef.current = true; setSelectedPlatform(p.toLowerCase()); }}
+                          className={cn(
+                            "flex h-7 w-7 items-center justify-center rounded-full transition-all",
+                            isActive ? `bg-white dark:bg-gray-900 ring-2 ${brandRing} shadow-sm` : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+                          )}
+                          title={PLATFORM_LABELS[p.toLowerCase()] ?? p}
+                        >
+                          <PlatformBrandIcon platform={p} className="h-3.5 w-3.5" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Detailed Stats */}
             <div className="border-t border-gray-100 dark:border-gray-800 pt-3">

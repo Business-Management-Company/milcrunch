@@ -798,6 +798,7 @@ const BrandDiscover = () => {
   const [creatorType, setCreatorType] = useState<string>("all");
   const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [platform, setPlatform] = useState<string[]>([]);
+  const [platformFilter, setPlatformFilter] = useState<Set<string>>(new Set());
   const [followersRange, setFollowersRange] = useState<string>("any");
   const [engagementMin, setEngagementMin] = useState<string>("any");
   const [locationFilter, setLocationFilter] = useState("");
@@ -2301,11 +2302,28 @@ const BrandDiscover = () => {
       : [];
     return { level: level as "high" | "medium" | "low", score: blended, matches: uniqueMatches, evidence: keywordEvidence, militaryPct };
   }, [searchQuery, niche, selectedBranches, keywordsInBio]);
-  // Sort by confidence when selected (client-side sort)
+  // Sort by confidence when selected (client-side sort) + platform filter
   const displayCreators = useMemo(() => {
-    if (sortBy !== "confidence") return creators;
-    return [...creators].sort((a, b) => getConfidence(b).score - getConfidence(a).score);
-  }, [creators, sortBy, getConfidence]);
+    let filtered = creators;
+    // Client-side platform filter: only show creators who have selected platform(s) with followers > 0
+    if (platformFilter.size > 0) {
+      filtered = filtered.filter((c) => {
+        const rawEnrich = enrichRawCache[c.id];
+        if (rawEnrich) {
+          const platStats = getPlatformStatsFromEnrichment(rawEnrich);
+          // OR logic: creator passes if they have ANY of the selected platforms
+          return Array.from(platformFilter).some((pf) =>
+            platStats.some((ps) => ps.platform === pf && ps.followers > 0)
+          );
+        }
+        // Fallback: check creator.platforms or socialPlatforms array
+        const cardPlats = (c.socialPlatforms ?? c.platforms ?? []).map((p) => p.toLowerCase());
+        return Array.from(platformFilter).some((pf) => cardPlats.includes(pf));
+      });
+    }
+    if (sortBy !== "confidence") return filtered;
+    return [...filtered].sort((a, b) => getConfidence(b).score - getConfidence(a).score);
+  }, [creators, sortBy, getConfidence, platformFilter, enrichRawCache]);
 
   // Top Creator — highest follower count from results
   const topCreator = useMemo(() => {
@@ -2318,7 +2336,9 @@ const BrandDiscover = () => {
   const totalFromApi = apiResults?.total ?? 0;
   const resultsLabel =
     hasSearched && !apiLoading
-      ? `Showing ${creators.length} of ${totalFromApi >= 1000 ? formatFollowers(totalFromApi) : totalFromApi.toLocaleString()} results`
+      ? platformFilter.size > 0
+        ? `Showing ${displayCreators.length} of ${creators.length} results (filtered by platform)`
+        : `Showing ${creators.length} of ${totalFromApi >= 1000 ? formatFollowers(totalFromApi) : totalFromApi.toLocaleString()} results`
       : "";
 
   const creatorToListPayload = (c: CreatorCard) => {
@@ -3613,13 +3633,55 @@ const BrandDiscover = () => {
           {/* Results: after search */}
           {hasSearched && !apiLoading && (
             <>
+              {/* Platform filter toggle buttons */}
+              {creators.length > 0 && (
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mr-1">Filter:</span>
+                  {(["instagram", "tiktok", "youtube", "twitter"] as const).map((pKey) => {
+                    const isOn = platformFilter.has(pKey);
+                    const label = pKey === "instagram" ? "Instagram" : pKey === "tiktok" ? "TikTok" : pKey === "youtube" ? "YouTube" : "X";
+                    const brandActive = pKey === "instagram" ? "border-[#E1306C] bg-[#E1306C]/10 text-[#E1306C]"
+                      : pKey === "tiktok" ? "border-[#00C9B7] bg-[#00C9B7]/10 text-[#00C9B7]"
+                      : pKey === "youtube" ? "border-[#FF0000] bg-[#FF0000]/10 text-[#FF0000]"
+                      : "border-gray-900 bg-gray-900/10 text-gray-900 dark:border-white dark:bg-white/10 dark:text-white";
+                    return (
+                      <button
+                        key={pKey}
+                        type="button"
+                        onClick={() => setPlatformFilter((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(pKey)) next.delete(pKey); else next.add(pKey);
+                          return next;
+                        })}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all",
+                          isOn ? brandActive : "border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                        )}
+                      >
+                        <PlatformIcon platform={pKey} />
+                        {label}
+                      </button>
+                    );
+                  })}
+                  {platformFilter.size > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setPlatformFilter(new Set())}
+                      className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 ml-1"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              )}
+
               <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
                 <div className="flex items-center gap-4">
                   <p className="text-sm text-muted-foreground">{resultsLabel}</p>
                   {creators.length > 0 && (
                     <div className="flex items-center gap-2">
                       <Checkbox
-                        checked={selectedIds.size === creators.length}
+                        checked={selectedIds.size === displayCreators.length}
                         onCheckedChange={selectAll}
                         aria-label="Select all on page"
                       />
