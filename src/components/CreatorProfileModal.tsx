@@ -1832,6 +1832,8 @@ export default function CreatorProfileModal({
 
   const displayEmail = fetchedEmail || enrichedEmail;
 
+  console.table(creator);
+
   return (
     <>
       <CreateListModal

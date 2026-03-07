@@ -90,6 +90,7 @@ function getApiKey(): string {
 
 function mapAccountToCard(account: ApiAccount, index: number): CreatorCard {
   const p = account.profile;
+  console.log('RAW IC ACCOUNT:', JSON.stringify(account, null, 2));
   console.log(`[influencers-club] Raw API profile[${index}]:`, JSON.parse(JSON.stringify(account)));
   // Use user_id when available (stable across searches), fall back to username
   // (unique per platform), then a random ID as last resort. Never use index-based
