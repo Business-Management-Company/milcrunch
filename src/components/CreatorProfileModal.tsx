@@ -993,6 +993,8 @@ export default function CreatorProfileModal({
     const cardPlatforms = creator?.socialPlatforms ?? creator?.platforms;
     if (Array.isArray(cardPlatforms)) {
       for (const p of cardPlatforms) { if (typeof p === "string") found.add(p.toLowerCase()); }
+    } else if (typeof cardPlatforms === "string" && cardPlatforms) {
+      cardPlatforms.split(",").map(p => p.trim().toLowerCase()).filter(Boolean).forEach(p => found.add(p));
     }
 
     // Extract IG handle
