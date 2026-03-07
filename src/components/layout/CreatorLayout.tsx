@@ -16,10 +16,7 @@ import {
   Briefcase,
   CalendarDays,
   List,
-  Users,
-  Trophy,
   Settings,
-  Palette,
   HelpCircle,
   LogOut,
   Menu,
@@ -63,17 +60,9 @@ const SECTIONS: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
-    label: "COMMUNITY",
-    items: [
-      { icon: Users, label: "Similar Creators", href: "/creator/similar" },
-      { icon: Trophy, label: "Leaderboard", href: "/creator/leaderboard" },
-    ],
-  },
-  {
     label: "SETTINGS",
     items: [
       { icon: Settings, label: "Settings", href: "/creator/settings" },
-      { icon: Palette, label: "Customize", href: "/creator/customize" },
       { icon: HelpCircle, label: "Help", href: "/creator/help" },
     ],
   },
@@ -178,7 +167,7 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
       <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-5">
         {SECTIONS.map((section) => (
           <div key={section.label}>
-            <p className="px-3 mb-3 flex items-center text-[10px] font-semibold uppercase text-[#C8A84B]" style={{ letterSpacing: "0.12em" }}>
+            <p className="px-3 mb-3 flex items-center text-[12px] font-semibold uppercase text-[#C8A84B]" style={{ letterSpacing: "0.15em" }}>
               <span className="mr-1.5">—</span>{section.label}
             </p>
             <div className="space-y-0.5">{section.items.map(navLink)}</div>
