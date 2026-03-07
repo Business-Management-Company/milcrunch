@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import CreatorLayout from "@/components/layout/CreatorLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,11 +14,12 @@ import {
   Loader2, Check, X, Link2, Plus, Eye, EyeOff, Sparkles,
   Upload, Image, Video, FileText, Download, Camera, Palette,
   Hash, Smile, Braces, Calendar, Tag, Copy,
-  ChevronDown, LayoutGrid,
+  ChevronDown, LayoutGrid, AlertTriangle, CheckCircle2,
+  Heart, MessageCircle, Bookmark, MoreHorizontal, ThumbsUp, Repeat2, Send,
 } from "lucide-react";
-import { PlatformIcon } from "@/lib/platform-icons";
+import { PlatformIcon, PLATFORM_NAMES } from "@/lib/platform-icons";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
 
 /* Google Drive icon (not a social platform — keep local) */
 const GoogleDriveIcon = ({ className }: { className?: string }) => (
@@ -42,13 +43,30 @@ const AI_IDEAS = [
   "Highlight a fellow veteran creator or small business you admire.",
 ];
 
+/* Platform-specific content limits */
+const platformRules: Record<string, {
+  maxChars?: number; maxHashtags?: number; maxImageMB?: number; maxVideoMB?: number;
+  imageRatio?: string; minImagePx?: number; maxImages?: number;
+  videoOnly?: boolean; imageRequired?: boolean;
+  maxTitleChars?: number; maxDescChars?: number; minVideoDuration?: number;
+}> = {
+  instagram: { maxChars: 2200, maxHashtags: 30, maxImageMB: 8, maxVideoMB: 100, imageRatio: "1:1, 4:5, 16:9", minImagePx: 320 },
+  facebook: { maxChars: 63206, maxImageMB: 4, maxVideoMB: 1024 },
+  x: { maxChars: 280, maxImageMB: 5, maxVideoMB: 512, maxImages: 4 },
+  linkedin: { maxChars: 3000, maxImageMB: 5, maxVideoMB: 200, maxImages: 9 },
+  tiktok: { maxChars: 2200, videoOnly: true, maxVideoMB: 287, minVideoDuration: 3 },
+  youtube: { maxTitleChars: 100, maxDescChars: 5000, videoOnly: true },
+  pinterest: { maxChars: 500, imageRequired: true },
+  threads: { maxChars: 500, maxImages: 10 },
+  google_business: { maxChars: 1500, maxImageMB: 5 },
+};
+
 export default function CreatePost() {
-  const { user } = useAuth();
+  const { user, creatorProfile } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Read query params for deep-linking from CreatorProfileModal
   const qTab = searchParams.get("tab");
   const qCreatorName = searchParams.get("creatorName") ?? undefined;
   const qCreatorId = searchParams.get("creatorId") ?? undefined;
@@ -70,6 +88,15 @@ export default function CreatePost() {
   const [showAiInput, setShowAiInput] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [previewPlatform, setPreviewPlatform] = useState("instagram");
+
+  /* Image preview URLs */
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  useEffect(() => {
+    const urls = mediaFiles.map((f) => URL.createObjectURL(f));
+    setPreviewUrls(urls);
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, [mediaFiles]);
 
   /* Fetch connected accounts */
   useEffect(() => {
@@ -105,6 +132,12 @@ export default function CreatePost() {
       });
   }, [user?.id]);
 
+  /* Auto-select preview platform from connected */
+  useEffect(() => {
+    const arr = Array.from(selected);
+    if (arr.length > 0 && !selected.has(previewPlatform)) setPreviewPlatform(arr[0]);
+  }, [selected]);
+
   const toggle = (platform: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -114,17 +147,19 @@ export default function CreatePost() {
     });
   };
 
-  const handlePost = async () => {
+  /* ── Post logic ── */
+  const executePost = async (immediate: boolean) => {
     if (!user?.id || !caption.trim()) { toast.error("Enter a caption."); return; }
     const selectedPlatforms = Array.from(selected);
     if (selectedPlatforms.length === 0) { toast.error("Select at least one platform."); return; }
+    if (hasErrors) { toast.error("Fix validation errors before posting."); return; }
     setPosting(true);
     try {
       const accountIds = accounts
         .filter((a) => selectedPlatforms.includes(a.platform))
         .map((a) => a.platform_user_id)
         .filter((id): id is string => !!id);
-      const scheduled = scheduledDate ? new Date(scheduledDate).toISOString() : undefined;
+      const scheduled = (!immediate && scheduledDate) ? new Date(scheduledDate).toISOString() : undefined;
       if (accountIds.length > 0) {
         const result = await createUploadPost({
           text: caption.trim(), account_ids: accountIds,
@@ -132,8 +167,10 @@ export default function CreatePost() {
           scheduled_at: scheduled,
         });
         if (result.success) {
-          toast.success(scheduled ? "Post scheduled!" : "Post published!");
-          setCaption(""); setMediaUrl(""); setScheduledDate(""); setSelected(new Set());
+          toast.success(immediate
+            ? `Posted successfully to ${selectedPlatforms.length} platform${selectedPlatforms.length !== 1 ? "s" : ""}!`
+            : "Post scheduled!");
+          setCaption(""); setMediaUrl(""); setScheduledDate(""); setSelected(new Set()); setMediaFiles([]);
         } else { toast.error(result.error ?? "Post failed."); }
       } else {
         const platformList = selectedPlatforms as UploadPostPlatform[];
@@ -146,34 +183,48 @@ export default function CreatePost() {
           result = await uploadText({ title: caption.trim(), user: user.id, platform: platformList, scheduled_date: scheduled });
         }
         if (result.success) {
-          toast.success(scheduled ? "Post scheduled!" : "Post published!");
-          setCaption(""); setMediaUrl(""); setScheduledDate(""); setSelected(new Set());
+          toast.success(immediate
+            ? `Posted successfully to ${selectedPlatforms.length} platform${selectedPlatforms.length !== 1 ? "s" : ""}!`
+            : "Post scheduled!");
+          setCaption(""); setMediaUrl(""); setScheduledDate(""); setSelected(new Set()); setMediaFiles([]);
         } else { toast.error(result.error ?? "Post failed."); }
       }
     } catch { toast.error("Post failed."); } finally { setPosting(false); }
   };
 
+  const handlePost = () => executePost(false);
+  const handlePostNow = () => executePost(true);
+
   const handleAiGenerate = async () => {
-    if (!aiPrompt.trim()) return;
+    console.log("[AI Caption] handler called, aiPrompt:", JSON.stringify(aiPrompt));
+    if (!aiPrompt.trim()) {
+      console.warn("[AI Caption] empty prompt, aborting");
+      toast.error("Enter a prompt first.");
+      return;
+    }
     console.log("[AI Caption] generating for prompt:", aiPrompt.trim());
     setAiLoading(true);
     try {
+      const payload = {
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 500,
+        messages: [
+          {
+            role: "user",
+            content: `You are a social media caption writer for a military creator. Write a compelling social media caption based on this prompt: "${aiPrompt.trim()}". Include 3-5 relevant hashtags at the end. Return only the caption text and hashtags, nothing else.`,
+          },
+        ],
+      };
+      console.log("[AI Caption] request payload:", JSON.stringify(payload));
       const res = await fetch("/api/anthropic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 500,
-          messages: [
-            {
-              role: "user",
-              content: `You are a social media caption writer for a military creator. Write a compelling social media caption based on this prompt: "${aiPrompt.trim()}". Include 3-5 relevant hashtags at the end. Return only the caption text and hashtags, nothing else.`,
-            },
-          ],
-        }),
+        body: JSON.stringify(payload),
       });
+      console.log("[AI Caption] response status:", res.status, res.statusText);
       if (res.ok) {
         const data = await res.json();
+        console.log("[AI Caption] response data:", JSON.stringify(data));
         const text = data.content?.[0]?.text ?? "";
         if (text) {
           setCaption((prev) => prev + (prev ? "\n\n" : "") + text);
@@ -187,7 +238,7 @@ export default function CreatePost() {
       } else {
         const errBody = await res.text().catch(() => "");
         console.error("[AI Caption] API error:", res.status, errBody);
-        toast.error("AI generation failed — try again.");
+        toast.error(`AI generation failed (${res.status}) — try again.`);
       }
     } catch (err) {
       console.error("[AI Caption] fetch error:", err);
@@ -209,12 +260,142 @@ export default function CreatePost() {
   const now = new Date();
   const defaultDateLabel = now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " " + now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
+  const displayName = creatorProfile?.display_name ?? user?.user_metadata?.full_name ?? "Creator";
+  const creatorHandle = creatorProfile?.handle ?? "creator";
+  const avatarInitial = (displayName || "C").charAt(0).toUpperCase();
+  const firstPreviewUrl = previewUrls.find((_, i) => mediaFiles[i]?.type.startsWith("image/")) ?? null;
+
+  /* ── Platform validation warnings ── */
+  const warnings = useMemo(() => {
+    const items: { platform: string; type: "warning" | "error"; message: string }[] = [];
+    for (const p of Array.from(selected)) {
+      const rules = platformRules[p];
+      if (!rules) continue;
+      const name = PLATFORM_NAMES[p] ?? p;
+      if (rules.maxChars) {
+        const len = caption.length;
+        if (len > rules.maxChars) items.push({ platform: p, type: "error", message: `${name}: ${len}/${rules.maxChars} chars (over limit)` });
+        else if (len > rules.maxChars * 0.8 && len > 0) items.push({ platform: p, type: "warning", message: `${name}: ${len}/${rules.maxChars} chars (approaching limit)` });
+      }
+      if (rules.videoOnly && mediaFiles.length > 0) {
+        const hasNonVideo = mediaFiles.some((f) => !f.type.startsWith("video/"));
+        if (hasNonVideo) items.push({ platform: p, type: "error", message: `${name}: requires video content only` });
+      }
+      if (rules.imageRequired && mediaFiles.length === 0 && !mediaUrl.trim()) {
+        items.push({ platform: p, type: "warning", message: `${name}: an image is required` });
+      }
+      for (const file of mediaFiles) {
+        const sizeMB = file.size / (1024 * 1024);
+        if (file.type.startsWith("image/") && rules.maxImageMB && sizeMB > rules.maxImageMB) {
+          items.push({ platform: p, type: "error", message: `${name}: image "${file.name}" exceeds ${rules.maxImageMB}MB limit` });
+        }
+        if (file.type.startsWith("video/") && rules.maxVideoMB && sizeMB > rules.maxVideoMB) {
+          items.push({ platform: p, type: "error", message: `${name}: video "${file.name}" exceeds ${rules.maxVideoMB}MB limit` });
+        }
+      }
+    }
+    return items;
+  }, [selected, caption, mediaFiles, mediaUrl]);
+
+  const hasErrors = warnings.some((w) => w.type === "error");
+
+  /* ── Preview mockup renderer ── */
+  const renderPreview = () => {
+    const img = firstPreviewUrl;
+    const captionPreview = caption || "Your caption will appear here...";
+    const isTikTok = previewPlatform === "tiktok";
+
+    if (isTikTok) {
+      return (
+        <div className="bg-black text-white aspect-[9/16] relative overflow-hidden flex items-end">
+          {img && <img src={img} alt="" className="absolute inset-0 w-full h-full object-cover opacity-80" />}
+          {!img && <div className="absolute inset-0 bg-gradient-to-t from-black via-gray-900 to-gray-800" />}
+          <div className="relative z-10 p-3 pb-4 flex gap-2">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold mb-1">@{creatorHandle}</p>
+              <p className="text-[10px] leading-snug line-clamp-3 text-white/90">{captionPreview}</p>
+            </div>
+            <div className="flex flex-col items-center gap-3 shrink-0 pt-2">
+              <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold">{avatarInitial}</div>
+              <Heart className="h-5 w-5" /><span className="text-[9px] -mt-2">—</span>
+              <MessageCircle className="h-5 w-5" /><span className="text-[9px] -mt-2">—</span>
+              <Send className="h-5 w-5" />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const isX = previewPlatform === "x";
+    const isLinkedIn = previewPlatform === "linkedin";
+    const isFacebook = previewPlatform === "facebook";
+
+    return (
+      <div className="bg-white dark:bg-gray-900 p-3 space-y-2.5">
+        {/* Header row */}
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-[#1B3A6B] flex items-center justify-center text-white text-xs font-bold shrink-0">{avatarInitial}</div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-gray-900 dark:text-white leading-tight truncate">{displayName}</p>
+            {(isX || isLinkedIn) && <p className="text-[10px] text-gray-500 leading-tight">@{creatorHandle}</p>}
+            {isFacebook && <p className="text-[10px] text-gray-500 leading-tight">Just now</p>}
+          </div>
+          <MoreHorizontal className="h-4 w-4 text-gray-400 shrink-0" />
+        </div>
+
+        {/* Caption — X shows before image, others after */}
+        {isX && <p className="text-xs text-gray-800 dark:text-gray-200 leading-relaxed line-clamp-4 whitespace-pre-wrap">{captionPreview}</p>}
+
+        {/* Image */}
+        {img ? (
+          <img src={img} alt="" className={cn("w-full object-cover", isX ? "rounded-xl max-h-48" : "max-h-56")} />
+        ) : (
+          <div className={cn("w-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center", isX ? "rounded-xl h-32" : "h-40")}>
+            <Image className="h-8 w-8 text-gray-300" />
+          </div>
+        )}
+
+        {/* Caption — Instagram/LinkedIn/Facebook show after image */}
+        {!isX && <p className="text-xs text-gray-800 dark:text-gray-200 leading-relaxed line-clamp-3 whitespace-pre-wrap">{captionPreview}</p>}
+
+        {/* Engagement row */}
+        <div className="flex items-center pt-1 border-t border-gray-100 dark:border-gray-800">
+          {isX ? (
+            <div className="flex items-center gap-5 text-gray-500">
+              <span className="flex items-center gap-1"><MessageCircle className="h-3.5 w-3.5" /><span className="text-[10px]">—</span></span>
+              <span className="flex items-center gap-1"><Repeat2 className="h-3.5 w-3.5" /><span className="text-[10px]">—</span></span>
+              <span className="flex items-center gap-1"><Heart className="h-3.5 w-3.5" /><span className="text-[10px]">—</span></span>
+              <Send className="h-3.5 w-3.5 ml-auto" />
+            </div>
+          ) : isLinkedIn || isFacebook ? (
+            <div className="flex items-center gap-4 text-gray-500 w-full">
+              <span className="flex items-center gap-1 text-[10px]"><ThumbsUp className="h-3.5 w-3.5" /> Like</span>
+              <span className="flex items-center gap-1 text-[10px]"><MessageCircle className="h-3.5 w-3.5" /> Comment</span>
+              <span className="flex items-center gap-1 text-[10px]"><Repeat2 className="h-3.5 w-3.5" /> Repost</span>
+              <span className="flex items-center gap-1 text-[10px] ml-auto"><Send className="h-3.5 w-3.5" /></span>
+            </div>
+          ) : (
+            /* Instagram */
+            <div className="flex items-center w-full">
+              <div className="flex items-center gap-3 text-gray-800 dark:text-gray-200">
+                <Heart className="h-5 w-5" />
+                <MessageCircle className="h-5 w-5" />
+                <Send className="h-5 w-5" />
+              </div>
+              <Bookmark className="h-5 w-5 ml-auto text-gray-800 dark:text-gray-200" />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <CreatorLayout>
       <div className="flex flex-col h-[calc(100vh-2rem)] -mt-2">
         {/* ── TAB BAR ── */}
         <div className="shrink-0 border-b border-border bg-card">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 flex">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 flex">
             <button
               onClick={() => setActiveTab("single")}
               className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
@@ -252,7 +433,11 @@ export default function CreatePost() {
         {activeTab === "single" && <>
         {/* ── SCROLLABLE CONTENT ── */}
         <div className="flex-1 overflow-y-auto" style={{ backgroundColor: "#F5F7FA" }}>
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+              {/* ═══ LEFT COLUMN — FORM ═══ */}
+              <div className="lg:col-span-3 space-y-6">
 
             {/* ── 1. INSPIRATION BANNER ── */}
             <div className="rounded-xl border border-green-200 bg-green-50 dark:bg-green-900/10 dark:border-green-800/40 px-4 py-3">
@@ -323,8 +508,7 @@ export default function CreatePost() {
                         >
                           <PlatformIcon platform={platform} size={28} />
                         </div>
-                        {/* Badge overlay — top-right */}
-                        <div className={`absolute -top-0.5 -right-0.5 h-4.5 w-4.5 rounded-full flex items-center justify-center text-white ${
+                        <div className={`absolute -top-0.5 -right-0.5 rounded-full flex items-center justify-center text-white ${
                           connected
                             ? isSelected ? "bg-green-500" : "bg-gray-400"
                             : "bg-gray-300"
@@ -357,7 +541,6 @@ export default function CreatePost() {
                   placeholder="What do you want to talk about?"
                   className="border-0 focus-visible:ring-0 resize-none min-h-[120px] text-sm rounded-none"
                 />
-                {/* AI prompt inline input */}
                 {showAiInput && (
                   <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-muted/30">
                     <Sparkles className="h-4 w-4 text-green-600 shrink-0" />
@@ -377,7 +560,6 @@ export default function CreatePost() {
                     </Button>
                   </div>
                 )}
-                {/* Bottom toolbar */}
                 <div className="flex items-center justify-between px-3 py-2 border-t border-border bg-muted/20">
                   <Button
                     variant="outline"
@@ -390,7 +572,6 @@ export default function CreatePost() {
                   </Button>
                   <span className="text-xs text-muted-foreground">{caption.length} characters</span>
                 </div>
-                {/* Emoji / hashtag / variables / link toolbar */}
                 <div className="flex items-center justify-between px-3 py-2 border-t border-border">
                   <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
                     <Checkbox checked={shortenUrls} onCheckedChange={(v) => setShortenUrls(!!v)} className="h-3.5 w-3.5" />
@@ -406,6 +587,47 @@ export default function CreatePost() {
               </div>
             </div>
 
+            {/* ── PLATFORM WARNINGS ── */}
+            {selected.size > 0 && (
+              <div className={cn(
+                "rounded-xl px-4 py-3 text-sm",
+                warnings.length === 0
+                  ? "border border-green-200 bg-green-50 dark:bg-green-900/10 dark:border-green-800/40"
+                  : hasErrors
+                    ? "border border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800/40"
+                    : "border border-amber-200 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-800/40"
+              )}>
+                {warnings.length === 0 ? (
+                  <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    <span className="text-xs font-medium">All platforms look good</span>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {warnings.map((w, i) => (
+                      <div key={i} className={cn("flex items-start gap-2 text-xs", w.type === "error" ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400")}>
+                        {w.type === "error" ? <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" /> : <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />}
+                        <span>{w.message}</span>
+                      </div>
+                    ))}
+                    {/* Per-platform char counts */}
+                    <div className="pt-1.5 mt-1.5 border-t border-current/10 flex flex-wrap gap-x-4 gap-y-1">
+                      {Array.from(selected).map((p) => {
+                        const rules = platformRules[p];
+                        if (!rules?.maxChars) return null;
+                        const pct = caption.length / rules.maxChars;
+                        return (
+                          <span key={p} className={cn("text-[11px]", pct > 1 ? "text-red-600 font-medium" : pct > 0.8 ? "text-amber-600" : "text-gray-500")}>
+                            {PLATFORM_NAMES[p] ?? p}: {caption.length}/{rules.maxChars}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* ── 4. ADD MEDIA ── */}
             <div className="bg-white dark:bg-card rounded-2xl p-6 space-y-4" style={{ borderLeft: "4px solid #7C3AED", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
               <h2 className="text-lg font-semibold text-foreground flex items-center gap-3">
@@ -417,7 +639,6 @@ export default function CreatePost() {
                   </span>
                 )}
               </h2>
-              {/* Upload type toolbar */}
               <div className="flex items-center gap-1 flex-wrap">
                 {[
                   { icon: Upload, label: "File" },
@@ -446,27 +667,50 @@ export default function CreatePost() {
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              {/* Upload zone */}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full rounded-xl border-2 border-dashed border-border hover:border-[#7C3AED]/40 transition-colors p-8 flex flex-col items-center gap-3"
-              >
-                {/* Stacked card illustration */}
-                <div className="relative w-16 h-16">
-                  <div className="absolute inset-0 rotate-[-6deg] rounded-lg border-2 border-border bg-muted/50" />
-                  <div className="absolute inset-0 rotate-[3deg] rounded-lg border-2 border-border bg-card" />
-                  <div className="absolute inset-0 rounded-lg border-2 border-border bg-card flex items-center justify-center">
-                    <Upload className="h-6 w-6 text-muted-foreground" />
+              {/* Upload zone (hidden when files exist) */}
+              {mediaFiles.length === 0 && (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full rounded-xl border-2 border-dashed border-border hover:border-[#7C3AED]/40 transition-colors p-8 flex flex-col items-center gap-3"
+                >
+                  <div className="relative w-16 h-16">
+                    <div className="absolute inset-0 rotate-[-6deg] rounded-lg border-2 border-border bg-muted/50" />
+                    <div className="absolute inset-0 rotate-[3deg] rounded-lg border-2 border-border bg-card" />
+                    <div className="absolute inset-0 rounded-lg border-2 border-border bg-card flex items-center justify-center">
+                      <Upload className="h-6 w-6 text-muted-foreground" />
+                    </div>
                   </div>
-                </div>
-                <div className="text-center">
-                  <span className="text-sm font-medium text-foreground">Upload media</span>
-                  <p className="text-xs text-muted-foreground mt-0.5">or drag and drop your file</p>
-                </div>
-              </button>
-              {/* Show uploaded files */}
+                  <div className="text-center">
+                    <span className="text-sm font-medium text-foreground">Upload media</span>
+                    <p className="text-xs text-muted-foreground mt-0.5">or drag and drop your file</p>
+                  </div>
+                </button>
+              )}
+              {/* Image previews + file list */}
               {mediaFiles.length > 0 && (
-                <div className="space-y-2">
+                <div className="space-y-3">
+                  {/* Thumbnail previews */}
+                  <div className="flex flex-wrap gap-2">
+                    {mediaFiles.map((file, i) => {
+                      if (!file.type.startsWith("image/")) return null;
+                      return (
+                        <div key={i} className="relative group">
+                          <img
+                            src={previewUrls[i]}
+                            alt={file.name}
+                            className="h-[200px] max-w-full rounded-lg object-cover border border-border"
+                          />
+                          <button
+                            onClick={() => setMediaFiles((prev) => prev.filter((_, j) => j !== i))}
+                            className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* File rows */}
                   {mediaFiles.map((file, i) => (
                     <div key={i} className="flex items-center gap-3 rounded-lg border border-border px-3 py-2">
                       <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -477,6 +721,13 @@ export default function CreatePost() {
                       </button>
                     </div>
                   ))}
+                  {/* Add more button */}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Add more files
+                  </button>
                 </div>
               )}
               {/* URL input fallback */}
@@ -517,7 +768,6 @@ export default function CreatePost() {
                 Post Details
               </h2>
               <div className="space-y-3">
-                {/* Schedule */}
                 <div className="flex items-center gap-3">
                   <div className="flex-1">
                     <label className="text-xs text-muted-foreground mb-1 block">Select when to publish</label>
@@ -533,7 +783,6 @@ export default function CreatePost() {
                     </div>
                   </div>
                 </div>
-                {/* Post name + Clone button */}
                 <div className="flex items-center gap-3">
                   <div className="flex-1">
                     <label className="text-xs text-muted-foreground mb-1 block">Name your post (optional)</label>
@@ -553,7 +802,6 @@ export default function CreatePost() {
                     Clone to other calendars
                   </Button>
                 </div>
-                {/* Label */}
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">Add a label to track campaigns</label>
                   <div className="relative">
@@ -570,12 +818,92 @@ export default function CreatePost() {
             </div>
 
             <div className="h-4" />
+              </div>
+
+              {/* ═══ RIGHT COLUMN — PREVIEW ═══ */}
+              <div className="lg:col-span-2 hidden lg:block">
+                <div className="sticky top-8 space-y-4">
+                  <div className="bg-white dark:bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
+                    <div className="px-5 py-4 border-b border-border">
+                      <h3 className="text-sm font-semibold text-foreground">Preview</h3>
+                    </div>
+                    {/* Platform tabs */}
+                    {selected.size > 0 && (
+                      <div className="flex flex-wrap gap-1.5 px-4 py-3 border-b border-border">
+                        {Array.from(selected).map((p) => (
+                          <button
+                            key={p}
+                            onClick={() => setPreviewPlatform(p)}
+                            className={cn(
+                              "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] transition-colors",
+                              previewPlatform === p
+                                ? "bg-[#1B3A6B] text-white"
+                                : "bg-muted text-muted-foreground hover:text-foreground"
+                            )}
+                          >
+                            <PlatformIcon platform={p} size={14} />
+                            {PLATFORM_NAMES[p] ?? p}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {/* Phone frame */}
+                    <div className="p-4">
+                      <div className="rounded-[24px] border-[3px] border-gray-300 dark:border-gray-600 overflow-hidden bg-white dark:bg-gray-900">
+                        {/* Status bar */}
+                        <div className="h-5 bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
+                          <span className="text-[8px] text-muted-foreground font-medium">9:41</span>
+                        </div>
+                        {selected.size === 0 ? (
+                          <div className="p-6 text-center">
+                            <Image className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
+                            <p className="text-xs text-muted-foreground">Select a platform to preview</p>
+                          </div>
+                        ) : (
+                          renderPreview()
+                        )}
+                        {/* Home indicator */}
+                        <div className="h-5 bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
+                          <div className="w-16 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Character counts card */}
+                  {selected.size > 0 && (
+                    <div className="bg-white dark:bg-card rounded-xl p-4 shadow-sm border border-border">
+                      <p className="text-xs font-semibold text-muted-foreground mb-2">Character Counts</p>
+                      <div className="space-y-1">
+                        {Array.from(selected).map((p) => {
+                          const rules = platformRules[p];
+                          if (!rules?.maxChars) return null;
+                          const name = PLATFORM_NAMES[p] ?? p;
+                          const len = caption.length;
+                          const max = rules.maxChars;
+                          const pct = len / max;
+                          return (
+                            <div key={p} className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">{name}</span>
+                              <span className={cn("font-medium", pct > 1 ? "text-red-500" : pct > 0.8 ? "text-amber-500" : "text-green-600")}>
+                                {len}/{max}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
           </div>
         </div>
 
-        {/* ── 6. STICKY BOTTOM ACTION BAR ── */}
+        {/* ── STICKY BOTTOM ACTION BAR ── */}
         <div className="shrink-0 border-t border-border bg-card px-4 sm:px-6 py-3">
-          <div className="max-w-3xl mx-auto flex items-center justify-between">
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
             <Button
               variant="outline"
               size="sm"
@@ -600,13 +928,25 @@ export default function CreatePost() {
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
               </div>
               <Button
+                variant="outline"
                 size="sm"
-                className="h-9 text-xs bg-gray-900 hover:bg-gray-800 text-white dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
-                onClick={handlePost}
-                disabled={posting || noAccounts}
+                className="h-9 text-xs"
+                onClick={() => handlePost()}
+                disabled={posting || noAccounts || hasErrors}
               >
                 {posting && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
-                {scheduledDate ? "Schedule" : "Schedule"}
+                <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                Schedule
+              </Button>
+              <Button
+                size="sm"
+                className="h-9 text-xs bg-[#1B3A6B] hover:bg-[#152d54] text-white"
+                onClick={() => handlePostNow()}
+                disabled={posting || noAccounts || hasErrors}
+              >
+                {posting && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
+                <Send className="h-3.5 w-3.5 mr-1.5" />
+                Post Now
               </Button>
             </div>
           </div>
