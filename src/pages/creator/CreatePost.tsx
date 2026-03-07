@@ -7,8 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { getConnectedAccounts, type ConnectedAccountRow } from "@/lib/upload-post-sync";
-import { createUploadPost, uploadText, uploadVideo, uploadPhotos, type UploadPostPlatform } from "@/services/upload-post";
+import { getConnectedAccounts, resolveUploadPostUsername, type ConnectedAccountRow } from "@/lib/upload-post-sync";
+import { createUploadPost, type UploadPostPlatform } from "@/services/upload-post";
 import CadenceCampaign from "./CadenceCampaign";
 import {
   Loader2, Check, X, Link2, Plus, Eye, EyeOff, Sparkles,
@@ -151,45 +151,27 @@ export default function CreatePost({ noLayout }: { noLayout?: boolean } = {}) {
   /* ── Post logic ── */
   const executePost = async (immediate: boolean) => {
     if (!user?.id || !caption.trim()) { toast.error("Enter a caption."); return; }
-    const selectedPlatforms = Array.from(selected);
+    const selectedPlatforms = Array.from(selected) as UploadPostPlatform[];
     if (selectedPlatforms.length === 0) { toast.error("Select at least one platform."); return; }
     if (hasErrors) { toast.error("Fix validation errors before posting."); return; }
     setPosting(true);
     try {
-      const accountIds = accounts
-        .filter((a) => selectedPlatforms.includes(a.platform))
-        .map((a) => a.platform_user_id)
-        .filter((id): id is string => !!id);
+      const upUser = await resolveUploadPostUsername(user.id);
       const scheduled = (!immediate && scheduledDate) ? new Date(scheduledDate).toISOString() : undefined;
-      if (accountIds.length > 0) {
-        const result = await createUploadPost({
-          text: caption.trim(), account_ids: accountIds,
-          media_url: (mediaType !== "none" && mediaUrl.trim()) ? mediaUrl.trim() : undefined,
-          scheduled_at: scheduled,
-        });
-        if (result.success) {
-          toast.success(immediate
-            ? `Posted successfully to ${selectedPlatforms.length} platform${selectedPlatforms.length !== 1 ? "s" : ""}!`
-            : "Post scheduled!");
-          setCaption(""); setMediaUrl(""); setScheduledDate(""); setSelected(new Set()); setMediaFiles([]);
-        } else { toast.error(result.error ?? "Post failed."); }
-      } else {
-        const platformList = selectedPlatforms as UploadPostPlatform[];
-        let result;
-        if (mediaType === "video" && mediaUrl.trim()) {
-          result = await uploadVideo({ title: caption.trim(), user: user.id, platform: platformList, video: mediaUrl.trim(), scheduled_date: scheduled, async_upload: true });
-        } else if (mediaType === "photo" && mediaUrl.trim()) {
-          result = await uploadPhotos({ title: caption.trim(), user: user.id, platform: platformList, photos: [mediaUrl.trim()], scheduled_date: scheduled, async_upload: true });
-        } else {
-          result = await uploadText({ title: caption.trim(), user: user.id, platform: platformList, scheduled_date: scheduled });
-        }
-        if (result.success) {
-          toast.success(immediate
-            ? `Posted successfully to ${selectedPlatforms.length} platform${selectedPlatforms.length !== 1 ? "s" : ""}!`
-            : "Post scheduled!");
-          setCaption(""); setMediaUrl(""); setScheduledDate(""); setSelected(new Set()); setMediaFiles([]);
-        } else { toast.error(result.error ?? "Post failed."); }
-      }
+      const result = await createUploadPost({
+        text: caption.trim(),
+        user: upUser,
+        platforms: selectedPlatforms,
+        media_url: (mediaType !== "none" && mediaUrl.trim()) ? mediaUrl.trim() : undefined,
+        media_type: mediaType === "none" ? undefined : mediaType,
+        scheduled_at: scheduled,
+      });
+      if (result.success) {
+        toast.success(immediate
+          ? `Posted successfully to ${selectedPlatforms.length} platform${selectedPlatforms.length !== 1 ? "s" : ""}!`
+          : "Post scheduled!");
+        setCaption(""); setMediaUrl(""); setScheduledDate(""); setSelected(new Set()); setMediaFiles([]);
+      } else { toast.error(result.error ?? "Post failed."); }
     } catch { toast.error("Post failed."); } finally { setPosting(false); }
   };
 

@@ -363,12 +363,20 @@ export async function uploadText(opts: UploadTextOptions): Promise<UploadResult>
   return data;
 }
 
-// --- Unified post endpoint ---
+// --- Unified post helper ---
 
 export interface CreatePostOptions {
+  /** Caption / post text */
   text: string;
-  account_ids: string[];
+  /** UploadPost profile username (resolved slug, not UUID) */
+  user: string;
+  /** Target platform names (e.g. ["instagram", "x"]) */
+  platforms: UploadPostPlatform[];
+  /** Optional media URL — determines photo vs text post */
   media_url?: string;
+  /** "video" | "photo" — if media_url is set, specify type. Defaults to "photo". */
+  media_type?: "video" | "photo";
+  /** ISO-8601 scheduled date (omit for immediate) */
   scheduled_at?: string;
 }
 
@@ -380,26 +388,43 @@ export interface CreatePostResult {
   [key: string]: unknown;
 }
 
-/** Create a post via the unified UploadPost posts endpoint. */
+/**
+ * Create a post via the correct UploadPost upload endpoint.
+ * Routes to /api/upload_text, /api/upload_photos, or /api/upload_videos
+ * based on whether media is attached.
+ */
 export async function createUploadPost(
   opts: CreatePostOptions
 ): Promise<CreatePostResult> {
-  const body: Record<string, unknown> = {
-    text: opts.text,
-    account_ids: opts.account_ids,
-  };
-  if (opts.media_url) body.media_url = opts.media_url;
-  if (opts.scheduled_at) body.scheduled_at = opts.scheduled_at;
+  const hasMedia = !!opts.media_url?.trim();
+  const isVideo = hasMedia && opts.media_type === "video";
 
-  console.log("[UploadPost] POST /api/uploadposts/posts request:", JSON.stringify(body, null, 2));
-
-  const { status, data } = await proxyFetch("/api/uploadposts/posts", "POST", body);
-
-  console.log("[UploadPost] POST /api/uploadposts/posts response:", status, JSON.stringify(data, null, 2));
-
-  if (status >= 400)
-    return { success: false, error: data.message ?? data.error ?? `HTTP ${status}` };
-  return { success: true, ...data };
+  if (isVideo) {
+    return uploadVideo({
+      title: opts.text,
+      user: opts.user,
+      platform: opts.platforms,
+      video: opts.media_url!,
+      scheduled_date: opts.scheduled_at,
+      async_upload: true,
+    });
+  } else if (hasMedia) {
+    return uploadPhotos({
+      title: opts.text,
+      user: opts.user,
+      platform: opts.platforms,
+      photos: [opts.media_url!],
+      scheduled_date: opts.scheduled_at,
+      async_upload: true,
+    });
+  } else {
+    return uploadText({
+      title: opts.text,
+      user: opts.user,
+      platform: opts.platforms,
+      scheduled_date: opts.scheduled_at,
+    });
+  }
 }
 
 /** Get upload status (async or scheduled). */

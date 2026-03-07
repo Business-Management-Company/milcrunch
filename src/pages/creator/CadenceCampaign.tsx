@@ -4,8 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { getConnectedAccounts, type ConnectedAccountRow } from "@/lib/upload-post-sync";
-import { createUploadPost } from "@/services/upload-post";
+import { getConnectedAccounts, resolveUploadPostUsername, type ConnectedAccountRow } from "@/lib/upload-post-sync";
+import { createUploadPost, type UploadPostPlatform } from "@/services/upload-post";
 import {
   Loader2, Check, X, Plus, Upload, Pencil, ChevronLeft,
   Calendar, Clock, Sparkles, Search, UserCircle, Link2,
@@ -678,31 +678,17 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
             });
         }
 
-        // Route based on media type: video → Reels/Shorts endpoint, image → standard post
-        let result;
-        if (post.mediaIsVideo && mediaUrl) {
-          // Video: use the Reels/Shorts-compatible endpoint
-          // Filter to video-capable platform accounts (Instagram, TikTok, YouTube)
-          const videoCapablePlatforms = ["instagram", "tiktok", "youtube"];
-          const videoAccountIds = accounts
-            .filter((a) => selectedPlatforms.has(a.platform) && videoCapablePlatforms.includes(a.platform))
-            .map((a) => a.platform_user_id)
-            .filter((id): id is string => !!id);
-          const postAccountIds = videoAccountIds.length > 0 ? videoAccountIds : post.accountIds;
-          result = await createUploadPost({
-            text,
-            account_ids: postAccountIds,
-            media_url: mediaUrl,
-            scheduled_at: new Date(post.scheduledAt).toISOString(),
-          });
-        } else {
-          result = await createUploadPost({
-            text,
-            account_ids: post.accountIds,
-            media_url: mediaUrl,
-            scheduled_at: new Date(post.scheduledAt).toISOString(),
-          });
-        }
+        // Resolve UploadPost profile slug and publish via correct endpoint
+        const upUser = await resolveUploadPostUsername(effectiveUserId ?? user?.id ?? "");
+        const platforms = Array.from(selectedPlatforms) as UploadPostPlatform[];
+        const result = await createUploadPost({
+          text,
+          user: upUser,
+          platforms,
+          media_url: mediaUrl,
+          media_type: post.mediaIsVideo ? "video" : mediaUrl ? "photo" : undefined,
+          scheduled_at: new Date(post.scheduledAt).toISOString(),
+        });
 
         if (user?.id && campaignId) {
           await supabase.from("cadence_posts").insert({
