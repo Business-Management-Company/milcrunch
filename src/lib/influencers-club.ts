@@ -131,7 +131,10 @@ function mapAccountToCard(account: ApiAccount, index: number): CreatorCard {
     : Number(p?.engagement_percent) || Number(p?.engagement_rate) || Number(p?.er) || 0;
   const engagementRate = engagementRaw ? Number(engagementRaw.toFixed(2)) : 0;
 
-  const platforms = [(p?.platform as string) ?? "instagram"];
+  const rawPlatforms = p?.platforms ?? p?.platform ?? "instagram";
+  const platforms: string[] = Array.isArray(rawPlatforms)
+    ? rawPlatforms.map(String)
+    : rawPlatforms ? [String(rawPlatforms)] : ["instagram"];
   const bio = (p?.biography ?? "") as string;
   // Check multiple levels for analytics: profile, account root, account.instagram, account.stats
   const a = account as Record<string, unknown>;
@@ -168,8 +171,12 @@ function mapAccountToCard(account: ApiAccount, index: number): CreatorCard {
   const nicheClass = (p?.niche_class as string) ?? undefined;
 
   const socialPlatforms: string[] = [];
-  if (p?.platforms && Array.isArray(p.platforms)) {
-    socialPlatforms.push(...(p.platforms as string[]).map((x) => String(x).toLowerCase()));
+  if (p?.platforms) {
+    if (Array.isArray(p.platforms)) {
+      socialPlatforms.push(...(p.platforms as string[]).map((x) => String(x).toLowerCase()));
+    } else if (typeof p.platforms === "string") {
+      socialPlatforms.push(p.platforms.toLowerCase());
+    }
   }
   if (p?.social_links && Array.isArray(p.social_links)) {
     (p.social_links as { platform?: string }[]).forEach((s) => {
@@ -292,13 +299,13 @@ function mapAccountToCard(account: ApiAccount, index: number): CreatorCard {
     avatar,
     followers,
     engagementRate,
-    platforms,
+    platforms: Array.isArray(platforms) ? platforms : platforms ? [String(platforms)] : ["instagram"],
     bio,
     location: location || undefined,
     postsPerMonth,
     category,
     nicheClass,
-    socialPlatforms: socialPlatforms.length > 0 ? socialPlatforms : undefined,
+    socialPlatforms: Array.isArray(socialPlatforms) && socialPlatforms.length > 0 ? socialPlatforms : socialPlatforms && !Array.isArray(socialPlatforms) ? [String(socialPlatforms)] : undefined,
     hashtags: hashtags && hashtags.length > 0 ? hashtags : undefined,
     externalLinks: externalLinks.length > 0 ? externalLinks : undefined,
     isVerified: isVerified || undefined,
