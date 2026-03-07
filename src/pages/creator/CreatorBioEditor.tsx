@@ -89,7 +89,7 @@ type EditorTab = "profile" | "design" | "sections" | "share";
 const SIDEBAR_TABS: { id: EditorTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "profile", label: "Profile", icon: User },
   { id: "design", label: "Design", icon: Palette },
-  { id: "sections", label: "Sections", icon: Layers },
+  { id: "sections", label: "Content", icon: Layers },
   { id: "share", label: "Share", icon: Share2 },
 ];
 
@@ -247,6 +247,9 @@ export default function CreatorBioEditor() {
   const [activeTab, setActiveTab] = useState<EditorTab>("sections");
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("phone");
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [targetGroupId, setTargetGroupId] = useState<string | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [pendingTemplate, setPendingTemplate] = useState<TemplateId | null>(null);
   const [carouselCenterIdx, setCarouselCenterIdx] = useState(0);
@@ -528,25 +531,34 @@ export default function CreatorBioEditor() {
   };
 
   const addSection = (entry: SectionCatalogEntry) => {
-    // Allow multiple section_title entries; other types are unique
-    if (entry.type !== "section_title" && sections.find((s) => s.type === entry.type)) {
-      toast.info(`${entry.label} is already added.`);
-      setModalOpen(false);
-      return;
-    }
+    const newId = generateId();
+    const isST = entry.type === "section_title";
     const newSection: BioSectionConfig = {
-      id: generateId(), type: entry.type, label: entry.label,
-      visible: true, order: sections.length + 1,
+      id: newId,
+      type: entry.type,
+      label: isST ? "New Section" : entry.label,
+      visible: true,
+      order: sections.length + 1,
+      ...((!isST && targetGroupId) ? { groupId: targetGroupId } : {}),
     };
     const updated = [...sections, newSection];
     setSections(updated);
     persistSections(updated);
     setModalOpen(false);
-    toast.success(`Added ${entry.label}`);
+    toast.success(`Added ${isST ? "Section Title" : entry.label}`);
+    if (isST) {
+      setTimeout(() => setRenamingId(newId), 100);
+    }
   };
 
   const removeSection = (id: string) => {
-    const updated = sections.filter((s) => s.id !== id).map((s, i) => ({ ...s, order: i + 1 }));
+    const removed = sections.find((s) => s.id === id);
+    let updated = sections.filter((s) => s.id !== id);
+    // Ungroup children when deleting a section_title
+    if (removed?.type === "section_title") {
+      updated = updated.map((s) => s.groupId === id ? { ...s, groupId: undefined } : s);
+    }
+    updated = updated.map((s, i) => ({ ...s, order: i + 1 }));
     setSections(updated);
     persistSections(updated);
   };
@@ -571,6 +583,15 @@ export default function CreatorBioEditor() {
   };
 
   const catalogEntryFor = (type: SectionType) => SECTION_CATALOG.find((e) => e.type === type);
+
+  const toggleGroupCollapse = (sectionTitleId: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(sectionTitleId)) next.delete(sectionTitleId);
+      else next.add(sectionTitleId);
+      return next;
+    });
+  };
 
   /** Update a section's config and debounce-save to Supabase. */
   const updateSectionConfig = useCallback(
@@ -1419,20 +1440,103 @@ export default function CreatorBioEditor() {
             {activeTab === "sections" && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-foreground">Page Sections</h2>
+                  <h2 className="text-sm font-semibold text-foreground">Page Content</h2>
                   <span className="text-[11px] text-muted-foreground">
-                    {sections.length} section{sections.length === 1 ? "" : "s"}
+                    {sections.length} item{sections.length === 1 ? "" : "s"}
                   </span>
                 </div>
                 {sections.map((section, idx) => {
                   const entry = catalogEntryFor(section.type);
                   if (!entry) return null;
+
+                  const isSectionTitle = section.type === "section_title";
+                  const isGrouped = !!section.groupId && !isSectionTitle;
+
+                  // Hide grouped items when parent is collapsed
+                  if (section.groupId && collapsedGroups.has(section.groupId)) return null;
+
+                  // ── SECTION TITLE ROW ──
+                  if (isSectionTitle) {
+                    const groupChildCount = sections.filter((s) => s.groupId === section.id).length;
+                    const isCollapsed = collapsedGroups.has(section.id);
+                    const isRenaming = renamingId === section.id;
+                    const titleText = ((section.config as Record<string, unknown>)?.title as string) || section.label;
+                    return (
+                      <div
+                        key={section.id}
+                        className="flex items-center gap-2 rounded-lg p-2.5 transition-colors bg-[#F0F4FF] border border-[#1B3A6B]/15"
+                      >
+                        <GripVertical className="h-3.5 w-3.5 text-[#1B3A6B]/40 shrink-0 cursor-grab" />
+                        <button
+                          onClick={() => toggleGroupCollapse(section.id)}
+                          className="h-5 w-5 flex items-center justify-center shrink-0 text-[#1B3A6B]/60 hover:text-[#1B3A6B]"
+                        >
+                          {isCollapsed
+                            ? <ChevronRightIcon className="h-3.5 w-3.5" />
+                            : <ChevronDown className="h-3.5 w-3.5" />}
+                        </button>
+                        <div className="flex items-center justify-center h-6 w-6 rounded bg-[#1B3A6B]/15 text-[#1B3A6B] shrink-0">
+                          <Type className="h-3.5 w-3.5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          {isRenaming ? (
+                            <Input
+                              autoFocus
+                              defaultValue={titleText}
+                              className="h-7 text-xs font-semibold text-[#1B3A6B] bg-white"
+                              onFocus={(e) => e.target.select()}
+                              onBlur={(e) => {
+                                const val = e.target.value.trim() || "New Section";
+                                const updated = sections.map((s) =>
+                                  s.id === section.id
+                                    ? { ...s, label: val, config: { ...(s.config ?? {}), title: val } }
+                                    : s
+                                );
+                                setSections(updated);
+                                persistSections(updated);
+                                setRenamingId(null);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                                if (e.key === "Escape") setRenamingId(null);
+                              }}
+                            />
+                          ) : (
+                            <span className="font-semibold text-xs text-[#1B3A6B] truncate block">
+                              {titleText}
+                              {groupChildCount > 0 && (
+                                <span className="font-normal text-[10px] text-[#1B3A6B]/50 ml-1.5">
+                                  ({groupChildCount} item{groupChildCount !== 1 ? "s" : ""})
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <Button variant="ghost" size="icon" className="h-6 w-6" disabled={idx === 0} onClick={() => moveSection(section.id, "up")}>
+                            <ChevronUp className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" disabled={idx === sections.length - 1} onClick={() => moveSection(section.id, "down")}>
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-[#1B3A6B]" onClick={() => setRenamingId(section.id)} title="Rename">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => removeSection(section.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // ── REGULAR CONTENT ROW (grouped or ungrouped) ──
                   return (
                     <div
                       key={section.id}
                       className={`flex items-center gap-2.5 rounded-lg border p-2.5 transition-colors ${
                         section.visible ? "bg-card border-border" : "bg-muted/50 border-border/50 opacity-60"
-                      }`}
+                      } ${isGrouped ? "ml-5 border-l-[3px] border-l-[#C8A84B]" : ""}`}
                     >
                       <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 cursor-grab" />
                       <div className="flex items-center justify-center h-8 w-8 rounded-md bg-[#1B3A6B]/10 text-[#1B3A6B] shrink-0">
@@ -1463,9 +1567,17 @@ export default function CreatorBioEditor() {
                     </div>
                   );
                 })}
-                <Button variant="outline" className="w-full border-dashed text-xs h-9" onClick={() => setModalOpen(true)}>
+                <Button
+                  variant="outline"
+                  className="w-full border-dashed text-xs h-9"
+                  onClick={() => {
+                    const lastST = [...sections].reverse().find(s => s.type === "section_title");
+                    setTargetGroupId(lastST?.id ?? null);
+                    setModalOpen(true);
+                  }}
+                >
                   <Plus className="h-3.5 w-3.5 mr-1.5" />
-                  Add Section
+                  Add Content
                 </Button>
               </div>
             )}
@@ -1596,7 +1708,7 @@ export default function CreatorBioEditor() {
                       <div className="py-12 text-center">
                         <Layers className="h-8 w-8 mx-auto mb-2 opacity-20" style={{ color: phoneSubtext }} />
                         <p className="text-sm" style={{ color: phoneSubtext }}>No sections yet</p>
-                        <p className="text-[11px] mt-0.5 opacity-60" style={{ color: phoneSubtext }}>Add sections from the Sections tab</p>
+                        <p className="text-[11px] mt-0.5 opacity-60" style={{ color: phoneSubtext }}>Add content from the Content tab</p>
                       </div>
                     ) : (
                       visibleSections.map((section) => {
@@ -2322,36 +2434,93 @@ export default function CreatorBioEditor() {
         );
       })()}
 
-      {/* ── ADD SECTION MODAL ── */}
+      {/* ── ADD CONTENT MODAL ── */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add a Section</DialogTitle>
+            <DialogTitle>Add Content</DialogTitle>
           </DialogHeader>
           <div className="grid gap-2 py-2">
-            {SECTION_CATALOG.map((entry) => {
-              const alreadyAdded = sections.some((s) => s.type === entry.type);
+            {/* Section Title — featured at top */}
+            {(() => {
+              const stEntry = SECTION_CATALOG.find((e) => e.type === "section_title")!;
+              const count = sections.filter((s) => s.type === "section_title").length;
+              return (
+                <button
+                  onClick={() => addSection(stEntry)}
+                  className="flex items-center gap-3 rounded-lg border-2 border-[#1B3A6B]/20 p-3.5 text-left transition-colors bg-[#EEF2FF] hover:bg-[#E0E7FF] cursor-pointer"
+                >
+                  <div className="flex items-center justify-center h-11 w-11 rounded-md bg-[#1B3A6B]/15 text-[#1B3A6B] shrink-0">
+                    {getSectionIcon(stEntry)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm text-[#1B3A6B]">{stEntry.label}</span>
+                      {count > 0 && (
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-[#1B3A6B]/10 text-[#1B3A6B]">
+                          &times;{count}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-[#1B3A6B]/70">Organize your content into named groups</p>
+                  </div>
+                </button>
+              );
+            })()}
+
+            {/* Divider */}
+            <div className="border-t border-border my-1" />
+
+            {/* Remaining catalog items */}
+            {SECTION_CATALOG.filter((e) => e.type !== "section_title").map((entry) => {
+              const count = sections.filter((s) => s.type === entry.type).length;
+              const isComingSoon = entry.comingSoon;
               return (
                 <button
                   key={entry.type}
-                  onClick={() => addSection(entry)}
-                  disabled={alreadyAdded}
+                  onClick={() => !isComingSoon && addSection(entry)}
+                  disabled={isComingSoon}
                   className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-colors ${
-                    alreadyAdded ? "border-border/40 bg-muted/30 opacity-50 cursor-not-allowed" : "border-border hover:bg-accent hover:border-accent-foreground/20 cursor-pointer"
+                    isComingSoon
+                      ? "border-border/40 bg-muted/30 opacity-50 cursor-not-allowed"
+                      : "border-border hover:bg-accent hover:border-accent-foreground/20 cursor-pointer"
                   }`}
                 >
-                  <div className="flex items-center justify-center h-10 w-10 rounded-md bg-[#1B3A6B]/10 text-[#1B3A6B] shrink-0">{getSectionIcon(entry)}</div>
+                  <div className="flex items-center justify-center h-10 w-10 rounded-md bg-[#1B3A6B]/10 text-[#1B3A6B] shrink-0">
+                    {getSectionIcon(entry)}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-sm">{entry.label}</span>
-                      {entry.comingSoon && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Coming Soon</Badge>}
-                      {alreadyAdded && <Badge variant="outline" className="text-[10px] px-1.5 py-0">Added</Badge>}
+                      {isComingSoon && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Coming Soon</Badge>}
+                      {count > 0 && !isComingSoon && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-gray-500">&times;{count}</Badge>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground">{entry.description}</p>
                   </div>
                 </button>
               );
             })}
+
+            {/* "Add to" group selector */}
+            {sections.some((s) => s.type === "section_title") && (
+              <div className="flex items-center gap-2 pt-2 border-t border-border mt-1">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">Add to:</span>
+                <select
+                  value={targetGroupId ?? ""}
+                  onChange={(e) => setTargetGroupId(e.target.value || null)}
+                  className="flex-1 h-8 rounded-md border border-border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="">Top of page</option>
+                  {sections.filter((s) => s.type === "section_title").map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {((s.config as Record<string, unknown>)?.title as string) || s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

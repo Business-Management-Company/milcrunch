@@ -39,6 +39,8 @@ export interface BioSectionConfig {
   label: string;
   visible: boolean;
   order: number;
+  /** Optional group: references the id of a section_title this belongs to */
+  groupId?: string;
   /** Section-specific configuration (links, URLs, toggles, etc.) */
   config?: Record<string, unknown>;
 }
