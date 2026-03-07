@@ -206,36 +206,22 @@ export default function CreatePost({ noLayout }: { noLayout?: boolean } = {}) {
     console.log("[AI Caption] generating for prompt:", aiPrompt.trim());
     setAiLoading(true);
     try {
-      const platformList = selected.size > 0 ? Array.from(selected).join(", ") : "Instagram";
-      const payload = {
-        model: "claude-sonnet-4-5-20250929",
-        max_tokens: 1024,
-        system: `You are an expert military social media content creator. Generate engaging, authentic captions optimized for the selected platforms. Include:\n- A strong hook in the first line\n- Authentic military community voice\n- Platform-appropriate length and tone\n- 5-10 highly relevant hashtags mixing broad (#military #veteran) and niche (#navylife #milspouse) tags\n- A clear call to action\n- Emoji where appropriate for the platform\nTailor the content specifically for the platform selected. Return only the caption text and hashtags, nothing else.`,
-        messages: [
-          {
-            role: "user",
-            content: `Platform(s): ${platformList}\n\nPrompt: ${aiPrompt.trim()}`,
-          },
-        ],
-      };
-      console.log("[AI Caption] request payload:", JSON.stringify(payload));
-      const res = await fetch("/api/anthropic", {
+      const platforms = selected.size > 0 ? Array.from(selected) : ["Instagram"];
+      const res = await fetch("/api/generate-caption", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ topic: aiPrompt.trim(), platforms }),
       });
       console.log("[AI Caption] response status:", res.status, res.statusText);
       if (res.ok) {
         const data = await res.json();
-        console.log("[AI Caption] response data:", JSON.stringify(data));
-        const text = data.content?.[0]?.text ?? "";
+        const text = data.caption ?? "";
         if (text) {
           setCaption((prev) => prev + (prev ? "\n\n" : "") + text);
           setShowAiInput(false);
           setAiPrompt("");
           toast.success("Caption generated!");
         } else {
-          console.error("[AI Caption] empty response:", data);
           toast.error("AI returned an empty response — try again.");
         }
       } else {

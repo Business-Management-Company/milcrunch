@@ -541,24 +541,19 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
         : "";
 
       try {
-        const userPrompt = `Content series: "${cadence.name}"\nBrief: ${cadence.brief}${voiceStyle ? `\nCreator voice: ${voiceStyle}` : ""}${samplePost ? `\nSample post style: ${samplePost}` : ""}${mediaFile ? `\nMedia filename hint: ${mediaFile.name}` : ""}${mediaTypeContext ? `\n${mediaTypeContext}` : ""}`;
+        const topic = `Content series: "${cadence.name}"\nBrief: ${cadence.brief}${voiceStyle ? `\nCreator voice: ${voiceStyle}` : ""}${samplePost ? `\nSample post style: ${samplePost}` : ""}${mediaFile ? `\nMedia filename hint: ${mediaFile.name}` : ""}${mediaTypeContext ? `\n${mediaTypeContext}` : ""}`;
 
-        const res = await fetch("/api/anthropic", {
+        const res = await fetch("/api/generate-caption", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "claude-sonnet-4-5-20250929",
-            max_tokens: 1024,
-            system: "You are an expert military social media content creator. Generate ONE post caption for a content series. Include:\n- A strong hook in the first line\n- Authentic military community voice\n- Platform-appropriate length and tone\n- 5-10 highly relevant hashtags mixing broad (#military #veteran) and niche (#navylife #milspouse) tags\n- A clear call to action\n- Emoji where appropriate for the platform\nReturn only the caption text and hashtags, nothing else.",
-            messages: [{ role: "user", content: userPrompt }],
-          }),
+          body: JSON.stringify({ topic, platforms: ["Instagram"] }),
         });
 
         let captionText = "";
         let hashtagsText = "";
         if (res.ok) {
           const data = await res.json();
-          const fullText = data.content?.[0]?.text ?? "";
+          const fullText = data.caption ?? "";
           const hashtagMatch = fullText.match(/(#\S+(?:\s+#\S+)*)\s*$/);
           if (hashtagMatch) {
             hashtagsText = hashtagMatch[1];
