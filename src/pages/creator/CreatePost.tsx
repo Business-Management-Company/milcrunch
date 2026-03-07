@@ -206,13 +206,15 @@ export default function CreatePost({ noLayout }: { noLayout?: boolean } = {}) {
     console.log("[AI Caption] generating for prompt:", aiPrompt.trim());
     setAiLoading(true);
     try {
+      const platformList = selected.size > 0 ? Array.from(selected).join(", ") : "Instagram";
       const payload = {
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 500,
+        model: "claude-sonnet-4-5-20250929",
+        max_tokens: 1024,
+        system: `You are an expert military social media content creator. Generate engaging, authentic captions optimized for the selected platforms. Include:\n- A strong hook in the first line\n- Authentic military community voice\n- Platform-appropriate length and tone\n- 5-10 highly relevant hashtags mixing broad (#military #veteran) and niche (#navylife #milspouse) tags\n- A clear call to action\n- Emoji where appropriate for the platform\nTailor the content specifically for the platform selected. Return only the caption text and hashtags, nothing else.`,
         messages: [
           {
             role: "user",
-            content: `You are a social media caption writer for a military creator. Write a compelling social media caption based on this prompt: "${aiPrompt.trim()}". Include 3-5 relevant hashtags at the end. Return only the caption text and hashtags, nothing else.`,
+            content: `Platform(s): ${platformList}\n\nPrompt: ${aiPrompt.trim()}`,
           },
         ],
       };
