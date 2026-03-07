@@ -45,6 +45,7 @@ import {
   MapPin,
   Eye,
   LayoutGrid,
+  Image,
   type LucideIcon,
 } from "lucide-react";
 
@@ -133,6 +134,7 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     key: "content",
     label: "MEDIA",
     items: [
+      { href: "/brand/media-library", label: "Media Library", icon: Image },
       { href: "/brand/podcasts", label: "Podcasts", icon: Headphones },
       { href: "/brand/streaming", label: "Streaming", icon: Monitor },
       { href: "/brand/pages", label: "Pages", icon: FileText },

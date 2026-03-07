@@ -261,6 +261,7 @@ const App = () => (
                 <Route path="/brand/posting" element={<CreatePost noLayout />} />
                 <Route path="/brand/drafts" element={<BrandDrafts />} />
                 <Route path="/brand/cadence" element={<CadenceCampaign />} />
+                <Route path="/brand/media-library" element={<CreatorMediaLibrary noLayout />} />
                 <Route path="/brand/pages" element={<BrandPages />} />
                 <Route path="/brand/pages/:id" element={<BrandPageEdit />} />
                 <Route path="/brand/sponsors" element={<SponsorDashboard />} />

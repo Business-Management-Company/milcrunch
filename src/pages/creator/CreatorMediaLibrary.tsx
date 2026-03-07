@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import CreatorLayout from "@/components/layout/CreatorLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,7 @@ interface CampaignSummary {
   media_count: number;
 }
 
-export default function CreatorMediaLibrary() {
+export default function CreatorMediaLibrary({ noLayout }: { noLayout?: boolean } = {}) {
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -129,8 +129,10 @@ export default function CreatorMediaLibrary() {
     return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   };
 
+  const Wrapper = noLayout ? ({ children }: { children: React.ReactNode }) => <>{children}</> : CreatorLayout;
+
   return (
-    <CreatorLayout>
+    <Wrapper>
       <div className="flex h-[calc(100vh-64px)]">
         {/* LEFT SIDEBAR */}
         <div className="w-[240px] shrink-0 border-r border-border bg-card overflow-y-auto hidden lg:block">
@@ -393,6 +395,6 @@ export default function CreatorMediaLibrary() {
           </div>
         </div>
       </div>
-    </CreatorLayout>
+    </Wrapper>
   );
 }
