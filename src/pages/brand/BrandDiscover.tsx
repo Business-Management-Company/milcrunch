@@ -3886,45 +3886,18 @@ const BrandDiscover = () => {
                             {/* Social Links */}
                             <td className="p-3" onClick={(e) => e.stopPropagation()}>
                               {(() => {
-                                const rawEnrich = enrichRawCache[baseCreator.id];
-                                const platStats = rawEnrich ? getPlatformStatsFromEnrichment(rawEnrich) : [];
-                                const platStatsMap = new Map(platStats.map((ps) => [ps.platform, ps]));
-                                // Ensure primary platform (instagram) has follower data from enrichment or card
-                                if (!platStatsMap.has("instagram") && rawEnrich) {
-                                  const igData = (rawEnrich as any).instagram as Record<string, unknown> | undefined;
-                                  const igFollowers = Number(igData?.follower_count ?? igData?.followers ?? creator.followers ?? 0);
-                                  if (igFollowers > 0) {
-                                    platStatsMap.set("instagram", {
-                                      platform: "instagram", label: "Instagram",
-                                      username: (igData?.username as string) ?? creator.username ?? "",
-                                      url: `https://instagram.com/${creator.username ?? ""}`,
-                                      followers: igFollowers, engagementRate: null, avgLikes: null, avgComments: null,
-                                    });
-                                  }
-                                }
-                                // Fallback: use card follower count for primary platform if nothing from enrichment
-                                if (!platStatsMap.has("instagram") && creator.followers) {
-                                  platStatsMap.set("instagram", {
-                                    platform: "instagram", label: "Instagram",
-                                    username: creator.username ?? "",
-                                    url: `https://instagram.com/${creator.username ?? ""}`,
-                                    followers: creator.followers, engagementRate: null, avgLikes: null, avgComments: null,
-                                  });
-                                }
-                                return socialPlatforms.length > 0 ? (
+                                const igFollowers = creator.followers ?? 0;
+                                const secondaryPlats = socialPlatforms.filter((p) => p !== "instagram" && (p === "tiktok" || p === "youtube"));
+                                return (
                                   <div className="flex items-center gap-2">
-                                    {socialPlatforms.slice(0, 5).map((p) => {
-                                      const ps = platStatsMap.get(p);
-                                      return (
-                                        <span key={p} className="inline-flex items-center gap-0.5">
-                                          <PlatformIcon platform={p} username={ps?.username ?? creator.username} size={20} />
-                                          {ps && ps.followers > 0 && <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 tabular-nums">{formatCompactFollowers(ps.followers)}</span>}
-                                        </span>
-                                      );
-                                    })}
+                                    <span className="inline-flex items-center gap-1">
+                                      <PlatformIcon platform="instagram" username={creator.username} size={20} />
+                                      {igFollowers > 0 && <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 tabular-nums">{formatCompactFollowers(igFollowers)}</span>}
+                                    </span>
+                                    {secondaryPlats.map((p) => (
+                                      <PlatformIcon key={p} platform={p} size={20} />
+                                    ))}
                                   </div>
-                                ) : (
-                                  <span className="text-gray-300 dark:text-gray-600">—</span>
                                 );
                               })()}
                             </td>
