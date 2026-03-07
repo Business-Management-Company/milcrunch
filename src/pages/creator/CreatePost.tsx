@@ -8,12 +8,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getConnectedAccounts, type ConnectedAccountRow } from "@/lib/upload-post-sync";
 import { createUploadPost, uploadText, uploadVideo, uploadPhotos, type UploadPostPlatform } from "@/services/upload-post";
+import CadenceCampaign from "./CadenceCampaign";
 import {
   Loader2, Check, X, Link2, Plus, Eye, EyeOff, Sparkles,
   Upload, Image, Video, FileText, Download, Camera, Palette,
   Hash, Smile, Braces, Calendar, Tag, Copy,
   Instagram, Youtube, Facebook, Linkedin, Twitter,
-  ChevronDown,
+  ChevronDown, LayoutGrid,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -98,6 +99,7 @@ export default function CreatePost() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [activeTab, setActiveTab] = useState<"single" | "cadence">("single");
   const [accounts, setAccounts] = useState<ConnectedAccountRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [caption, setCaption] = useState("");
@@ -238,6 +240,39 @@ export default function CreatePost() {
   return (
     <CreatorLayout>
       <div className="flex flex-col h-[calc(100vh-2rem)] -mt-2">
+        {/* ── TAB BAR ── */}
+        <div className="shrink-0 border-b border-border bg-card">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 flex">
+            <button
+              onClick={() => setActiveTab("single")}
+              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+                activeTab === "single"
+                  ? "border-[#1B3A6B] text-[#1B3A6B] dark:text-blue-400 dark:border-blue-400"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <FileText className="h-4 w-4" />
+              Single Post
+            </button>
+            <button
+              onClick={() => setActiveTab("cadence")}
+              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+                activeTab === "cadence"
+                  ? "border-[#1B3A6B] text-[#1B3A6B] dark:text-blue-400 dark:border-blue-400"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <LayoutGrid className="h-4 w-4" />
+              Cadence Campaign
+            </button>
+          </div>
+        </div>
+
+        {/* ── CADENCE CAMPAIGN TAB ── */}
+        {activeTab === "cadence" && <CadenceCampaign />}
+
+        {/* ── SINGLE POST TAB ── */}
+        {activeTab === "single" && <>
         {/* ── SCROLLABLE CONTENT ── */}
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-5">
@@ -587,6 +622,7 @@ export default function CreatePost() {
             </div>
           </div>
         </div>
+        </>}
       </div>
     </CreatorLayout>
   );
