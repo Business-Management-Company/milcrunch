@@ -647,6 +647,13 @@ export default function CreatorProfileModal({
       return;
     }
 
+    // ── DIAGNOSTIC: log creator data sources on open ──
+    console.log('[DIAG] Creator opened:', creator.name, {
+      platforms: creator.platforms,
+      socialPlatforms: creator.socialPlatforms,
+      followers: creator.followers,
+    });
+
     const rawHandle = creator.username;
     const handle = typeof rawHandle === "string" ? rawHandle.replace(/^@/, "").trim() : "";
     if (!handle) {
@@ -773,6 +780,7 @@ export default function CreatorProfileModal({
   // ── Multi-platform enrichment: fetch TikTok, YouTube, etc. data ──
   // After IG enrichment is done, enrich other platforms the creator has (RAW, 0.03 credits each).
   // Detects platforms from: creator card fields, enrichment result (creator_has, accounts, platform data keys).
+  // Uses platform-specific handles from accounts array for accurate per-platform enrichment.
   useEffect(() => {
     if (!enriched || !open || !creator) return;
     const handle = (creator.username ?? "").replace(/^@/, "").trim();
@@ -780,6 +788,7 @@ export default function CreatorProfileModal({
 
     const rt = enriched.result ?? {};
     const detected = new Set<string>();
+    const handleMap = new Map<string, string>(); // platform → platform-specific handle
 
     // 1. From creator card
     const cardPlats = creator.socialPlatforms ?? creator.platforms;
@@ -795,21 +804,62 @@ export default function CreatorProfileModal({
       }
     }
 
-    // 3. From enrichment result.accounts array
-    const accounts = rt.accounts as { platform?: string }[] | undefined;
+    // 3. From enrichment result.accounts array — extract platform-specific handles
+    const accounts = rt.accounts as { platform?: string; username?: string; handle?: string; url?: string }[] | undefined;
     if (Array.isArray(accounts)) {
       for (const acc of accounts) {
-        if (acc.platform) detected.add(acc.platform.toLowerCase());
+        const p = acc.platform?.toLowerCase();
+        if (!p) continue;
+        detected.add(p);
+        const u = (acc.username || acc.handle || "").replace(/^@/, "").trim();
+        if (u && !handleMap.has(p)) handleMap.set(p, u);
       }
     }
 
-    // 4. From enrichment result platform data keys
-    const KNOWN_PLATFORMS = ["tiktok", "youtube", "twitter", "facebook", "linkedin"];
-    for (const p of KNOWN_PLATFORMS) {
-      if ((rt as Record<string, unknown>)[p] && typeof (rt as Record<string, unknown>)[p] === "object") {
+    // 4. From enrichment result.platform_links — extract handles from URLs
+    const plinks = rt.platform_links as Record<string, string> | undefined;
+    if (plinks && typeof plinks === "object") {
+      for (const [k, url] of Object.entries(plinks)) {
+        const p = k.toLowerCase();
+        if (!url || typeof url !== "string") continue;
         detected.add(p);
+        if (!handleMap.has(p)) {
+          try {
+            const path = new URL(url).pathname.replace(/\/$/, "");
+            const seg = path.split("/").pop()?.replace(/^@/, "");
+            if (seg) handleMap.set(p, seg);
+          } catch { /* ignore invalid URLs */ }
+        }
       }
     }
+
+    // 5. From enrichment result platform data keys — use data directly if it has stats
+    const KNOWN_PLATFORMS = ["tiktok", "youtube", "twitter", "facebook", "linkedin"];
+    for (const p of KNOWN_PLATFORMS) {
+      const platObj = (rt as Record<string, unknown>)[p];
+      if (platObj && typeof platObj === "object") {
+        detected.add(p);
+        const pd = platObj as Record<string, unknown>;
+        // Extract handle from existing platform data
+        const u = ((pd.username ?? pd.handle ?? pd.custom_url) as string || "").replace(/^@/, "").trim();
+        if (u && !handleMap.has(p)) handleMap.set(p, u);
+        // If this platform data already has meaningful follower data, use it directly
+        const followers = Number(pd.follower_count ?? pd.subscriber_count ?? 0);
+        if (followers > 0 && !platformEnrichments[p]) {
+          console.log(`[Enrich] Using existing result.${p} data directly: ${followers} followers`);
+          setPlatformEnrichments(prev => ({ ...prev, [p]: pd }));
+        }
+      }
+    }
+
+    console.log("[Enrich] Multi-platform detection:", {
+      detected: Array.from(detected),
+      handleMap: Object.fromEntries(handleMap),
+      creatorPlatforms: cardPlats,
+      creator_has: has,
+      accountsCount: Array.isArray(accounts) ? accounts.length : 0,
+      resultKeys: Object.keys(rt).filter(k => KNOWN_PLATFORMS.includes(k)),
+    });
 
     // Remove instagram and filter to only platforms we don't already have enrichments for
     detected.delete("instagram");
@@ -828,36 +878,32 @@ export default function CreatorProfileModal({
 
     otherPlatforms.forEach(async (platform: string) => {
       if (cancelled) return;
+      // Use platform-specific handle if available, otherwise fall back to IG handle
+      const platHandle = handleMap.get(platform) || handle;
+      console.log(`[Enrich] Multi-platform ${platform}: using handle "${platHandle}" (${platHandle === handle ? "same as IG" : "platform-specific"})`);
       try {
-        const data = await enrichCreatorProfile(handle, controller.signal, platform, false);
+        const data = await enrichCreatorProfile(platHandle, controller.signal, platform, false);
         if (cancelled) return;
         if (data?.instagram && typeof data.instagram === "object") {
           const pd = data.instagram as Record<string, unknown>;
           const pdFollowers = Number(pd.follower_count ?? pd.subscriber_count ?? 0);
           const pdEngagement = Number(pd.engagement_percent ?? pd.engagement_rate ?? 0);
-          const pdMediaCount = Number(pd.media_count ?? pd.video_count ?? pd.number_of_posts ?? 0);
           const igFollowers = Number(igRecord?.follower_count ?? 0);
-          const igEngagement = Number(igRecord?.engagement_percent ?? igRecord?.engagement_rate ?? 0);
-          const igMediaCount = Number(igRecord?.media_count ?? igRecord?.number_of_posts ?? 0);
 
           console.log(`[Enrich] Multi-platform ${platform} enrichment:`, {
-            pdFollowers, pdEngagement: pdEngagement.toFixed(2), pdMediaCount,
-            igFollowers, igEngagement: igEngagement.toFixed(2), igMediaCount,
-            post_data: Array.isArray(pd.post_data) ? `${(pd.post_data as unknown[]).length} posts` : "none",
-            keys: Object.keys(pd).length,
+            handle: platHandle, pdFollowers, pdEngagement: pdEngagement.toFixed(2),
+            igFollowers, keys: Object.keys(pd).length,
           });
 
-          // Cross-contamination guard: only skip if follower count exactly matches IG
-          // AND it's a meaningful number (>100). Engagement/mediaCount can legitimately
-          // be similar across platforms, so we only check the most reliable differentiator.
-          const isCrossContaminated = platform !== "instagram"
+          // Cross-contamination guard: skip ONLY if using same handle AND follower count matches IG exactly
+          const isCrossContaminated = platHandle === handle
             && igFollowers > 100
             && pdFollowers === igFollowers;
 
           if (isCrossContaminated) {
-            console.warn(`[Enrich] Multi-platform ${platform}: SKIPPING — follower_count ${pdFollowers} matches IG exactly (cross-contamination)`);
+            console.warn(`[Enrich] Multi-platform ${platform}: SKIPPING — same handle "${platHandle}" returned IG follower_count ${pdFollowers} (cross-contamination)`);
           } else {
-            console.log(`[Enrich] Multi-platform ${platform}: ACCEPTED — followers=${pdFollowers}, engagement=${pdEngagement.toFixed(2)}, posts=${pdMediaCount}`);
+            console.log(`[Enrich] Multi-platform ${platform}: ACCEPTED — followers=${pdFollowers}, engagement=${pdEngagement.toFixed(2)}`);
             setPlatformEnrichments(prev => ({ ...prev, [platform]: pd }));
           }
         } else {
