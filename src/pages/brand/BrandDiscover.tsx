@@ -185,9 +185,17 @@ function extractFromEnrichment(data: EnrichedProfileResponse): Partial<CreatorCa
     Number(instagram.engagement_percent) || Number(instagram.engagement_rate) || Number(instagram.er) || 0;
   if (erVal > 0) partial.engagementRate = Number(erVal.toFixed(2));
 
-  // NOTE: Do NOT set partial.socialPlatforms here. The search result already
-  // has the correct multi-platform list from has_tiktok/has_youtube/etc flags.
-  // Setting it from enrichment's creator_has would overwrite with incomplete data.
+  // Extract cross-platform list from enrichment's creator_has flags.
+  // The IC Discovery search does NOT return has_tiktok/has_youtube flags —
+  // only the enrichment endpoint provides creator_has, so we must set it here.
+  const creatorHas = result.creator_has as Record<string, boolean> | undefined;
+  if (creatorHas && typeof creatorHas === "object") {
+    const plats: string[] = ["instagram"]; // always include IG since enrichment is IG-based
+    for (const [k, v] of Object.entries(creatorHas)) {
+      if (v && !plats.includes(k.toLowerCase())) plats.push(k.toLowerCase());
+    }
+    partial.socialPlatforms = plats;
+  }
 
   // Hashtags: try direct field (FULL endpoint), then aggregate from post_data (RAW endpoint)
   let hashtags = instagram.hashtags ?? instagram.frequently_used_hashtags ?? instagram.top_hashtags;
