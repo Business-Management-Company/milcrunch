@@ -155,24 +155,42 @@ export default function CreatePost() {
 
   const handleAiGenerate = async () => {
     if (!aiPrompt.trim()) return;
+    console.log("[AI Caption] generating for prompt:", aiPrompt.trim());
     setAiLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch("/api/ai-caption", {
+      const res = await fetch("/api/anthropic", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ prompt: aiPrompt.trim() }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 500,
+          messages: [
+            {
+              role: "user",
+              content: `You are a social media caption writer for a military creator. Write a compelling social media caption based on this prompt: "${aiPrompt.trim()}". Include 3-5 relevant hashtags at the end. Return only the caption text and hashtags, nothing else.`,
+            },
+          ],
+        }),
       });
       if (res.ok) {
         const data = await res.json();
-        setCaption((prev) => prev + (prev ? "\n\n" : "") + (data.caption ?? data.text ?? ""));
-        setShowAiInput(false);
-        setAiPrompt("");
-        toast.success("Caption generated!");
+        const text = data.content?.[0]?.text ?? "";
+        if (text) {
+          setCaption((prev) => prev + (prev ? "\n\n" : "") + text);
+          setShowAiInput(false);
+          setAiPrompt("");
+          toast.success("Caption generated!");
+        } else {
+          console.error("[AI Caption] empty response:", data);
+          toast.error("AI returned an empty response — try again.");
+        }
       } else {
+        const errBody = await res.text().catch(() => "");
+        console.error("[AI Caption] API error:", res.status, errBody);
         toast.error("AI generation failed — try again.");
       }
-    } catch {
+    } catch (err) {
+      console.error("[AI Caption] fetch error:", err);
       toast.error("AI generation failed.");
     } finally { setAiLoading(false); }
   };
