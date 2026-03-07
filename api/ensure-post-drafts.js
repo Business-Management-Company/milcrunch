@@ -39,13 +39,22 @@ export default async function handler(req, res) {
       user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
       caption text,
       media_url text,
+      media_type text,
       platforms jsonb DEFAULT '[]'::jsonb,
+      account_ids jsonb DEFAULT '[]'::jsonb,
+      post_name text,
+      label text,
       scheduled_at timestamptz,
       created_at timestamptz DEFAULT now(),
       updated_at timestamptz DEFAULT now()
     );`,
     // Enable RLS
     `ALTER TABLE post_drafts ENABLE ROW LEVEL SECURITY;`,
+    // Add columns if table already existed without them
+    `ALTER TABLE post_drafts ADD COLUMN IF NOT EXISTS media_type text;`,
+    `ALTER TABLE post_drafts ADD COLUMN IF NOT EXISTS account_ids jsonb DEFAULT '[]'::jsonb;`,
+    `ALTER TABLE post_drafts ADD COLUMN IF NOT EXISTS post_name text;`,
+    `ALTER TABLE post_drafts ADD COLUMN IF NOT EXISTS label text;`,
     // Drop policy if exists then recreate (idempotent)
     `DROP POLICY IF EXISTS "Users can manage own drafts" ON post_drafts;`,
     `CREATE POLICY "Users can manage own drafts" ON post_drafts FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);`,
@@ -86,7 +95,11 @@ CREATE TABLE IF NOT EXISTS post_drafts (
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   caption text,
   media_url text,
+  media_type text,
   platforms jsonb DEFAULT '[]'::jsonb,
+  account_ids jsonb DEFAULT '[]'::jsonb,
+  post_name text,
+  label text,
   scheduled_at timestamptz,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()

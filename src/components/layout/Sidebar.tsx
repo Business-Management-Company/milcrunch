@@ -125,6 +125,7 @@ const SIDEBAR_SECTIONS: NavSection[] = [
       { href: "/brand/tags", label: "Tags", icon: Tags },
       { href: "/brand/social-monitoring", label: "Social Listening", icon: Ear },
       { href: "/brand/posting", label: "Posting", icon: Send },
+      { href: "/brand/drafts", label: "Drafts", icon: FileText },
       { href: "/brand/cadence", label: "Cadence Campaign", icon: LayoutGrid },
     ],
   },

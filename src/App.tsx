@@ -86,6 +86,7 @@ import ConflictsCollabs from "./pages/brand/ConflictsCollabs";
 import BrandEventCreate from "./pages/brand/BrandEventCreate";
 import BrandEventDetail from "./pages/brand/BrandEventDetail";
 import BrandAttribution from "./pages/brand/BrandAttribution";
+import BrandDrafts from "./pages/brand/BrandDrafts";
 import BrandSettings from "./pages/brand/BrandSettings";
 import BrandTags from "./pages/brand/BrandTags";
 import BrandVenueFinder from "./pages/brand/BrandVenueFinder";
@@ -258,6 +259,7 @@ const App = () => (
                 <Route path="/brand/attribution" element={<BrandAttribution />} />
                 <Route path="/brand/settings" element={<BrandSettings />} />
                 <Route path="/brand/posting" element={<CreatePost noLayout />} />
+                <Route path="/brand/drafts" element={<BrandDrafts />} />
                 <Route path="/brand/cadence" element={<CadenceCampaign />} />
                 <Route path="/brand/pages" element={<BrandPages />} />
                 <Route path="/brand/pages/:id" element={<BrandPageEdit />} />

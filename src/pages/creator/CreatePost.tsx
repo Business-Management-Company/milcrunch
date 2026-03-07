@@ -926,9 +926,33 @@ export default function CreatePost({ noLayout }: { noLayout?: boolean } = {}) {
                   variant="outline"
                   size="sm"
                   className="h-9 text-xs gap-1 pr-7"
-                  onClick={() => {
-                    toast.success("Saved as draft!");
-                    setCaption(""); setMediaUrl(""); setScheduledDate("");
+                  onClick={async () => {
+                    if (!user?.id) return;
+                    if (!caption.trim() && selected.size === 0) {
+                      toast.error("Add a caption or select platforms first");
+                      return;
+                    }
+                    const { error } = await supabase.from("post_drafts").insert({
+                      user_id: user.id,
+                      caption: caption.trim(),
+                      platforms: JSON.stringify(Array.from(selected)),
+                      media_url: mediaUrl || null,
+                      media_type: mediaType === "none" ? null : mediaType,
+                      scheduled_at: scheduledDate ? new Date(scheduledDate).toISOString() : null,
+                      post_name: postName.trim() || null,
+                      label: postLabel.trim() || null,
+                      account_ids: JSON.stringify(accounts
+                        .filter((a) => selected.has(a.platform) && a.platform_user_id)
+                        .map((a) => a.platform_user_id!)),
+                    });
+                    if (error) {
+                      console.error("Draft save error:", error);
+                      toast.error("Failed to save draft");
+                    } else {
+                      toast.success("Saved as draft!");
+                      setCaption(""); setMediaUrl(""); setScheduledDate("");
+                      setPostName(""); setPostLabel("");
+                    }
                   }}
                 >
                   Save as draft
