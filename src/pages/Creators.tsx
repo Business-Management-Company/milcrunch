@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,9 +8,6 @@ import {
 } from "@/components/ui/tooltip";
 import {
   ShieldCheck,
-  Instagram,
-  Youtube,
-  Twitter,
   ArrowLeft,
   ArrowRight,
   Search,
@@ -32,16 +29,7 @@ import {
 } from "@/lib/featured-creators";
 import { cn, safeImageUrl } from "@/lib/utils";
 import { getCreatorAvatar } from "@/lib/avatar";
-
-/* ------------------------------------------------------------------ */
-/* Icons                                                               */
-/* ------------------------------------------------------------------ */
-
-const TikTokIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.88-2.88 2.89 2.89 0 012.88-2.88c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V9.39a8.16 8.16 0 003.76.92V6.86a4.85 4.85 0 01-.01-.17z" />
-  </svg>
-);
+import { PlatformIcon, PLATFORM_COLORS as BRAND_PLATFORM_COLORS, PLATFORM_NAMES } from "@/lib/platform-icons";
 
 /* ------------------------------------------------------------------ */
 /* Constants                                                           */
@@ -94,26 +82,6 @@ const BRANCH_BADGE: Record<string, string> = {
   "Space Force": "bg-indigo-600 text-white",
 };
 
-const PLATFORM_ICON: Record<string, React.ReactNode> = {
-  instagram: <Instagram className="h-4 w-4" />,
-  tiktok: <TikTokIcon className="h-4 w-4" />,
-  youtube: <Youtube className="h-4 w-4" />,
-  twitter: <Twitter className="h-4 w-4" />,
-};
-
-const PLATFORM_COLOR: Record<string, string> = {
-  instagram: "text-pink-500",
-  tiktok: "text-gray-900",
-  youtube: "text-red-600",
-  twitter: "text-gray-700",
-};
-
-const PLATFORM_LABEL: Record<string, string> = {
-  instagram: "Instagram",
-  tiktok: "TikTok",
-  youtube: "YouTube",
-  twitter: "X",
-};
 
 const KNOWN_PLATFORMS = ["instagram", "tiktok", "youtube", "twitter", "facebook", "linkedin", "twitch", "pinterest", "snapchat", "threads"];
 
@@ -602,10 +570,10 @@ export default function Creators() {
                         : "bg-white text-gray-600 border-gray-200 hover:border-gray-300",
                     )}
                   >
-                    <span className={isActive ? "text-white" : PLATFORM_COLOR[p]}>
-                      {PLATFORM_ICON[p]}
+                    <span style={isActive ? undefined : { color: BRAND_PLATFORM_COLORS[p] }}>
+                      <PlatformIcon platform={p} size={16} />
                     </span>
-                    {PLATFORM_LABEL[p] ?? p}
+                    {PLATFORM_NAMES[p] ?? p}
                   </button>
                 );
               })}
