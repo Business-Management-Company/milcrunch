@@ -179,14 +179,14 @@ export default function CreatorDashboard() {
         </div>
 
         {/* ── 2. AI AGENT CHAT BAR ── */}
-        <Card className="rounded-2xl bg-[#1B3A6B] border-0" style={{ borderBottom: "2px solid #C8A84B" }}>
+        <Card className="rounded-2xl bg-white dark:bg-card border border-gray-200 dark:border-border shadow-sm" style={{ borderBottom: "2px solid #C8A84B" }}>
           <CardContent className="py-6 px-8">
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-3 flex-1 rounded-xl bg-[#243d6e] px-4 py-3 cursor-pointer" onClick={() => chatRef.current?.open()}>
-                <Sparkles className="h-5 w-5 text-white shrink-0" />
-                <span className="text-sm text-white/60">What do you need help with today?</span>
+              <div className="flex items-center gap-3 flex-1 rounded-xl bg-[#F3F4F6] dark:bg-white/5 px-4 py-3 cursor-pointer" onClick={() => chatRef.current?.open()}>
+                <Sparkles className="h-5 w-5 text-[#C8A84B] shrink-0" />
+                <span className="text-sm text-[#6B7280]">What do you need help with today?</span>
               </div>
-              <Button size="sm" className="bg-[#C8A84B] hover:bg-[#b8993f] text-white h-11 px-5 shrink-0" onClick={() => chatRef.current?.open()}>
+              <Button size="sm" className="bg-[#1B3A6B] hover:bg-[#152d54] text-white h-11 px-5 shrink-0" onClick={() => chatRef.current?.open()}>
                 Get Started
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
@@ -198,7 +198,7 @@ export default function CreatorDashboard() {
                     <button
                       key={chip}
                       onClick={() => chatRef.current?.openWithMessage(chip)}
-                      className="px-3 py-1.5 rounded-full border border-white/20 bg-white/10 text-xs text-white hover:bg-white/20 transition-colors"
+                      className="px-3 py-1.5 rounded-full bg-[#F3F4F6] dark:bg-white/10 text-xs text-[#374151] dark:text-gray-300 hover:bg-[#E5E7EB] dark:hover:bg-white/20 transition-colors"
                     >
                       {chip}
                     </button>
