@@ -64,6 +64,7 @@ import CreatorAnalytics from "./pages/creator/CreatorAnalytics";
 import CreatorOnboard from "./pages/creator/CreatorOnboard";
 import CreatorBioEditor from "./pages/creator/CreatorBioEditor";
 import CreatePost from "./pages/creator/CreatePost";
+import CadenceCampaign from "./pages/creator/CadenceCampaign";
 import CreatorPosts from "./pages/creator/CreatorPosts";
 import CreatorEvents from "./pages/creator/CreatorEvents";
 import CreatorDeals from "./pages/creator/CreatorDeals";
@@ -257,6 +258,7 @@ const App = () => (
                 <Route path="/brand/attribution" element={<BrandAttribution />} />
                 <Route path="/brand/settings" element={<BrandSettings />} />
                 <Route path="/brand/posting" element={<CreatePost noLayout />} />
+                <Route path="/brand/cadence" element={<CadenceCampaign />} />
                 <Route path="/brand/pages" element={<BrandPages />} />
                 <Route path="/brand/pages/:id" element={<BrandPageEdit />} />
                 <Route path="/brand/sponsors" element={<SponsorDashboard />} />
