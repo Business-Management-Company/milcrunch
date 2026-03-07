@@ -6,6 +6,8 @@
  * each with { username, url, ... } and a creator_has map of boolean flags.
  */
 
+import { normalizePlatform } from "@/lib/platform-icons";
+
 export interface EnrichmentPlatform {
   platform: string;
   label: string;
@@ -111,7 +113,7 @@ export function getPlatformStatsFromEnrichment(enrichmentData: unknown): Platfor
     const avgComments = Number(pd.avg_comments ?? pd.average_comments ?? 0) || null;
 
     stats.push({
-      platform: key,
+      platform: normalizePlatform(key),
       label: config.label,
       username: cleanUsername,
       url,

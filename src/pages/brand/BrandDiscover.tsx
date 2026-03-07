@@ -3857,14 +3857,36 @@ const BrandDiscover = () => {
                                 const rawEnrich = enrichRawCache[baseCreator.id];
                                 const platStats = rawEnrich ? getPlatformStatsFromEnrichment(rawEnrich) : [];
                                 const platStatsMap = new Map(platStats.map((ps) => [ps.platform, ps]));
+                                // Ensure primary platform (instagram) has follower data from enrichment or card
+                                if (!platStatsMap.has("instagram") && rawEnrich) {
+                                  const igData = (rawEnrich as any).instagram as Record<string, unknown> | undefined;
+                                  const igFollowers = Number(igData?.follower_count ?? igData?.followers ?? creator.followers ?? 0);
+                                  if (igFollowers > 0) {
+                                    platStatsMap.set("instagram", {
+                                      platform: "instagram", label: "Instagram",
+                                      username: (igData?.username as string) ?? creator.username ?? "",
+                                      url: `https://instagram.com/${creator.username ?? ""}`,
+                                      followers: igFollowers, engagementRate: null, avgLikes: null, avgComments: null,
+                                    });
+                                  }
+                                }
+                                // Fallback: use card follower count for primary platform if nothing from enrichment
+                                if (!platStatsMap.has("instagram") && creator.followers) {
+                                  platStatsMap.set("instagram", {
+                                    platform: "instagram", label: "Instagram",
+                                    username: creator.username ?? "",
+                                    url: `https://instagram.com/${creator.username ?? ""}`,
+                                    followers: creator.followers, engagementRate: null, avgLikes: null, avgComments: null,
+                                  });
+                                }
                                 return socialPlatforms.length > 0 ? (
-                                  <div className="flex items-center gap-1.5">
+                                  <div className="flex items-center gap-2">
                                     {socialPlatforms.slice(0, 5).map((p) => {
                                       const ps = platStatsMap.get(p);
                                       return (
                                         <span key={p} className="inline-flex items-center gap-0.5">
-                                          <PlatformIcon platform={p} username={ps?.username ?? creator.username} />
-                                          {ps && ps.followers > 0 && <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">{formatCompactFollowers(ps.followers)}</span>}
+                                          <PlatformIcon platform={p} username={ps?.username ?? creator.username} size={20} />
+                                          {ps && ps.followers > 0 && <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 tabular-nums">{formatCompactFollowers(ps.followers)}</span>}
                                         </span>
                                       );
                                     })}
@@ -4148,13 +4170,34 @@ const BrandDiscover = () => {
                           const rawEnrich = enrichRawCache[baseCreator.id];
                           const platStats = rawEnrich ? getPlatformStatsFromEnrichment(rawEnrich) : [];
                           const platStatsMap = new Map(platStats.map((ps) => [ps.platform, ps]));
+                          // Ensure primary platform has follower data from enrichment or card
+                          if (!platStatsMap.has("instagram") && rawEnrich) {
+                            const igData = (rawEnrich as any).instagram as Record<string, unknown> | undefined;
+                            const igFollowers = Number(igData?.follower_count ?? igData?.followers ?? creator.followers ?? 0);
+                            if (igFollowers > 0) {
+                              platStatsMap.set("instagram", {
+                                platform: "instagram", label: "Instagram",
+                                username: (igData?.username as string) ?? creator.username ?? "",
+                                url: `https://instagram.com/${creator.username ?? ""}`,
+                                followers: igFollowers, engagementRate: null, avgLikes: null, avgComments: null,
+                              });
+                            }
+                          }
+                          if (!platStatsMap.has("instagram") && creator.followers) {
+                            platStatsMap.set("instagram", {
+                              platform: "instagram", label: "Instagram",
+                              username: creator.username ?? "",
+                              url: `https://instagram.com/${creator.username ?? ""}`,
+                              followers: creator.followers, engagementRate: null, avgLikes: null, avgComments: null,
+                            });
+                          }
                           return socialPlatforms.length > 0 ? (
                             <div className="flex items-center gap-2 mb-3 flex-wrap" onClick={(e) => e.stopPropagation()}>
                               {socialPlatforms.slice(0, 5).map((p) => {
                                 const ps = platStatsMap.get(p);
                                 return (
                                   <span key={p} className="inline-flex items-center gap-0.5">
-                                    <PlatformIcon platform={p} username={ps?.username ?? creator.username} />
+                                    <PlatformIcon platform={p} username={ps?.username ?? creator.username} size={20} />
                                     {ps && ps.followers > 0 && (
                                       <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">{formatCompactFollowers(ps.followers)}</span>
                                     )}
