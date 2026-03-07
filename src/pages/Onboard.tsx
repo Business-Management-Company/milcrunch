@@ -5,13 +5,10 @@ import {
   ArrowRight,
   Check,
   Loader2,
-  Instagram,
-  Youtube,
-  Facebook,
-  Twitter,
   RefreshCw,
   Shield,
 } from "lucide-react";
+import { PlatformIcon } from "@/lib/platform-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { generateConnectUrl } from "@/services/upload-post";
@@ -89,18 +86,12 @@ const CATEGORY_OPTIONS = [
 ];
 
 const SOCIAL_PLATFORMS = [
-  { id: "instagram", name: "Instagram", icon: Instagram, color: "text-pink-500 bg-pink-500/10 border-pink-500/20" },
-  { id: "tiktok", name: "TikTok", icon: null, color: "text-gray-900 bg-gray-100 border-gray-200" },
-  { id: "youtube", name: "YouTube", icon: Youtube, color: "text-red-500 bg-red-500/10 border-red-500/20" },
-  { id: "x", name: "Twitter/X", icon: Twitter, color: "text-gray-700 bg-gray-100 border-gray-200" },
-  { id: "facebook", name: "Facebook", icon: Facebook, color: "text-blue-600 bg-blue-500/10 border-blue-500/20" },
+  { id: "instagram", name: "Instagram" },
+  { id: "tiktok", name: "TikTok" },
+  { id: "youtube", name: "YouTube" },
+  { id: "x", name: "Twitter/X" },
+  { id: "facebook", name: "Facebook" },
 ];
-
-const TikTokIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.88-2.88 2.89 2.89 0 012.88-2.88c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V9.39a8.16 8.16 0 003.76.92V6.86a4.85 4.85 0 01-.01-.17z" />
-  </svg>
-);
 
 /* ------------------------------------------------------------------ */
 /* Helper: pill button                                                 */
@@ -466,7 +457,6 @@ function Step4({
       <div className="space-y-3">
         {SOCIAL_PLATFORMS.map((p) => {
           const connected = connectedPlatforms.has(p.id);
-          const Icon = p.id === "tiktok" ? TikTokIcon : p.icon;
 
           return (
             <button
@@ -486,15 +476,13 @@ function Step4({
                   "w-10 h-10 rounded-full flex items-center justify-center border",
                   connected
                     ? "bg-green-100 border-green-300 text-green-600"
-                    : p.color
+                    : "border-gray-200"
                 )}
               >
                 {connected ? (
                   <Check className="h-5 w-5" />
-                ) : Icon ? (
-                  <Icon className="h-5 w-5" />
                 ) : (
-                  <TikTokIcon className="h-5 w-5" />
+                  <PlatformIcon platform={p.id} size={20} />
                 )}
               </div>
               <div className="flex-1">
