@@ -233,8 +233,8 @@ export default function CreatePost() {
         {/* ── SINGLE POST TAB ── */}
         {activeTab === "single" && <>
         {/* ── SCROLLABLE CONTENT ── */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+        <div className="flex-1 overflow-y-auto" style={{ backgroundColor: "#F5F7FA" }}>
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
 
             {/* ── 1. INSPIRATION BANNER ── */}
             <div className="rounded-xl border border-green-200 bg-green-50 dark:bg-green-900/10 dark:border-green-800/40 px-4 py-3">
@@ -270,8 +270,11 @@ export default function CreatePost() {
             </div>
 
             {/* ── 2. SELECT SOCIAL ACCOUNTS ── */}
-            <div>
-              <h2 className="text-sm font-semibold text-foreground mb-3">Select social accounts</h2>
+            <div className="bg-white dark:bg-card rounded-2xl p-6 space-y-4" style={{ borderLeft: "4px solid #1B3A6B", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-3">
+                <span className="flex items-center justify-center h-8 w-8 rounded-full text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#1B3A6B" }}>A</span>
+                Select Social Accounts
+              </h2>
               {noAccounts ? (
                 <div className="rounded-xl border border-dashed border-border p-6 text-center">
                   <p className="text-sm text-muted-foreground mb-3">Connect your social accounts to start posting</p>
@@ -324,8 +327,11 @@ export default function CreatePost() {
             </div>
 
             {/* ── 3. WRITE A CAPTION ── */}
-            <div>
-              <h2 className="text-sm font-semibold text-foreground mb-3">Write a caption</h2>
+            <div className="bg-white dark:bg-card rounded-2xl p-6 space-y-4" style={{ borderLeft: "4px solid #C8A84B", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-3">
+                <span className="flex items-center justify-center h-8 w-8 rounded-full text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#C8A84B" }}>B</span>
+                Write a Caption
+              </h2>
               <div className="rounded-xl border border-border overflow-hidden">
                 <Textarea
                   value={caption}
@@ -383,13 +389,18 @@ export default function CreatePost() {
             </div>
 
             {/* ── 4. ADD MEDIA ── */}
-            <div>
-              <h2 className="text-sm font-semibold text-foreground mb-3">
-                Add images, videos, and PDF documents
-                <span className="text-muted-foreground font-normal ml-1">({mediaFiles.length})</span>
+            <div className="bg-white dark:bg-card rounded-2xl p-6 space-y-4" style={{ borderLeft: "4px solid #7C3AED", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-3">
+                <span className="flex items-center justify-center h-8 w-8 rounded-full text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#7C3AED" }}>C</span>
+                Add Media
+                {mediaFiles.length > 0 && (
+                  <span className="ml-1 text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                    {mediaFiles.length} file{mediaFiles.length !== 1 ? "s" : ""}
+                  </span>
+                )}
               </h2>
               {/* Upload type toolbar */}
-              <div className="flex items-center gap-1 mb-3 flex-wrap">
+              <div className="flex items-center gap-1 flex-wrap">
                 {[
                   { icon: Upload, label: "File" },
                   { icon: Image, label: "Image" },
@@ -420,7 +431,7 @@ export default function CreatePost() {
               {/* Upload zone */}
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full rounded-xl border-2 border-dashed border-border hover:border-green-400 transition-colors p-8 flex flex-col items-center gap-3"
+                className="w-full rounded-xl border-2 border-dashed border-border hover:border-[#7C3AED]/40 transition-colors p-8 flex flex-col items-center gap-3"
               >
                 {/* Stacked card illustration */}
                 <div className="relative w-16 h-16">
@@ -437,7 +448,7 @@ export default function CreatePost() {
               </button>
               {/* Show uploaded files */}
               {mediaFiles.length > 0 && (
-                <div className="mt-3 space-y-2">
+                <div className="space-y-2">
                   {mediaFiles.map((file, i) => (
                     <div key={i} className="flex items-center gap-3 rounded-lg border border-border px-3 py-2">
                       <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -452,7 +463,7 @@ export default function CreatePost() {
               )}
               {/* URL input fallback */}
               {mediaFiles.length === 0 && (
-                <div className="mt-3 space-y-2">
+                <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">Or paste a URL:</span>
                     <div className="flex gap-2">
@@ -482,8 +493,11 @@ export default function CreatePost() {
             </div>
 
             {/* ── 5. POST DETAILS ── */}
-            <div>
-              <h2 className="text-sm font-semibold text-foreground mb-3">Set post details</h2>
+            <div className="bg-white dark:bg-card rounded-2xl p-6 space-y-4" style={{ borderLeft: "4px solid #0D9488", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-3">
+                <span className="flex items-center justify-center h-8 w-8 rounded-full text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#0D9488" }}>D</span>
+                Post Details
+              </h2>
               <div className="space-y-3">
                 {/* Schedule */}
                 <div className="flex items-center gap-3">
@@ -537,6 +551,7 @@ export default function CreatePost() {
               </div>
             </div>
 
+            <div className="h-4" />
           </div>
         </div>
 
