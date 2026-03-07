@@ -119,6 +119,9 @@ interface ThemeSettings {
   showUsername: boolean;
   profileImageSize: "s" | "m" | "l";
   template?: string;
+  showSocialIcons?: boolean;
+  socialIconsOrder?: string[];
+  socialIconsEnabled?: Record<string, boolean>;
 }
 
 /* ── Design sub-tab definitions ── */
@@ -283,6 +286,7 @@ export default function CreatorBioEditor() {
     linkColor: "#1B3A6B", showBranding: true,
     showProfileImage: true, showHeroImage: true,
     showUsername: true, profileImageSize: "m",
+    showSocialIcons: true, socialIconsOrder: [], socialIconsEnabled: {},
   });
   const updateTheme = (patch: Partial<ThemeSettings>) =>
     setTheme((prev) => ({ ...prev, ...patch }));
@@ -301,7 +305,8 @@ export default function CreatorBioEditor() {
     setHeroDominantColor((meta.hero_dominant_color as string) ?? null);
     const cl = meta.custom_links;
     const config = normalizeCustomLinks(cl);
-    setSections(config.sections ?? []);
+    // Strip legacy social_links sections (now handled by Profile tab social icons)
+    setSections((config.sections ?? []).filter((s) => s.type !== "social_links"));
     if (cl && typeof cl === "object") {
       const saved = (cl as Record<string, unknown>).themeSettings;
       if (saved && typeof saved === "object")
@@ -1014,52 +1019,105 @@ export default function CreatorBioEditor() {
                   />
                 </div>
 
-                {/* Social Links */}
-                {socialAccounts.length > 0 && (
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground">Social Links</label>
-                    <div className="space-y-1.5">
-                      {socialAccounts.map((acc) => {
-                        return (
-                          <div key={acc.id} className="flex items-center gap-2.5 rounded-lg border border-border p-2.5">
-                            <PlatformIcon platform={acc.platform} size={18} />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium truncate capitalize">{acc.platform}</p>
-                              {acc.platform_username && (
-                                <p className="text-[11px] text-muted-foreground truncate">@{acc.platform_username}</p>
-                              )}
-                            </div>
-                            <div className="h-2 w-2 rounded-full bg-[#C8A84B] shrink-0" title="Connected" />
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-xs h-8"
-                      onClick={() => navigate("/creator/socials")}
-                    >
-                      Manage Connections
-                    </Button>
+                {/* Social Icons */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-muted-foreground">Social Icons</label>
+                    <Switch
+                      checked={theme.showSocialIcons ?? true}
+                      onCheckedChange={(v) => {
+                        const updated = { ...theme, showSocialIcons: v };
+                        setTheme(updated);
+                        persistTheme(updated);
+                      }}
+                      className="scale-75 origin-right data-[state=checked]:bg-[#1B3A6B]"
+                    />
                   </div>
-                )}
-                {socialAccounts.length === 0 && (
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground">Social Links</label>
+                  {(theme.showSocialIcons ?? true) && socialAccounts.length > 0 && (
+                    <div className="space-y-1.5">
+                      {(() => {
+                        const order = theme.socialIconsOrder ?? [];
+                        const enabled = theme.socialIconsEnabled ?? {};
+                        // Show accounts in saved order, appending any new ones
+                        const sorted = [...socialAccounts].sort((a, b) => {
+                          const ai = order.indexOf(a.platform);
+                          const bi = order.indexOf(b.platform);
+                          if (ai === -1 && bi === -1) return 0;
+                          if (ai === -1) return 1;
+                          if (bi === -1) return -1;
+                          return ai - bi;
+                        });
+                        return sorted.map((acc, idx) => {
+                          const isEnabled = enabled[acc.platform] ?? true;
+                          return (
+                            <div key={acc.id} className="flex items-center gap-2.5 rounded-lg border border-border p-2.5">
+                              <div className="flex flex-col gap-0.5">
+                                <button
+                                  disabled={idx === 0}
+                                  onClick={() => {
+                                    const curOrder = sorted.map((a) => a.platform);
+                                    [curOrder[idx - 1], curOrder[idx]] = [curOrder[idx], curOrder[idx - 1]];
+                                    const updated = { ...theme, socialIconsOrder: curOrder };
+                                    setTheme(updated);
+                                    persistTheme(updated);
+                                  }}
+                                  className="text-muted-foreground hover:text-foreground disabled:opacity-20"
+                                >
+                                  <ChevronUp className="h-3 w-3" />
+                                </button>
+                                <button
+                                  disabled={idx === sorted.length - 1}
+                                  onClick={() => {
+                                    const curOrder = sorted.map((a) => a.platform);
+                                    [curOrder[idx], curOrder[idx + 1]] = [curOrder[idx + 1], curOrder[idx]];
+                                    const updated = { ...theme, socialIconsOrder: curOrder };
+                                    setTheme(updated);
+                                    persistTheme(updated);
+                                  }}
+                                  className="text-muted-foreground hover:text-foreground disabled:opacity-20"
+                                >
+                                  <ChevronDown className="h-3 w-3" />
+                                </button>
+                              </div>
+                              <PlatformIcon platform={acc.platform} size={18} />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium truncate capitalize">{acc.platform}</p>
+                                {acc.platform_username && (
+                                  <p className="text-[11px] text-muted-foreground truncate">@{acc.platform_username}</p>
+                                )}
+                              </div>
+                              <Switch
+                                checked={isEnabled}
+                                onCheckedChange={(v) => {
+                                  const updated = {
+                                    ...theme,
+                                    socialIconsEnabled: { ...(theme.socialIconsEnabled ?? {}), [acc.platform]: v },
+                                  };
+                                  setTheme(updated);
+                                  persistTheme(updated);
+                                }}
+                                className="scale-75 origin-right data-[state=checked]:bg-[#1B3A6B]"
+                              />
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  )}
+                  {(theme.showSocialIcons ?? true) && socialAccounts.length === 0 && (
                     <div className="rounded-lg border border-dashed border-border p-4 text-center">
                       <p className="text-xs text-muted-foreground">No accounts connected yet</p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-2 text-xs h-8"
-                        onClick={() => navigate("/creator/socials")}
-                      >
-                        Connect Accounts
-                      </Button>
                     </div>
-                  </div>
-                )}
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-xs h-8"
+                    onClick={() => navigate("/creator/socials")}
+                  >
+                    {socialAccounts.length > 0 ? "Manage Connections" : "Connect Accounts"}
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -1700,6 +1758,31 @@ export default function CreatorBioEditor() {
                     {profileBio && (
                       <p className="text-[11px] mt-1.5 text-center max-w-[240px] leading-relaxed line-clamp-3" style={{ color: phoneSubtext }}>{profileBio}</p>
                     )}
+
+                    {/* Social Icons row */}
+                    {(theme.showSocialIcons ?? true) && socialAccounts.length > 0 && (() => {
+                      const iconSize = theme.profileImageSize === "s" ? 20 : theme.profileImageSize === "l" ? 28 : 24;
+                      const order = theme.socialIconsOrder ?? [];
+                      const enabled = theme.socialIconsEnabled ?? {};
+                      const filtered = socialAccounts
+                        .filter((acc) => enabled[acc.platform] ?? true)
+                        .sort((a, b) => {
+                          const ai = order.indexOf(a.platform);
+                          const bi = order.indexOf(b.platform);
+                          if (ai === -1 && bi === -1) return 0;
+                          if (ai === -1) return 1;
+                          if (bi === -1) return -1;
+                          return ai - bi;
+                        });
+                      if (filtered.length === 0) return null;
+                      return (
+                        <div className="flex items-center justify-center gap-2 mt-2.5">
+                          {filtered.map((acc) => (
+                            <PlatformIcon key={acc.id} platform={acc.platform} size={iconSize} />
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Sections */}
@@ -1733,28 +1816,6 @@ export default function CreatorBioEditor() {
                               )}
                               {(stStyle === "divider" || stStyle === "heading_divider") && (
                                 <div className="mt-1.5 border-t" style={{ borderColor: isDark ? "#374151" : "#e5e7eb" }} />
-                              )}
-                            </div>
-                          );
-                        }
-
-                        if (section.type === "social_links") {
-                          const accs = socialAccounts.filter((acc) => {
-                            const toggles = (cfg.platformToggles as any[]) ?? [];
-                            const t = toggles.find((t: any) => t.platform === acc.platform);
-                            return t ? t.enabled : true;
-                          });
-                          return (
-                            <div key={section.id} style={cStyle}>
-                              <p className="text-[11px] font-semibold mb-2" style={{ color: theme.themeColor }}>Social Links</p>
-                              {accs.length > 0 ? (
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  {accs.map((acc) => {
-                                    return <PlatformIcon key={acc.id} platform={acc.platform} size={34} className="shadow-sm" />;
-                                  })}
-                                </div>
-                              ) : (
-                                <p className="text-xs" style={{ color: phoneSubtext }}>No social accounts connected yet</p>
                               )}
                             </div>
                           );
@@ -2037,54 +2098,6 @@ export default function CreatorBioEditor() {
                   </div>
                 )}
 
-                {/* ── SOCIAL LINKS ── */}
-                {section.type === "social_links" && (
-                  <div className="space-y-2">
-                    {socialAccounts.length === 0 ? (
-                      <div className="text-center py-6">
-                        <Share2 className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-                        <p className="text-sm text-muted-foreground">No social accounts connected.</p>
-                        <Button variant="outline" size="sm" className="mt-3 text-xs" onClick={() => navigate("/creator/socials")}>
-                          Connect Accounts
-                        </Button>
-                      </div>
-                    ) : (
-                      socialAccounts.map((acc) => {
-                        const toggles = (cfg.platformToggles ?? []) as Array<{ platform: string; enabled: boolean }>;
-                        const toggle = toggles.find((t) => t.platform === acc.platform);
-                        const enabled = toggle ? toggle.enabled : true;
-                        return (
-                          <div key={acc.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
-                            <PlatformIcon platform={acc.platform} size={18} />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium capitalize">{acc.platform}</p>
-                              {acc.platform_username && (
-                                <p className="text-[11px] text-muted-foreground truncate">@{acc.platform_username}</p>
-                              )}
-                            </div>
-                            <Switch
-                              checked={enabled}
-                              onCheckedChange={(v) => {
-                                const newToggles = socialAccounts.map((a) => ({
-                                  platform: a.platform,
-                                  enabled: a.platform === acc.platform
-                                    ? v
-                                    : ((toggles.find((t) => t.platform === a.platform)?.enabled) ?? true),
-                                }));
-                                updateSectionConfig(section.id, { platformToggles: newToggles });
-                              }}
-                            />
-                          </div>
-                        );
-                      })
-                    )}
-                    <Button variant="outline" size="sm" className="w-full mt-3 text-xs" onClick={() => navigate("/creator/socials")}>
-                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                      Go to My Socials
-                    </Button>
-                  </div>
-                )}
-
                 {/* ── CUSTOM LINKS (Linktree-style) ── */}
                 {section.type === "custom_links" && (() => {
                   const links = (cfg.links ?? []) as Array<{ id: string; label: string; url: string; thumbnail?: string; group?: string; imageDisplayType?: string; imageUrl?: string; description?: string }>;
@@ -2309,7 +2322,7 @@ export default function CreatorBioEditor() {
                 )}
 
                 {/* ── GENERIC (all other section types) ── */}
-                {!["social_links", "custom_links", "book_meeting", "podcast", "section_title"].includes(section.type) && (
+                {!["custom_links", "book_meeting", "podcast", "section_title"].includes(section.type) && (
                   <div className="space-y-3">
                     <div className="space-y-1.5">
                       <label className="text-xs font-medium text-muted-foreground">Title</label>
@@ -2471,8 +2484,8 @@ export default function CreatorBioEditor() {
             {/* Divider */}
             <div className="border-t border-border my-1" />
 
-            {/* Remaining catalog items */}
-            {SECTION_CATALOG.filter((e) => e.type !== "section_title").map((entry) => {
+            {/* Remaining catalog items (social_links removed — handled by Profile tab) */}
+            {SECTION_CATALOG.filter((e) => e.type !== "section_title" && e.type !== "social_links").map((entry) => {
               const count = sections.filter((s) => s.type === entry.type).length;
               const isComingSoon = entry.comingSoon;
               return (
