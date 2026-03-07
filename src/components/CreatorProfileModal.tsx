@@ -646,6 +646,30 @@ export default function CreatorProfileModal({
       setSidebarWidth(320);
       return;
     }
+
+    // ── TEMPORARY DEBUG: log raw creator data ──
+    console.log('CREATOR RAW DATA:', JSON.stringify(creator, null, 2));
+
+    // Query A: directory_members record for this creator
+    (async () => {
+      const { data } = await supabase
+        .from('directory_members')
+        .select('*')
+        .ilike('full_name', `%${creator.name?.split(' ')[0] || 'patriotic'}%`)
+        .limit(1);
+      console.log('FULL RECORD:', JSON.stringify(data, null, 2));
+    })();
+
+    // Query B: social fields sample from directory_members
+    (async () => {
+      const { data } = await supabase
+        .from('directory_members')
+        .select('instagram_handle, tiktok_handle, youtube_handle, twitter_handle, facebook_url, linkedin_url, instagram_followers, tiktok_followers, youtube_subscribers, twitter_followers, total_followers, platforms, social_links, social_accounts')
+        .limit(3);
+      console.log('SOCIAL FIELDS SAMPLE:', JSON.stringify(data, null, 2));
+    })();
+    // ── END TEMPORARY DEBUG ──
+
     const rawHandle = creator.username;
     const handle = typeof rawHandle === "string" ? rawHandle.replace(/^@/, "").trim() : "";
     if (!handle) {
@@ -715,6 +739,10 @@ export default function CreatorProfileModal({
           return;
         }
 
+        // ── TEMPORARY DEBUG: log enrichment response ──
+        console.log('ENRICHMENT RAW DATA:', JSON.stringify(payload, null, 2));
+        // ── END TEMPORARY DEBUG ──
+
         setEnrichmentLoading(false);
         setEnriched(payload);
         setError(null);
@@ -749,6 +777,9 @@ export default function CreatorProfileModal({
 
       if (cached) {
         console.log("[Enrich] Supabase cache hit for:", handle);
+        // ── TEMPORARY DEBUG: log cached enrichment ──
+        console.log('ENRICHMENT RAW DATA (cached):', JSON.stringify(cached, null, 2));
+        // ── END TEMPORARY DEBUG ──
         setEnriched(cached);
         setEnrichmentLoading(false);
         setEnrichmentSource("cache");
