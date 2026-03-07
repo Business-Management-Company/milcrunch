@@ -178,8 +178,8 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
       <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-5">
         {SECTIONS.map((section) => (
           <div key={section.label}>
-            <p className="px-3 mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#C8A84B]/50">
-              {section.label}
+            <p className="px-3 mb-3 flex items-center text-[10px] font-semibold uppercase text-[#C8A84B]" style={{ letterSpacing: "0.12em" }}>
+              <span className="mr-1.5">—</span>{section.label}
             </p>
             <div className="space-y-0.5">{section.items.map(navLink)}</div>
           </div>
