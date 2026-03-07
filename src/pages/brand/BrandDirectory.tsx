@@ -123,12 +123,51 @@ const TikTokIcon = ({ className = "h-3.5 w-3.5" }: { className?: string }) => (
   </svg>
 );
 
+const FacebookIcon = ({ className = "h-3.5 w-3.5" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+  </svg>
+);
+
+const LinkedInIcon = ({ className = "h-3.5 w-3.5" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+  </svg>
+);
+
 const PLATFORM_ICON: Record<string, React.ReactNode> = {
   instagram: <Instagram className="h-3.5 w-3.5" />,
   tiktok: <TikTokIcon />,
   youtube: <Youtube className="h-3.5 w-3.5" />,
   twitter: <Twitter className="h-3.5 w-3.5" />,
+  x: <Twitter className="h-3.5 w-3.5" />,
+  facebook: <FacebookIcon />,
+  linkedin: <LinkedInIcon />,
 };
+
+const PLATFORM_COLOR: Record<string, string> = {
+  instagram: "bg-gradient-to-br from-purple-500 to-pink-500 text-white",
+  tiktok: "bg-black text-white",
+  youtube: "bg-red-600 text-white",
+  twitter: "bg-black text-white",
+  x: "bg-black text-white",
+  facebook: "bg-blue-600 text-white",
+  linkedin: "bg-blue-700 text-white",
+  twitch: "bg-purple-600 text-white",
+  pinterest: "bg-red-700 text-white",
+  snapchat: "bg-yellow-400 text-black",
+  threads: "bg-black text-white",
+};
+
+/** Filterable platforms shown as buttons. */
+const FILTER_PLATFORMS = [
+  { key: "instagram", label: "Instagram", icon: <Instagram className="h-3.5 w-3.5" /> },
+  { key: "tiktok", label: "TikTok", icon: <TikTokIcon className="h-3.5 w-3.5" /> },
+  { key: "youtube", label: "YouTube", icon: <Youtube className="h-3.5 w-3.5" /> },
+  { key: "x", label: "X", icon: <Twitter className="h-3.5 w-3.5" />, aliases: ["twitter"] },
+  { key: "facebook", label: "Facebook", icon: <FacebookIcon className="h-3.5 w-3.5" /> },
+  { key: "linkedin", label: "LinkedIn", icon: <LinkedInIcon className="h-3.5 w-3.5" /> },
+];
 
 /** Avatar component — renders permanent Supabase URL with onError fallback to initials. */
 function DirAvatar({ m, size = "lg" }: { m: DirectoryMember; size?: "sm" | "lg" }) {
@@ -277,6 +316,7 @@ const BrandDirectory = () => {
   const [membersLoading, setMembersLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [branchFilter, setBranchFilter] = useState("all");
+  const [platformFilter, setPlatformFilter] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>("sort_order");
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -502,6 +542,7 @@ const BrandDirectory = () => {
     setDescValue(dir.description || "");
     setSearchQuery("");
     setBranchFilter("all");
+    setPlatformFilter(null);
     setSelectedIds(new Set());
     loadMembers(dir.id);
   };
@@ -760,6 +801,14 @@ const BrandDirectory = () => {
       );
     }
     if (branchFilter !== "all") list = list.filter((m) => m.branch === branchFilter);
+    if (platformFilter) {
+      const fp = FILTER_PLATFORMS.find((p) => p.key === platformFilter);
+      const aliases = fp && "aliases" in fp ? (fp as any).aliases as string[] : [];
+      list = list.filter((m) => {
+        const memberPlatforms = getAllPlatforms(m);
+        return memberPlatforms.includes(platformFilter!) || aliases.some((a: string) => memberPlatforms.includes(a));
+      });
+    }
     switch (sortField) {
       case "followers": list.sort((a, b) => (b.follower_count ?? 0) - (a.follower_count ?? 0)); break;
       case "engagement": list.sort((a, b) => (b.engagement_rate ?? 0) - (a.engagement_rate ?? 0)); break;
@@ -767,7 +816,7 @@ const BrandDirectory = () => {
       default: list.sort((a, b) => a.sort_order - b.sort_order);
     }
     return list;
-  }, [members, searchQuery, branchFilter, sortField]);
+  }, [members, searchQuery, branchFilter, platformFilter, sortField]);
 
   const toggleSelectAll = () => {
     if (selectedIds.size === filtered.length) {
@@ -1301,6 +1350,29 @@ const BrandDirectory = () => {
               Discover Creators
             </Button>
           </a>
+          {/* Platform filter buttons */}
+          <div className="flex items-center gap-1.5">
+            {FILTER_PLATFORMS.map((p) => {
+              const isActive = platformFilter === p.key;
+              return (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => setPlatformFilter(isActive ? null : p.key)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors border",
+                    isActive
+                      ? "bg-pd-blue text-white border-pd-blue"
+                      : "bg-background text-muted-foreground border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  )}
+                  title={`Filter by ${p.label}`}
+                >
+                  {p.icon}
+                  <span className="hidden md:inline">{p.label}</span>
+                </button>
+              );
+            })}
+          </div>
           <div className="flex-grow" />
           {/* View toggle */}
           <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
@@ -1329,12 +1401,25 @@ const BrandDirectory = () => {
                 const branchStyle = BRANCH_STYLES[m.branch ?? ""] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
                 const isToggling = togglingIds.has(m.id);
                 const platforms = getAllPlatforms(m);
-                if (platforms.length <= 1) console.log("[DirCard]", m.creator_handle, "platforms:", platforms, "enrichment_data:", m.enrichment_data, "platform_urls:", m.platform_urls);
                 return (
                   <Card key={m.id} className={cn("p-5 bg-white dark:bg-[#1A1D27] border-border flex flex-col items-center text-center cursor-pointer hover:shadow-lg transition-shadow", !m.approved && "opacity-60")} onClick={() => openCreatorDrawer(m)} onMouseEnter={() => handleRowMouseEnter(m)} onMouseLeave={handleRowMouseLeave}>
                     <DirAvatar m={m} size="lg" />
                     <h3 className="font-semibold text-[#000741] dark:text-white text-sm truncate max-w-full">{m.creator_name}</h3>
                     <p className="text-xs text-[#1e3a5f] mb-1 truncate max-w-full">@{m.creator_handle}</p>
+                    {/* Platform icons */}
+                    {platforms.length > 0 && (
+                      <div className="flex items-center gap-1 mb-1.5">
+                        {platforms.slice(0, 6).map((p) => (
+                          <span
+                            key={p}
+                            className={cn("w-5 h-5 rounded-full flex items-center justify-center", PLATFORM_COLOR[p] ?? "bg-gray-500 text-white")}
+                            title={p.charAt(0).toUpperCase() + p.slice(1)}
+                          >
+                            <span className="scale-[0.65]">{PLATFORM_ICON[p] ?? <ExternalLink className="h-3.5 w-3.5" />}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {(() => {
                       const isSpouse = detectMilitarySpouse(m);
                       const showStatusPill = !isSpouse && m.status && !(/\bspouse\b/i.test(m.status));
@@ -1429,7 +1514,7 @@ const BrandDirectory = () => {
             </div>
             {filtered.length === 0 && (
               <div className="p-8 text-center text-muted-foreground">
-                {searchQuery || branchFilter !== "all" ? "No creators match your filters." : "No creators in this directory yet."}
+                {searchQuery || branchFilter !== "all" || platformFilter ? "No creators match your filters." : "No creators in this directory yet."}
               </div>
             )}
           </>
@@ -1501,6 +1586,7 @@ const BrandDirectory = () => {
                     <input type="checkbox" className="rounded border-gray-300 dark:border-gray-600 accent-pd-blue" checked={filtered.length > 0 && selectedIds.size === filtered.length} onChange={toggleSelectAll} />
                   </th>
                   <th className="text-left p-3 font-medium text-gray-500 dark:text-gray-400">Creator</th>
+                  <th className="text-left p-3 font-medium text-gray-500 dark:text-gray-400">Platforms</th>
                   <th className="text-left p-3 font-medium text-gray-500 dark:text-gray-400">Branch</th>
                   <th className="text-right p-3 font-medium text-gray-500 dark:text-gray-400">Followers</th>
                   <th className="text-right p-3 font-medium text-gray-500 dark:text-gray-400">Engagement</th>
@@ -1526,6 +1612,24 @@ const BrandDirectory = () => {
                             <p className="text-xs text-[#1e3a5f] truncate">@{m.creator_handle}</p>
                           </div>
                         </div>
+                      </td>
+                      <td className="p-3">
+                        {(() => {
+                          const rowPlatforms = getAllPlatforms(m);
+                          return rowPlatforms.length > 0 ? (
+                            <div className="flex items-center gap-1">
+                              {rowPlatforms.slice(0, 5).map((p) => (
+                                <span
+                                  key={p}
+                                  className={cn("w-5 h-5 rounded-full flex items-center justify-center", PLATFORM_COLOR[p] ?? "bg-gray-500 text-white")}
+                                  title={p.charAt(0).toUpperCase() + p.slice(1)}
+                                >
+                                  <span className="scale-[0.65]">{PLATFORM_ICON[p] ?? <ExternalLink className="h-3.5 w-3.5" />}</span>
+                                </span>
+                              ))}
+                            </div>
+                          ) : <span className="text-gray-300 dark:text-gray-600">—</span>;
+                        })()}
                       </td>
                       <td className="p-3">
                         {(() => {
@@ -1625,7 +1729,7 @@ const BrandDirectory = () => {
             </table>
             {filtered.length === 0 && (
               <div className="p-8 text-center text-muted-foreground">
-                {searchQuery || branchFilter !== "all" ? "No creators match your filters." : "No creators in this directory yet. Add creators from Discovery."}
+                {searchQuery || branchFilter !== "all" || platformFilter ? "No creators match your filters." : "No creators in this directory yet. Add creators from Discovery."}
               </div>
             )}
           </div>
