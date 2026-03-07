@@ -25,6 +25,8 @@ import {
   ExternalLink,
   Plus,
   GripVertical,
+  ChevronLeft,
+  ChevronRight as ChevronRightIcon,
   ChevronUp,
   ChevronDown,
   Trash2,
@@ -74,7 +76,7 @@ import { SECTION_CATALOG, normalizeCustomLinks } from "@/types/bio-page";
 /* ── Icon map for section catalog entries ── */
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Clapperboard, MonitorPlay, Share2, CalendarCheck, BookOpen,
-  Ticket, ShoppingBag, HandCoins, Link, Mic, Mail,
+  Ticket, ShoppingBag, HandCoins, Link, Mic, Mail, Type,
 };
 
 function getSectionIcon(entry: SectionCatalogEntry) {
@@ -302,7 +304,13 @@ export default function CreatorBioEditor() {
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [pendingTemplate, setPendingTemplate] = useState<TemplateId | null>(null);
+  const [carouselCenterIdx, setCarouselCenterIdx] = useState(0);
+  const [carouselBgColor, setCarouselBgColor] = useState<string | null>(null);
+  const [carouselAccent, setCarouselAccent] = useState<string | null>(null);
+  const [carouselFont, setCarouselFont] = useState<string | null>(null);
   const sectionSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sectionIconInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const linkImageInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   /* ── Design scroll-spy state ── */
   const [designSubTab, setDesignSubTab] = useState<DesignSubTab>("color");
@@ -531,8 +539,51 @@ export default function CreatorBioEditor() {
     }
   };
 
+  /* ── Section icon upload ── */
+  const uploadSectionIcon = async (sectionId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("File must be under 5MB"); return; }
+    const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+    const path = `${user.id}/section-icon-${sectionId}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("bio-images").upload(path, file, { upsert: true });
+    if (upErr) { toast.error(upErr.message); e.target.value = ""; return; }
+    const { data: urlData } = supabase.storage.from("bio-images").getPublicUrl(path);
+    updateSectionConfig(sectionId, { iconUrl: urlData.publicUrl });
+    toast.success("Section icon uploaded");
+    e.target.value = "";
+  };
+
+  /* ── Link image upload ── */
+  const uploadLinkImage = async (sectionId: string, linkId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("File must be under 5MB"); return; }
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `${user.id}/link-${linkId}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("bio-images").upload(path, file, { upsert: true });
+    if (upErr) { toast.error(upErr.message); e.target.value = ""; return; }
+    const { data: urlData } = supabase.storage.from("bio-images").getPublicUrl(path);
+    setSections((prev) => {
+      const updated = prev.map((s) => {
+        if (s.id !== sectionId) return s;
+        const cfg = (s.config ?? {}) as Record<string, any>;
+        const links = ((cfg.links ?? []) as any[]).map((l: any) =>
+          l.id === linkId ? { ...l, imageUrl: urlData.publicUrl } : l
+        );
+        return { ...s, config: { ...cfg, links } };
+      });
+      if (sectionSaveTimerRef.current) clearTimeout(sectionSaveTimerRef.current);
+      sectionSaveTimerRef.current = setTimeout(() => persistSections(updated), 1000);
+      return updated;
+    });
+    toast.success("Image uploaded");
+    e.target.value = "";
+  };
+
   const addSection = (entry: SectionCatalogEntry) => {
-    if (sections.find((s) => s.type === entry.type)) {
+    // Allow multiple section_title entries; other types are unique
+    if (entry.type !== "section_title" && sections.find((s) => s.type === entry.type)) {
       toast.info(`${entry.label} is already added.`);
       setModalOpen(false);
       return;
@@ -1495,74 +1546,31 @@ export default function CreatorBioEditor() {
               </div>
             </div>
 
-            {/* Phone frame — 85% scale mockup (323×663, 296×612 screen) */}
-            <div className={`${deviceWidth[previewDevice]} transition-all duration-300 relative`}>
-              {/* Side buttons — volume (left), power (right) */}
-              <div className="absolute -left-[3px] top-[110px] w-[3px] h-[26px] bg-[#1a1a1a] rounded-l-sm" />
-              <div className="absolute -left-[3px] top-[153px] w-[3px] h-[48px] bg-[#1a1a1a] rounded-l-sm" />
-              <div className="absolute -left-[3px] top-[211px] w-[3px] h-[48px] bg-[#1a1a1a] rounded-l-sm" />
-              <div className="absolute -right-[3px] top-[170px] w-[3px] h-[68px] bg-[#1a1a1a] rounded-r-sm" />
-
-              {/* Bezel — dark frame */}
-              <div
-                className="rounded-[41px] relative"
-                style={{
-                  padding: "26px 14px",
-                  backgroundColor: "#1a1a1a",
-                  boxShadow: "0 30px 80px rgba(0,0,0,0.4)",
-                }}
-              >
-                {/* Dynamic Island — true black pill */}
-                <div className="absolute top-[14px] left-1/2 -translate-x-1/2 z-10">
-                  <div className="w-[109px] h-[24px] rounded-full bg-black" />
-                </div>
-
-                {/* Screen — 296×612 */}
-                <div
-                  className="rounded-[27px] overflow-hidden overflow-y-auto relative"
-                  style={{
-                    width: "296px",
-                    height: "612px",
-                    fontFamily: theme.fontFamily,
-                    ...phoneScreenBg,
-                  }}
-                >
+            {/* Device frame — rendered via IIFE for proper nesting */}
+            {(() => {
+              /* Shared bio page content rendered inside whichever frame */
+              const bioContent = (
+                <>
                   {/* Hero + Avatar composite header */}
                   {(() => {
                     const heroVisible = !!(heroImageUrl && theme.showHeroImage);
                     const avatarVisible = theme.showProfileImage;
-                    /* Hero height: 160px when visible */
-                    /* Avatar: overlaps hero at top 130px (centered), so bottom of avatar at ~190px */
-                    /* When no hero: avatar sits at top with padding */
                     const headerHeight = heroVisible
-                      ? (avatarVisible ? 200 : 168) /* 160 hero + avatar overlap + gap */
-                      : (avatarVisible ? 100 : 40);  /* just top padding + avatar */
+                      ? (avatarVisible ? 200 : 168)
+                      : (avatarVisible ? 100 : 40);
                     return (
                       <div className="relative w-full" style={{ height: headerHeight }}>
-                        {/* Hero banner — absolute top */}
                         {heroVisible && (
                           <div className="absolute top-0 left-0 right-0 overflow-hidden" style={{ height: 160 }}>
                             <img src={heroImageUrl!} alt="" className="w-full h-full object-cover" />
                           </div>
                         )}
-                        {/* Avatar — overlapping hero or top-center */}
                         {avatarVisible && (
-                          <div
-                            className="absolute left-1/2 -translate-x-1/2 z-[2]"
-                            style={{ top: heroVisible ? 130 : 28 }}
-                          >
+                          <div className="absolute left-1/2 -translate-x-1/2 z-[2]" style={{ top: heroVisible ? 130 : 28 }}>
                             {avatarUrl ? (
-                              <img
-                                src={avatarUrl}
-                                alt=""
-                                className="h-[60px] w-[60px] rounded-full object-cover shadow-md"
-                                style={{ border: "3px solid #ffffff" }}
-                              />
+                              <img src={avatarUrl} alt="" className="h-[60px] w-[60px] rounded-full object-cover shadow-md" style={{ border: "3px solid #ffffff" }} />
                             ) : (
-                              <div
-                                className="h-[60px] w-[60px] rounded-full flex items-center justify-center text-lg font-semibold shadow-md"
-                                style={{ backgroundColor: isDark ? "#2d3548" : "#e5e7eb", color: phoneSubtext, border: "3px solid #ffffff" }}
-                              >
+                              <div className="h-[60px] w-[60px] rounded-full flex items-center justify-center text-lg font-semibold shadow-md" style={{ backgroundColor: isDark ? "#2d3548" : "#e5e7eb", color: phoneSubtext, border: "3px solid #ffffff" }}>
                                 {(displayName || "?")[0].toUpperCase()}
                               </div>
                             )}
@@ -1572,24 +1580,20 @@ export default function CreatorBioEditor() {
                     );
                   })()}
 
-                  {/* Name / Username / Badge / Bio — below composite header */}
+                  {/* Name / Username / Badge / Bio */}
                   <div className="px-4 pb-2.5 flex flex-col items-center">
-                    <h3 className="font-bold leading-tight" style={{ fontSize: "15px", color: phoneText, fontFamily: theme.fontFamily }}>
-                      {displayName || "Your Name"}
-                    </h3>
+                    <h3 className="font-bold leading-tight" style={{ fontSize: "15px", color: phoneText, fontFamily: theme.fontFamily }}>{displayName || "Your Name"}</h3>
                     <p className="mt-0.5" style={{ fontSize: "11px", color: phoneSubtext }}>@{handle || "username"}</p>
                     <div className="flex items-center gap-1 mt-1.5 px-2.5 py-0.5 rounded-full border" style={{ borderColor: theme.themeColor, color: theme.themeColor }}>
                       <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
                       <span className="text-[10px] font-medium">Certified Voice</span>
                     </div>
                     {profileBio && (
-                      <p className="text-[11px] mt-1.5 text-center max-w-[240px] leading-relaxed line-clamp-3" style={{ color: phoneSubtext }}>
-                        {profileBio}
-                      </p>
+                      <p className="text-[11px] mt-1.5 text-center max-w-[240px] leading-relaxed line-clamp-3" style={{ color: phoneSubtext }}>{profileBio}</p>
                     )}
                   </div>
 
-                  {/* Sections — render actual content per type */}
+                  {/* Sections */}
                   <div className="px-3 pb-8 space-y-2.5">
                     {visibleSections.length === 0 ? (
                       <div className="py-12 text-center">
@@ -1602,27 +1606,30 @@ export default function CreatorBioEditor() {
                         const entry = catalogEntryFor(section.type);
                         if (!entry) return null;
                         const cfg = (section.config ?? {}) as Record<string, any>;
-
-                        /* Card style from theme — white (light) / #1e2433 (dark) */
-                        const cardBg = theme.cardStyle === "glass"
-                          ? isDark ? "rgba(30,36,51,0.6)" : "rgba(255,255,255,0.7)"
-                          : isDark ? "#1e2433" : "#ffffff";
+                        const cardBg = theme.cardStyle === "glass" ? (isDark ? "rgba(30,36,51,0.6)" : "rgba(255,255,255,0.7)") : isDark ? "#1e2433" : "#ffffff";
                         const cardRadius = theme.cardStyle === "square" ? "6px" : "12px";
-                        const cardShadow = theme.cardStyle === "shadow"
-                          ? "0 2px 8px rgba(0,0,0,0.08)"
-                          : theme.cardStyle === "glass"
-                            ? "0 0 0 1px rgba(255,255,255,0.1)"
-                            : "0 1px 3px rgba(0,0,0,0.04)";
+                        const cardShadow = theme.cardStyle === "shadow" ? "0 2px 8px rgba(0,0,0,0.08)" : theme.cardStyle === "glass" ? "0 0 0 1px rgba(255,255,255,0.1)" : "0 1px 3px rgba(0,0,0,0.04)";
                         const cardBackdrop = theme.cardStyle === "glass" ? "blur(12px)" : undefined;
-                        const cStyle: React.CSSProperties = {
-                          borderRadius: cardRadius,
-                          backgroundColor: cardBg,
-                          boxShadow: cardShadow,
-                          backdropFilter: cardBackdrop,
-                          padding: "12px",
-                        };
+                        const cStyle: React.CSSProperties = { borderRadius: cardRadius, backgroundColor: cardBg, boxShadow: cardShadow, backdropFilter: cardBackdrop, padding: "12px" };
 
-                        /* ── Social Links ── */
+                        /* Section Title / Divider */
+                        if (section.type === "section_title") {
+                          const stStyle = (cfg.style as string) || "heading";
+                          const stAlign = (cfg.align as string) || "center";
+                          const stTitle = (cfg.title as string) || section.label;
+                          const alignClass = stAlign === "left" ? "text-left" : stAlign === "right" ? "text-right" : "text-center";
+                          return (
+                            <div key={section.id} className={`px-1 ${alignClass}`}>
+                              {(stStyle === "heading" || stStyle === "heading_divider") && (
+                                <p className="font-bold text-[13px]" style={{ color: phoneText }}>{stTitle}</p>
+                              )}
+                              {(stStyle === "divider" || stStyle === "heading_divider") && (
+                                <div className="mt-1.5 border-t" style={{ borderColor: isDark ? "#374151" : "#e5e7eb" }} />
+                              )}
+                            </div>
+                          );
+                        }
+
                         if (section.type === "social_links") {
                           const accs = socialAccounts.filter((acc) => {
                             const toggles = (cfg.platformToggles as any[]) ?? [];
@@ -1637,11 +1644,7 @@ export default function CreatorBioEditor() {
                                   {accs.map((acc) => {
                                     const SIcon = socialIcon(acc.platform);
                                     const brandColor = SOCIAL_BRAND_COLORS[acc.platform.toLowerCase()] ?? theme.themeColor;
-                                    return (
-                                      <div key={acc.id} className="flex items-center justify-center rounded-full shadow-sm" style={{ width: 34, height: 34, backgroundColor: brandColor }}>
-                                        <SIcon className="h-4 w-4 text-white" />
-                                      </div>
-                                    );
+                                    return <div key={acc.id} className="flex items-center justify-center rounded-full shadow-sm" style={{ width: 34, height: 34, backgroundColor: brandColor }}><SIcon className="h-4 w-4 text-white" /></div>;
                                   })}
                                 </div>
                               ) : (
@@ -1651,7 +1654,6 @@ export default function CreatorBioEditor() {
                           );
                         }
 
-                        /* ── Podcast ── */
                         if (section.type === "podcast") {
                           return (
                             <div key={section.id} style={cStyle}>
@@ -1664,7 +1666,6 @@ export default function CreatorBioEditor() {
                           );
                         }
 
-                        /* ── Custom Links ── */
                         if (section.type === "custom_links") {
                           const links = (cfg.links as any[]) ?? [];
                           return (
@@ -1676,13 +1677,9 @@ export default function CreatorBioEditor() {
                               {links.length > 0 ? (
                                 <div className="space-y-1.5">
                                   {links.slice(0, 3).map((link: any) => (
-                                    <div key={link.id} className="text-[11px] py-2 px-3 text-center truncate font-medium" style={getLinkItemStyle()}>
-                                      {link.label || link.url || "Untitled link"}
-                                    </div>
+                                    <div key={link.id} className="text-[11px] py-2 px-3 text-center truncate font-medium" style={getLinkItemStyle()}>{link.label || link.url || "Untitled link"}</div>
                                   ))}
-                                  {links.length > 3 && (
-                                    <p className="text-[10px] pl-3" style={{ color: phoneSubtext }}>+{links.length - 3} more</p>
-                                  )}
+                                  {links.length > 3 && <p className="text-[10px] pl-3" style={{ color: phoneSubtext }}>+{links.length - 3} more</p>}
                                 </div>
                               ) : (
                                 <p className="text-xs" style={{ color: phoneSubtext }}>Add links to display here</p>
@@ -1691,14 +1688,11 @@ export default function CreatorBioEditor() {
                           );
                         }
 
-                        /* ── Book a Meeting ── */
                         if (section.type === "book_meeting") {
                           return (
                             <div key={section.id} style={cStyle}>
                               <div className="flex items-center gap-2.5">
-                                <div className="flex items-center justify-center h-8 w-8 rounded-lg shrink-0" style={{ backgroundColor: `${theme.themeColor}15` }}>
-                                  <CalendarCheck className="h-4 w-4" style={{ color: theme.themeColor }} />
-                                </div>
+                                <div className="flex items-center justify-center h-8 w-8 rounded-lg shrink-0" style={{ backgroundColor: `${theme.themeColor}15` }}><CalendarCheck className="h-4 w-4" style={{ color: theme.themeColor }} /></div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-[11px] font-semibold" style={{ color: theme.themeColor }}>{(cfg.buttonLabel as string) || "Book a Meeting"}</p>
                                   <p className="text-[10px]" style={{ color: phoneSubtext }}>Schedule time with me</p>
@@ -1708,19 +1702,14 @@ export default function CreatorBioEditor() {
                           );
                         }
 
-                        /* ── Default section card ── */
                         return (
                           <div key={section.id} style={cStyle}>
                             <div className="flex items-center gap-2.5">
-                              <div className="flex items-center justify-center h-8 w-8 rounded-lg shrink-0" style={{ backgroundColor: `${theme.themeColor}15`, color: theme.themeColor }}>
-                                {getSectionIcon(entry)}
-                              </div>
+                              <div className="flex items-center justify-center h-8 w-8 rounded-lg shrink-0" style={{ backgroundColor: `${theme.themeColor}15`, color: theme.themeColor }}>{getSectionIcon(entry)}</div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-[11px] font-medium truncate" style={{ color: theme.themeColor }}>{section.label}</span>
-                                  {entry.comingSoon && (
-                                    <span className="text-[9px] px-1.5 py-px rounded font-medium" style={{ backgroundColor: isDark ? "#2d3548" : "#e5e7eb", color: phoneSubtext }}>SOON</span>
-                                  )}
+                                  {entry.comingSoon && <span className="text-[9px] px-1.5 py-px rounded font-medium" style={{ backgroundColor: isDark ? "#2d3548" : "#e5e7eb", color: phoneSubtext }}>SOON</span>}
                                 </div>
                                 <p className="text-[10px] truncate" style={{ color: phoneSubtext }}>{entry.description}</p>
                               </div>
@@ -1730,14 +1719,67 @@ export default function CreatorBioEditor() {
                       })
                     )}
                   </div>
+                </>
+              );
 
-                  {/* Home indicator bar — inside screen at bottom */}
-                  <div className="sticky bottom-0 flex justify-center pb-1.5 pt-1">
-                    <div className="w-24 h-1 rounded-full" style={{ backgroundColor: isDark ? "#4b5563" : "#d1d5db" }} />
+              const screenStyle: React.CSSProperties = { fontFamily: theme.fontFamily, ...phoneScreenBg };
+
+              /* PHONE */
+              if (previewDevice === "phone") {
+                return (
+                  <div className="transition-all duration-300 relative" style={{ width: 323 }}>
+                    <div className="absolute -left-[3px] top-[110px] w-[3px] h-[26px] bg-[#1a1a1a] rounded-l-sm" />
+                    <div className="absolute -left-[3px] top-[153px] w-[3px] h-[48px] bg-[#1a1a1a] rounded-l-sm" />
+                    <div className="absolute -left-[3px] top-[211px] w-[3px] h-[48px] bg-[#1a1a1a] rounded-l-sm" />
+                    <div className="absolute -right-[3px] top-[170px] w-[3px] h-[68px] bg-[#1a1a1a] rounded-r-sm" />
+                    <div className="rounded-[41px] relative" style={{ padding: "26px 14px", backgroundColor: "#1a1a1a", boxShadow: "0 30px 80px rgba(0,0,0,0.4)" }}>
+                      <div className="absolute top-[14px] left-1/2 -translate-x-1/2 z-10"><div className="w-[109px] h-[24px] rounded-full bg-black" /></div>
+                      <div className="rounded-[27px] overflow-hidden overflow-y-auto relative" style={{ width: 296, height: 612, ...screenStyle }}>
+                        {bioContent}
+                        <div className="sticky bottom-0 flex justify-center pb-1.5 pt-1"><div className="w-24 h-1 rounded-full" style={{ backgroundColor: isDark ? "#4b5563" : "#d1d5db" }} /></div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              /* TABLET */
+              if (previewDevice === "tablet") {
+                return (
+                  <div className="transition-all duration-300" style={{ width: 480 }}>
+                    <div className="rounded-2xl border-2 border-gray-300 dark:border-gray-600 overflow-hidden" style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+                      <div className="overflow-y-auto" style={{ width: 480, height: 640, ...screenStyle }}>
+                        {bioContent}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              /* DESKTOP */
+              return (
+                <div className="transition-all duration-300" style={{ width: 720 }}>
+                  <div className="rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden" style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                      <div className="flex gap-1.5">
+                        <div className="w-3 h-3 rounded-full bg-red-400" />
+                        <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                        <div className="w-3 h-3 rounded-full bg-green-400" />
+                      </div>
+                      <div className="flex-1 flex justify-center">
+                        <div className="bg-white dark:bg-gray-700 rounded-md px-3 py-1 text-[11px] text-muted-foreground font-mono min-w-[200px] text-center border border-gray-200 dark:border-gray-600">
+                          milcrunch.com/c/{handle || "username"}
+                        </div>
+                      </div>
+                      <div className="w-[54px]" />
+                    </div>
+                    <div className="overflow-y-auto" style={{ width: 720, height: 462, ...screenStyle }}>
+                      {bioContent}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -1796,6 +1838,99 @@ export default function CreatorBioEditor() {
               {/* Content */}
               <div className="flex-1 overflow-y-auto p-5 space-y-4">
 
+                {/* ── SECTION ICON UPLOAD (all types) ── */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-medium text-muted-foreground">Section Icon</label>
+                  <input
+                    ref={(el) => { sectionIconInputRefs.current[section.id] = el; }}
+                    type="file"
+                    accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                    onChange={(e) => uploadSectionIcon(section.id, e)}
+                    className="hidden"
+                  />
+                  <div className="flex items-center gap-3">
+                    {cfg.iconUrl ? (
+                      <div className="relative">
+                        <img src={cfg.iconUrl as string} alt="" className="h-12 w-12 rounded-lg object-cover border border-border" />
+                        <button
+                          onClick={() => updateSectionConfig(section.id, { iconUrl: undefined })}
+                          className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => sectionIconInputRefs.current[section.id]?.click()}
+                        className="h-12 w-12 rounded-lg border-2 border-dashed border-border hover:border-[#C8A84B] transition-colors flex items-center justify-center"
+                      >
+                        <Upload className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    )}
+                    <div className="text-[10px] text-muted-foreground">
+                      <p>Optional icon shown next to section title</p>
+                      <p>PNG, JPG, SVG up to 5MB</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="border-b border-border" />
+
+                {/* ── SECTION TITLE / DIVIDER ── */}
+                {section.type === "section_title" && (
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">Heading Text</label>
+                      <Input
+                        value={(cfg.title as string) ?? ""}
+                        onChange={(e) => updateSectionConfig(section.id, { title: e.target.value })}
+                        onBlur={() => persistSections(sections)}
+                        placeholder="Section heading..."
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">Style</label>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {([
+                          { value: "heading", label: "Heading" },
+                          { value: "divider", label: "Divider" },
+                          { value: "heading_divider", label: "Both" },
+                        ] as const).map((opt) => (
+                          <button
+                            key={opt.value}
+                            onClick={() => updateSectionConfig(section.id, { style: opt.value })}
+                            className={`rounded-lg border-2 p-2 text-[11px] font-medium transition-all ${
+                              (cfg.style || "heading") === opt.value
+                                ? "border-[#1B3A6B] bg-[#1B3A6B]/5 text-[#1B3A6B]"
+                                : "border-border text-muted-foreground hover:border-muted-foreground/30"
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">Alignment</label>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {(["left", "center", "right"] as const).map((a) => (
+                          <button
+                            key={a}
+                            onClick={() => updateSectionConfig(section.id, { align: a })}
+                            className={`rounded-lg border-2 p-2 text-[11px] font-medium transition-all capitalize ${
+                              (cfg.align || "center") === a
+                                ? "border-[#1B3A6B] bg-[#1B3A6B]/5 text-[#1B3A6B]"
+                                : "border-border text-muted-foreground hover:border-muted-foreground/30"
+                            }`}
+                          >
+                            {a}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* ── SOCIAL LINKS ── */}
                 {section.type === "social_links" && (
                   <div className="space-y-2">
@@ -1845,9 +1980,9 @@ export default function CreatorBioEditor() {
                   </div>
                 )}
 
-                {/* ── CUSTOM LINKS ── */}
+                {/* ── CUSTOM LINKS (Linktree-style) ── */}
                 {section.type === "custom_links" && (() => {
-                  const links = (cfg.links ?? []) as Array<{ id: string; label: string; url: string; thumbnail?: string; group?: string }>;
+                  const links = (cfg.links ?? []) as Array<{ id: string; label: string; url: string; thumbnail?: string; group?: string; imageDisplayType?: string; imageUrl?: string; description?: string }>;
                   return (
                     <div className="space-y-3">
                       {links.length === 0 && (
@@ -1856,76 +1991,146 @@ export default function CreatorBioEditor() {
                           <p className="text-sm text-muted-foreground">No links added yet.</p>
                         </div>
                       )}
-                      {links.map((link, linkIdx) => (
-                        <div key={link.id} className="rounded-lg border border-border p-3 space-y-2">
-                          <Input
-                            value={link.label}
-                            onChange={(e) => {
-                              const updated = [...links];
-                              updated[linkIdx] = { ...link, label: e.target.value };
-                              updateSectionConfig(section.id, { links: updated });
-                            }}
-                            placeholder="Link Label"
-                            className="h-8 text-xs"
-                          />
-                          <Input
-                            value={link.url}
-                            onChange={(e) => {
-                              const updated = [...links];
-                              updated[linkIdx] = { ...link, url: e.target.value };
-                              updateSectionConfig(section.id, { links: updated });
-                            }}
-                            placeholder="https://..."
-                            className="h-8 text-xs"
-                          />
-                          <Input
-                            value={link.thumbnail ?? ""}
-                            onChange={(e) => {
-                              const updated = [...links];
-                              updated[linkIdx] = { ...link, thumbnail: e.target.value };
-                              updateSectionConfig(section.id, { links: updated });
-                            }}
-                            placeholder="Thumbnail URL (optional)"
-                            className="h-8 text-xs"
-                          />
-                          <Input
-                            value={link.group ?? ""}
-                            onChange={(e) => {
-                              const updated = [...links];
-                              updated[linkIdx] = { ...link, group: e.target.value };
-                              updateSectionConfig(section.id, { links: updated });
-                            }}
-                            placeholder="Group Name (optional)"
-                            className="h-8 text-xs"
-                          />
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              className="bg-[#1B3A6B] hover:bg-[#152e55] text-white h-7 text-xs flex-1"
-                              onClick={() => { persistSections(sections); toast.success("Link saved!"); }}
-                            >
-                              Save
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-destructive hover:text-destructive"
-                              onClick={() => {
-                                const updated = links.filter((_, i) => i !== linkIdx);
-                                updateSectionConfig(section.id, { links: updated });
-                              }}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                      {links.map((link, linkIdx) => {
+                        const imgType = link.imageDisplayType || "none";
+                        return (
+                          <div key={link.id} className="rounded-lg border border-border p-3 space-y-3">
+                            {/* Image Display Type selector */}
+                            <div className="space-y-1.5">
+                              <label className="text-[11px] font-medium text-muted-foreground">Image Display Type</label>
+                              <div className="grid grid-cols-3 gap-1.5">
+                                {([
+                                  { value: "none", label: "No image", icon: <Link className="h-4 w-4" /> },
+                                  { value: "icon", label: "Icon", icon: <ImagePlus className="h-4 w-4" /> },
+                                  { value: "featured", label: "Featured", icon: <Eye className="h-4 w-4" /> },
+                                ] as const).map((opt) => (
+                                  <button
+                                    key={opt.value}
+                                    onClick={() => {
+                                      const updated = [...links];
+                                      updated[linkIdx] = { ...link, imageDisplayType: opt.value };
+                                      updateSectionConfig(section.id, { links: updated });
+                                    }}
+                                    className={`flex flex-col items-center gap-1 rounded-lg border-2 p-2 transition-all ${
+                                      imgType === opt.value ? "border-[#1B3A6B] bg-[#1B3A6B]/5" : "border-border hover:border-muted-foreground/30"
+                                    }`}
+                                  >
+                                    <div className={imgType === opt.value ? "text-[#1B3A6B]" : "text-muted-foreground"}>{opt.icon}</div>
+                                    <span className="text-[10px] font-medium">{opt.label}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Upload zone (hidden when "none") */}
+                            {imgType !== "none" && (
+                              <div className="space-y-1.5">
+                                <input
+                                  ref={(el) => { linkImageInputRefs.current[link.id] = el; }}
+                                  type="file"
+                                  accept="image/png,image/jpeg,image/webp"
+                                  onChange={(e) => uploadLinkImage(section.id, link.id, e)}
+                                  className="hidden"
+                                />
+                                {link.imageUrl ? (
+                                  <div className="relative">
+                                    <img src={link.imageUrl} alt="" className={`w-full object-cover rounded-lg border border-border ${imgType === "icon" ? "h-16 w-16" : "h-24"}`} />
+                                    <button
+                                      onClick={() => {
+                                        const updated = [...links];
+                                        updated[linkIdx] = { ...link, imageUrl: undefined };
+                                        updateSectionConfig(section.id, { links: updated });
+                                      }}
+                                      className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => linkImageInputRefs.current[link.id]?.click()}
+                                    className="w-full rounded-lg border-2 border-dashed border-border hover:border-[#C8A84B] transition-colors p-3 flex flex-col items-center gap-1"
+                                  >
+                                    <Upload className="h-5 w-5 text-muted-foreground" />
+                                    <span className="text-[10px] text-muted-foreground">Upload {imgType === "icon" ? "icon" : "image"}</span>
+                                  </button>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Title */}
+                            <div className="space-y-1">
+                              <label className="text-[11px] font-medium text-muted-foreground">Title</label>
+                              <Input
+                                value={link.label}
+                                onChange={(e) => {
+                                  const updated = [...links];
+                                  updated[linkIdx] = { ...link, label: e.target.value };
+                                  updateSectionConfig(section.id, { links: updated });
+                                }}
+                                placeholder="Link title"
+                                className="h-8 text-xs"
+                              />
+                            </div>
+
+                            {/* URL */}
+                            <div className="space-y-1">
+                              <label className="text-[11px] font-medium text-muted-foreground">URL</label>
+                              <Input
+                                value={link.url}
+                                onChange={(e) => {
+                                  const updated = [...links];
+                                  updated[linkIdx] = { ...link, url: e.target.value };
+                                  updateSectionConfig(section.id, { links: updated });
+                                }}
+                                placeholder="https://..."
+                                className="h-8 text-xs"
+                              />
+                            </div>
+
+                            {/* Description with counter */}
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <label className="text-[11px] font-medium text-muted-foreground">Description</label>
+                                <span className="text-[10px] text-muted-foreground">{(link.description || "").length}/500</span>
+                              </div>
+                              <Textarea
+                                value={link.description || ""}
+                                onChange={(e) => {
+                                  if (e.target.value.length > 500) return;
+                                  const updated = [...links];
+                                  updated[linkIdx] = { ...link, description: e.target.value };
+                                  updateSectionConfig(section.id, { links: updated });
+                                }}
+                                placeholder="Brief description (optional)"
+                                rows={2}
+                                className="text-xs resize-none"
+                              />
+                            </div>
+
+                            {/* Delete button */}
+                            <div className="flex justify-end">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs text-destructive hover:text-destructive"
+                                onClick={() => {
+                                  const updated = links.filter((_, i) => i !== linkIdx);
+                                  updateSectionConfig(section.id, { links: updated });
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3 mr-1" />Remove
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                       <Button
                         variant="outline"
                         className="w-full border-dashed text-xs h-8"
                         onClick={() => {
                           updateSectionConfig(section.id, {
-                            links: [...links, { id: generateId(), label: "", url: "", thumbnail: "", group: "" }],
+                            links: [...links, { id: generateId(), label: "", url: "", imageDisplayType: "none", description: "" }],
                           });
                         }}
                       >
@@ -1999,7 +2204,7 @@ export default function CreatorBioEditor() {
                 )}
 
                 {/* ── GENERIC (all other section types) ── */}
-                {!["social_links", "custom_links", "book_meeting", "podcast"].includes(section.type) && (
+                {!["social_links", "custom_links", "book_meeting", "podcast", "section_title"].includes(section.type) && (
                   <div className="space-y-3">
                     <div className="space-y-1.5">
                       <label className="text-xs font-medium text-muted-foreground">Title</label>
@@ -2158,181 +2363,243 @@ export default function CreatorBioEditor() {
         </DialogContent>
       </Dialog>
 
-      {/* ── TEMPLATE BROWSER MODAL ── */}
-      {templateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setTemplateModalOpen(false)}>
-          {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          {/* Panel */}
-          <div
-            className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl mx-4 flex flex-col"
-            style={{ maxHeight: "90vh" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-              <h2 className="text-lg font-semibold text-foreground">Choose a Template</h2>
-              <button
-                onClick={() => setTemplateModalOpen(false)}
-                className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+      {/* ── TEMPLATE CAROUSEL MODAL ── */}
+      {templateModalOpen && (() => {
+        const cIdx = carouselCenterIdx;
+        const totalT = TEMPLATES.length;
+        const shiftCarousel = (dir: -1 | 1) => setCarouselCenterIdx((cIdx + dir + totalT) % totalT);
 
-            {/* Grid */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="grid grid-cols-3 gap-5">
-                {TEMPLATES.map((tpl) => {
-                  const selected = pendingTemplate === tpl.id;
-                  const tDark = tpl.themeOverrides.darkMode;
-                  const tBg = tpl.id === "vibrant" ? theme.themeColor
-                    : tpl.themeOverrides.bgColor ?? "#ffffff";
-                  const tText = tDark ? "#ffffff" : "#111827";
-                  const tSub = tDark ? "#9ca3af" : "#6b7280";
-                  const tCardBg = tDark ? "#1e2433" : tpl.id === "minimal" ? "transparent" : "#ffffff";
-                  const tCardBorder = tpl.id === "minimal" ? "1px solid #e5e7eb" : "none";
-                  const tAvatarR = tpl.imageStyle === "square" ? "4px" : "9999px";
-                  const tLinkRadius = LINK_SHAPES.find((s) => s.value === tpl.themeOverrides.linkShape)?.radius ?? "9999px";
-                  const tLinkColor = theme.themeColor;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setTemplateModalOpen(false)}>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div
+              className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-7xl mx-4 flex flex-col"
+              style={{ height: "85vh" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+                <h2 className="text-lg font-semibold text-foreground">Choose a Template</h2>
+                <button onClick={() => setTemplateModalOpen(false)} className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
 
-                  /* Link preview style per template */
-                  const tLinkStyle = (): React.CSSProperties => {
-                    const base: React.CSSProperties = { borderRadius: tLinkRadius, height: 14, width: "100%" };
-                    switch (tpl.themeOverrides.linkStyle) {
-                      case "outline":
-                        return { ...base, border: `1.5px solid ${tLinkColor}`, backgroundColor: "transparent" };
-                      case "soft-shadow":
-                        return { ...base, backgroundColor: tDark ? "#1e2433" : "#ffffff", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" };
-                      case "fill":
-                        return { ...base, backgroundColor: tLinkColor };
-                      default:
-                        return { ...base, backgroundColor: tDark ? "#1e2433" : "#ffffff", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" };
-                    }
-                  };
+              {/* Carousel Area */}
+              <div className="flex-1 flex flex-col items-center justify-center overflow-hidden relative px-4">
+                {/* Left / Right arrows */}
+                <button onClick={() => shiftCarousel(-1)} className="absolute left-4 z-20 h-10 w-10 rounded-full bg-white/80 dark:bg-gray-800/80 shadow-lg flex items-center justify-center hover:bg-white dark:hover:bg-gray-700 transition-colors">
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button onClick={() => shiftCarousel(1)} className="absolute right-4 z-20 h-10 w-10 rounded-full bg-white/80 dark:bg-gray-800/80 shadow-lg flex items-center justify-center hover:bg-white dark:hover:bg-gray-700 transition-colors">
+                  <ChevronRightIcon className="h-5 w-5" />
+                </button>
 
-                  return (
-                    <button
-                      key={tpl.id}
-                      onClick={() => setPendingTemplate(tpl.id)}
-                      className={`relative rounded-2xl overflow-hidden transition-all text-left ${
-                        selected ? "ring-3 ring-[#1B3A6B] ring-offset-2" : "ring-1 ring-border hover:ring-foreground/30"
-                      }`}
-                      style={{ height: 360 }}
-                    >
-                      {/* Background */}
-                      <div className="absolute inset-0" style={
-                        tpl.id === "portrait" && heroImageUrl
-                          ? { backgroundImage: `url(${heroImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
-                          : { backgroundColor: tBg }
-                      } />
-                      {/* Portrait gradient overlay */}
-                      {tpl.id === "portrait" && (
-                        <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 25%, rgba(0,0,0,0.8) 100%)" }} />
-                      )}
+                {/* Cards row */}
+                <div className="flex items-center justify-center gap-0 relative" style={{ width: "100%", height: "580px" }}>
+                  {TEMPLATES.map((tpl, i) => {
+                    const dist = ((i - cIdx + totalT + Math.floor(totalT / 2)) % totalT) - Math.floor(totalT / 2);
+                    const absDist = Math.abs(dist);
+                    const scale = absDist === 0 ? 1 : absDist === 1 ? 0.82 : 0.65;
+                    const opacity = absDist === 0 ? 1 : absDist === 1 ? 0.7 : 0.45;
+                    const zIndex = 10 - absDist;
+                    const translateX = dist * 220;
+                    const cardW = absDist === 0 ? 280 : absDist === 1 ? 240 : 200;
+                    const cardH = absDist === 0 ? 500 : absDist === 1 ? 430 : 360;
 
-                      <div className="relative h-full flex flex-col">
-                        {/* Hero strip for bold template */}
-                        {tpl.id === "bold" && heroImageUrl && (
-                          <div className="w-full h-[72px] overflow-hidden shrink-0">
-                            <img src={heroImageUrl} alt="" className="w-full h-full object-cover" />
+                    const tDark = tpl.themeOverrides.darkMode;
+                    const effBg = carouselBgColor && i === cIdx ? carouselBgColor : (tpl.id === "vibrant" ? theme.themeColor : tpl.themeOverrides.bgColor ?? "#ffffff");
+                    const effAccent = carouselAccent && i === cIdx ? carouselAccent : theme.themeColor;
+                    const effFont = carouselFont && i === cIdx ? carouselFont : (tpl.themeOverrides.fontFamily ?? "Inter");
+                    const tText = tDark ? "#ffffff" : "#111827";
+                    const tSub = tDark ? "#9ca3af" : "#6b7280";
+                    const tAvatarR = tpl.imageStyle === "square" ? "4px" : "9999px";
+                    const tLinkRadius = LINK_SHAPES.find((s) => s.value === tpl.themeOverrides.linkShape)?.radius ?? "9999px";
+                    const tCardBg = tpl.id === "glass" ? (tDark ? "rgba(30,36,51,0.6)" : "rgba(255,255,255,0.7)") : tDark ? "#1e2433" : tpl.id === "minimal" ? "transparent" : "#ffffff";
+                    const tCardBorder = tpl.id === "minimal" ? "1px solid #d1d5db" : "none";
+
+                    const tLinkStyle = (): React.CSSProperties => {
+                      const base: React.CSSProperties = { borderRadius: tLinkRadius, height: 28, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 500 };
+                      switch (tpl.themeOverrides.linkStyle) {
+                        case "outline": return { ...base, border: `1.5px solid ${effAccent}`, backgroundColor: "transparent", color: effAccent };
+                        case "soft-shadow": return { ...base, backgroundColor: tDark ? "#1e2433" : "#ffffff", boxShadow: "0 2px 6px rgba(0,0,0,0.08)", color: effAccent };
+                        case "fill": return { ...base, backgroundColor: effAccent, color: "#ffffff" };
+                        default: return { ...base, backgroundColor: tDark ? "#1e2433" : "#ffffff", boxShadow: "0 2px 6px rgba(0,0,0,0.08)", color: effAccent };
+                      }
+                    };
+
+                    return (
+                      <div
+                        key={tpl.id}
+                        onClick={() => { setCarouselCenterIdx(i); setPendingTemplate(tpl.id); }}
+                        className="absolute cursor-pointer"
+                        style={{
+                          width: cardW, height: cardH,
+                          transform: `translateX(${translateX}px) scale(${scale})`,
+                          opacity, zIndex,
+                          transition: "all 0.5s cubic-bezier(0.4,0,0.2,1)",
+                          left: "50%", marginLeft: -cardW / 2,
+                        }}
+                      >
+                        {/* Phone frame */}
+                        <div className="w-full h-full rounded-[36px] overflow-hidden relative" style={{ backgroundColor: "#1a1a1a", padding: "12px 8px" }}>
+                          {/* Dynamic Island */}
+                          <div className="absolute top-[6px] left-1/2 -translate-x-1/2 z-10">
+                            <div className="w-[72px] h-[16px] rounded-full bg-black" />
                           </div>
-                        )}
-
-                        {/* Profile area */}
-                        <div className={`flex flex-col ${tpl.id === "minimal" ? "items-start px-5" : "items-center"} ${
-                          tpl.id === "portrait" ? "mt-auto" : tpl.id === "bold" && heroImageUrl ? "-mt-5" : "mt-10"
-                        }`}>
-                          {/* Avatar */}
-                          {avatarUrl ? (
-                            <img src={avatarUrl} alt="" className="object-cover" style={{
-                              width: 40, height: 40, borderRadius: tAvatarR,
-                              border: tpl.id === "bold" ? "3px solid #fff"
-                                : tpl.id === "vibrant" ? `3px solid ${theme.themeColor}`
-                                : "none",
-                            }} />
-                          ) : (
-                            <div className="flex items-center justify-center" style={{
-                              width: 40, height: 40, borderRadius: tAvatarR,
-                              backgroundColor: tDark ? "#2d3548" : "#e5e7eb",
-                              fontSize: 14, fontWeight: 700, color: tSub,
-                            }}>
-                              {(displayName || "?")[0]?.toUpperCase()}
-                            </div>
-                          )}
-                          {/* Name */}
-                          <p className="mt-1.5 truncate max-w-[180px] font-bold" style={{
-                            fontSize: 12, color: tText, fontFamily: tpl.themeOverrides.fontFamily,
-                          }}>
-                            {displayName || "Your Name"}
-                          </p>
-                          <p style={{ fontSize: 9, color: tSub }}>@{handle || "username"}</p>
-                          {/* Mini badge */}
-                          <div className="flex items-center gap-0.5 mt-1 px-2 py-0.5 rounded-full border" style={{ borderColor: tLinkColor }}>
-                            <svg className="h-2 w-2" viewBox="0 0 24 24" fill="none" stroke={tLinkColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                            <span style={{ fontSize: 7, color: tLinkColor, fontWeight: 600 }}>Certified</span>
-                          </div>
-                        </div>
-
-                        {/* Section placeholder bars */}
-                        <div className={`px-4 space-y-2 ${tpl.id === "portrait" ? "pb-6 mt-3" : "mt-4"}`}>
-                          {[1, 2, 3].map((i) => (
-                            <div key={i} style={tLinkStyle()} />
-                          ))}
-                        </div>
-
-                        {/* Social icons row */}
-                        <div className={`flex ${tpl.id === "minimal" ? "justify-start px-5" : "justify-center"} gap-1 mt-1`}>
-                          {["instagram", "tiktok", "youtube"].map((p) => {
-                            const brandColor = SOCIAL_BRAND_COLORS[p] ?? tLinkColor;
-                            return (
-                              <div key={p} className="rounded-full flex items-center justify-center" style={{ width: 16, height: 16, backgroundColor: brandColor }}>
-                                <div className="w-2 h-2 rounded-full bg-white/80" />
+                          {/* Screen */}
+                          <div
+                            className="w-full h-full rounded-[28px] overflow-hidden overflow-y-auto"
+                            style={{
+                              fontFamily: effFont,
+                              ...(tpl.id === "portrait" && heroImageUrl
+                                ? { backgroundImage: `url(${heroImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+                                : { backgroundColor: effBg }),
+                            }}
+                          >
+                            {/* Portrait overlay */}
+                            {tpl.id === "portrait" && (
+                              <div className="absolute inset-0 rounded-[28px]" style={{ background: "linear-gradient(to bottom, transparent 20%, rgba(0,0,0,0.75) 100%)" }} />
+                            )}
+                            <div className="relative flex flex-col h-full">
+                              {/* Hero for bold */}
+                              {(tpl.id === "bold" || tpl.id === "classic") && heroImageUrl && (
+                                <div className="w-full shrink-0 overflow-hidden" style={{ height: "35%" }}>
+                                  <img src={heroImageUrl} alt="" className="w-full h-full object-cover" />
+                                </div>
+                              )}
+                              {/* Profile area */}
+                              <div className={`flex flex-col ${tpl.id === "minimal" ? "items-start px-4" : "items-center"} ${
+                                tpl.id === "portrait" ? "mt-auto pb-2" : (tpl.id === "bold" || tpl.id === "classic") && heroImageUrl ? "-mt-6 z-[2]" : "mt-8"
+                              }`}>
+                                {avatarUrl ? (
+                                  <img src={avatarUrl} alt="" className="object-cover" style={{
+                                    width: 48, height: 48, borderRadius: tAvatarR,
+                                    border: "3px solid #ffffff",
+                                  }} />
+                                ) : (
+                                  <div className="flex items-center justify-center" style={{ width: 48, height: 48, borderRadius: tAvatarR, backgroundColor: tDark ? "#2d3548" : "#e5e7eb", fontSize: 16, fontWeight: 700, color: tSub, border: "3px solid #ffffff" }}>
+                                    {(displayName || "?")[0]?.toUpperCase()}
+                                  </div>
+                                )}
+                                <p className="mt-1.5 truncate max-w-full font-bold" style={{ fontSize: 14, color: tText, fontFamily: effFont }}>{displayName || "Your Name"}</p>
+                                <p style={{ fontSize: 10, color: tSub }}>@{handle || "username"}</p>
+                                <div className="flex items-center gap-0.5 mt-1 px-2 py-0.5 rounded-full border" style={{ borderColor: effAccent }}>
+                                  <svg className="h-2 w-2" viewBox="0 0 24 24" fill="none" stroke={effAccent} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                                  <span style={{ fontSize: 8, color: effAccent, fontWeight: 600 }}>Certified Voice</span>
+                                </div>
                               </div>
-                            );
-                          })}
+                              {/* Section cards */}
+                              <div className={`px-3 space-y-1.5 ${tpl.id === "portrait" ? "pb-4 mt-2" : "mt-3"} flex-1`}>
+                                {/* Social Links card */}
+                                <div className="p-2 rounded-lg" style={{ backgroundColor: tCardBg, border: tCardBorder, backdropFilter: tpl.themeOverrides.cardStyle === "glass" ? "blur(12px)" : undefined }}>
+                                  <p style={{ fontSize: 9, fontWeight: 600, color: effAccent, marginBottom: 4 }}>Social Links</p>
+                                  <div className="flex gap-1">
+                                    {["instagram", "tiktok", "youtube"].map((p) => {
+                                      const bc = SOCIAL_BRAND_COLORS[p] ?? effAccent;
+                                      const SIcon = socialIcon(p);
+                                      return <div key={p} className="rounded-full flex items-center justify-center" style={{ width: 22, height: 22, backgroundColor: bc }}><SIcon className="h-2.5 w-2.5 text-white" /></div>;
+                                    })}
+                                  </div>
+                                </div>
+                                {/* Book a Meeting card */}
+                                <div className="p-2 rounded-lg flex items-center gap-2" style={{ backgroundColor: tCardBg, border: tCardBorder }}>
+                                  <div className="rounded-md flex items-center justify-center shrink-0" style={{ width: 24, height: 24, backgroundColor: `${effAccent}15` }}>
+                                    <CalendarCheck className="h-3 w-3" style={{ color: effAccent }} />
+                                  </div>
+                                  <div>
+                                    <p style={{ fontSize: 9, fontWeight: 600, color: effAccent }}>Book a Meeting</p>
+                                    <p style={{ fontSize: 8, color: tSub }}>Schedule time</p>
+                                  </div>
+                                </div>
+                                {/* Custom Links */}
+                                <div className="space-y-1">
+                                  {["My Website", "Latest Video"].map((lbl) => (
+                                    <div key={lbl} style={tLinkStyle()}>{lbl}</div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
+                    );
+                  })}
+                </div>
 
-                      {/* Template label */}
-                      <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5 pt-6" style={{
-                        background: tpl.id === "portrait" || tpl.id === "bold"
-                          ? "transparent"
-                          : "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%)",
-                      }}>
-                        <p className="text-[11px] font-bold text-white text-center drop-shadow-md">{tpl.label}</p>
-                      </div>
+                {/* Template name below carousel */}
+                <div className="flex items-center gap-3 mt-2">
+                  <button onClick={() => shiftCarousel(-1)} className="text-muted-foreground hover:text-foreground transition-colors"><ChevronLeft className="h-4 w-4" /></button>
+                  <span className="text-sm font-semibold text-foreground min-w-[120px] text-center capitalize">{TEMPLATES[cIdx].label}</span>
+                  <button onClick={() => shiftCarousel(1)} className="text-muted-foreground hover:text-foreground transition-colors"><ChevronRightIcon className="h-4 w-4" /></button>
+                </div>
+              </div>
 
-                      {/* Selection checkmark */}
-                      {selected && (
-                        <div className="absolute top-2.5 right-2.5 h-6 w-6 rounded-full bg-[#1B3A6B] flex items-center justify-center shadow-lg">
-                          <Check className="h-3.5 w-3.5 text-white" />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+              {/* Bottom Controls Bar */}
+              <div className="px-6 py-4 border-t border-border shrink-0 flex items-center justify-between gap-4">
+                {/* Colors */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">Colors:</span>
+                  <label className="relative cursor-pointer">
+                    <div className="h-7 w-7 rounded-md border border-border" style={{ backgroundColor: carouselBgColor || (TEMPLATES[cIdx].id === "vibrant" ? theme.themeColor : TEMPLATES[cIdx].themeOverrides.bgColor ?? "#ffffff") }} />
+                    <input type="color" className="absolute inset-0 opacity-0 cursor-pointer" value={carouselBgColor || (TEMPLATES[cIdx].themeOverrides.bgColor ?? "#ffffff")} onChange={(e) => setCarouselBgColor(e.target.value)} />
+                  </label>
+                  <label className="relative cursor-pointer">
+                    <div className="h-7 w-7 rounded-md border border-border" style={{ backgroundColor: carouselAccent || theme.themeColor }} />
+                    <input type="color" className="absolute inset-0 opacity-0 cursor-pointer" value={carouselAccent || theme.themeColor} onChange={(e) => setCarouselAccent(e.target.value)} />
+                  </label>
+                </div>
+                {/* Font */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">Font:</span>
+                  <select
+                    value={carouselFont || TEMPLATES[cIdx].themeOverrides.fontFamily || "Inter"}
+                    onChange={(e) => setCarouselFont(e.target.value)}
+                    className="h-8 rounded-md border border-border bg-card px-2 text-xs"
+                  >
+                    {["Inter", "Poppins", "Merriweather", "IBM Plex Mono", "Montserrat"].map((f) => (
+                      <option key={f} value={f}>{f}</option>
+                    ))}
+                  </select>
+                </div>
+                {/* Buttons */}
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" className="text-xs" onClick={() => setTemplateModalOpen(false)}>Cancel</Button>
+                  <Button
+                    size="sm"
+                    className="bg-[#1B3A6B] hover:bg-[#152e55] text-white text-xs"
+                    onClick={() => {
+                      const tplId = TEMPLATES[cIdx].id;
+                      const tpl = TEMPLATES[cIdx];
+                      const overrides: Partial<ThemeSettings> = { ...tpl.themeOverrides };
+                      if (carouselBgColor) overrides.bgColor = carouselBgColor;
+                      if (carouselAccent) { overrides.themeColor = carouselAccent; overrides.linkColor = carouselAccent; }
+                      if (carouselFont) overrides.fontFamily = carouselFont;
+                      const updated: ThemeSettings = { ...theme, ...overrides, template: tplId };
+                      if (tplId === "vibrant" && !carouselBgColor) updated.bgColor = carouselAccent || theme.themeColor;
+                      if (tplId === "portrait" && heroImageUrl) updated.bgImageUrl = heroImageUrl;
+                      setTheme(updated);
+                      setImageStyle(tpl.imageStyle);
+                      if (user?.id) {
+                        const meta = user.user_metadata ?? {};
+                        const cl = typeof meta.custom_links === "object" && meta.custom_links ? (meta.custom_links as Record<string, unknown>) : {};
+                        supabase.auth.updateUser({ data: { image_style: tpl.imageStyle, custom_links: { ...cl, themeSettings: updated } } });
+                      }
+                      setCarouselBgColor(null);
+                      setCarouselAccent(null);
+                      setCarouselFont(null);
+                      setTemplateModalOpen(false);
+                      toast.success(`Applied "${tpl.label}" template`);
+                    }}
+                  >
+                    Apply Template
+                  </Button>
+                </div>
               </div>
             </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 border-t border-border shrink-0">
-              <Button
-                className="w-full bg-[#1B3A6B] hover:bg-[#152e55] text-white h-11 text-sm font-medium"
-                disabled={!pendingTemplate}
-                onClick={() => {
-                  if (pendingTemplate) {
-                    applyTemplate(pendingTemplate);
-                    setTemplateModalOpen(false);
-                  }
-                }}
-              >
-                Apply Template
-              </Button>
-            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </CreatorLayout>
   );
 }

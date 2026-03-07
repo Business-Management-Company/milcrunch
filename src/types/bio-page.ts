@@ -30,7 +30,8 @@ export type SectionType =
   | "tips"
   | "custom_links"
   | "podcast"
-  | "blog";
+  | "blog"
+  | "section_title";
 
 export interface BioSectionConfig {
   id: string;
@@ -62,6 +63,7 @@ export const SECTION_CATALOG: SectionCatalogEntry[] = [
   { type: "custom_links", label: "Custom Links", description: "Add unlimited custom links with groupings", icon: "Link", comingSoon: false },
   { type: "podcast", label: "Podcast", description: "Showcase your podcast and episodes", icon: "Mic", comingSoon: false },
   { type: "blog", label: "Blog", description: "Display your subscribers", icon: "Mail", comingSoon: true },
+  { type: "section_title", label: "Section Title / Divider", description: "Add a heading or visual separator between sections", icon: "Type", comingSoon: false },
 ];
 
 /** Stored in creator_profiles.custom_links JSONB. */
