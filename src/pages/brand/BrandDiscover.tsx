@@ -2045,6 +2045,18 @@ const BrandDiscover = () => {
     : (usernameNotFound?.fallbackResults ?? [])
   ).filter((c) => (c.followers ?? 0) >= 100);
 
+  // ── DEBUG: log raw search result platform data ──
+  if (creators.length > 0) {
+    const kenny = creators.find(c => c.name?.toLowerCase().includes('patriotic') || c.username?.toLowerCase().includes('patriotickenny'));
+    if (kenny) {
+      console.log('KENNY FULL OBJECT:', JSON.stringify(kenny, null, 2));
+      console.log('KENNY socialPlatforms:', kenny.socialPlatforms);
+      console.log('KENNY platforms:', kenny.platforms);
+      console.log('KENNY has_tiktok:', (kenny as any).has_tiktok);
+      console.log('KENNY has_youtube:', (kenny as any).has_youtube);
+    }
+  }
+
   // Pre-populate contactEmails from Supabase enrichment cache (batch query).
   // Creators enriched in a previous session get the green email icon immediately.
   useEffect(() => {

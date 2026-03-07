@@ -571,6 +571,7 @@ export default function CreatorProfileModal({
     }
 
     // ── DIAGNOSTIC: log creator data sources on open ──
+    console.log('MODAL PLATFORMS INPUT:', creator.socialPlatforms, creator.platforms);
     console.log('[DIAG] Creator opened:', creator.name, {
       platforms: creator.platforms,
       socialPlatforms: creator.socialPlatforms,
