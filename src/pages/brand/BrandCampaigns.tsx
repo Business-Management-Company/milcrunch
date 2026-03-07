@@ -8,11 +8,6 @@ import {
   Loader2,
   Download,
   CalendarClock,
-  Instagram,
-  Youtube,
-  Twitter,
-  Linkedin,
-  Hash,
   Image,
   Video,
   Type,
@@ -44,6 +39,7 @@ import {
   Save,
   Send,
 } from "lucide-react";
+import { PlatformIcon } from "@/lib/platform-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -122,26 +118,12 @@ interface TagGroup {
 const GOALS = ["Custom", "Pre-Event Hype", "Day-Of Coverage", "Post-Event Recap", "Full Campaign"] as const;
 const DURATIONS = [30, 60, 90] as const;
 const PLATFORMS = [
-  { key: "instagram", label: "Instagram", icon: Instagram },
-  { key: "tiktok", label: "TikTok", icon: Hash },
-  { key: "youtube", label: "YouTube", icon: Youtube },
-  { key: "x", label: "X", icon: Twitter },
-  { key: "linkedin", label: "LinkedIn", icon: Linkedin },
+  { key: "instagram", label: "Instagram" },
+  { key: "tiktok", label: "TikTok" },
+  { key: "youtube", label: "YouTube" },
+  { key: "x", label: "X" },
+  { key: "linkedin", label: "LinkedIn" },
 ] as const;
-
-const TikTokIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.88-2.88 2.89 2.89 0 012.88-2.88c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V9.39a8.16 8.16 0 003.76.92V6.86a4.85 4.85 0 01-.01-.17z" />
-  </svg>
-);
-
-const PLATFORM_ICONS: Record<string, React.ReactNode> = {
-  instagram: <Instagram className="h-4 w-4" />,
-  tiktok: <TikTokIcon className="h-4 w-4" />,
-  youtube: <Youtube className="h-4 w-4" />,
-  x: <Twitter className="h-4 w-4" />,
-  linkedin: <Linkedin className="h-4 w-4" />,
-};
 
 const CONTENT_TYPE_ICONS: Record<string, React.ReactNode> = {
   video: <Video className="h-3.5 w-3.5" />,
@@ -218,7 +200,7 @@ function PlatformToggles({
   };
   return (
     <div className="flex flex-wrap gap-2">
-      {PLATFORMS.map(({ key, label, icon: Icon }) => (
+      {PLATFORMS.map(({ key, label }) => (
         <button
           key={key}
           type="button"
@@ -230,7 +212,7 @@ function PlatformToggles({
               : "bg-white dark:bg-[#0F1117] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-[#1e3a5f]/40"
           )}
         >
-          <Icon className="h-4 w-4" />
+          <PlatformIcon platform={key} size={16} />
           {label}
         </button>
       ))}
@@ -637,7 +619,7 @@ function PostCard({
             {post.date_label}
           </span>
           <span className="flex items-center gap-1 text-gray-500">
-            {PLATFORM_ICONS[post.platform] ?? null}
+            <PlatformIcon platform={post.platform} size={16} />
             <span className="text-xs font-medium capitalize">{post.platform}</span>
           </span>
         </div>
@@ -771,7 +753,7 @@ function PostCard({
         </Button>
         {accountHandle && (
           <span className="text-[10px] text-gray-400">
-            {PLATFORM_ICONS[post.platform] ? <span className="inline-flex items-center gap-1">{PLATFORM_ICONS[post.platform]} @{accountHandle}</span> : `@${accountHandle}`}
+            <span className="inline-flex items-center gap-1"><PlatformIcon platform={post.platform} size={14} /> @{accountHandle}</span>
           </span>
         )}
       </div>
@@ -867,9 +849,9 @@ function CampaignLivePreview({
             {platforms.map((p) => (
               <span
                 key={p}
-                className="w-8 h-8 rounded-lg bg-[#1e3a5f]/10 text-[#1e3a5f] flex items-center justify-center"
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
               >
-                {PLATFORM_ICONS[p]}
+                <PlatformIcon platform={p} size={24} />
               </span>
             ))}
           </div>
@@ -1037,10 +1019,10 @@ function CampaignSummary({
                   {platforms.map((p) => (
                     <span
                       key={p}
-                      className="w-7 h-7 rounded-lg bg-[#1e3a5f]/10 text-[#1e3a5f] flex items-center justify-center"
+                      className="w-7 h-7 rounded-lg flex items-center justify-center"
                       title={p}
                     >
-                      {PLATFORM_ICONS[p]}
+                      <PlatformIcon platform={p} size={20} />
                     </span>
                   ))}
                 </div>
@@ -1210,7 +1192,7 @@ function ConnectedSocialsBanner({
         <span className="text-xs font-medium text-green-700 dark:text-green-300">Connected:</span>
         {accounts.map((a) => (
           <span key={`${a.platform}-${a.platform_username}`} className="flex items-center gap-1 text-[10px] font-medium text-green-800 dark:text-green-200 bg-green-100 dark:bg-green-800/40 px-2 py-0.5 rounded-full">
-            {PLATFORM_ICONS[a.platform.toLowerCase()] ?? null}
+            <PlatformIcon platform={a.platform.toLowerCase()} size={14} />
             {a.platform_username ? `@${a.platform_username}` : a.platform}
           </span>
         ))}
