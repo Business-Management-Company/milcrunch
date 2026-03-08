@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS creator_media (
   file_size bigint,
   cadence_tag text,
   campaign_id uuid,
-  created_at timestamptz DEFAULT now()
+  created_at timestamptz DEFAULT now(),
+  tags text[] DEFAULT '{}'
 );
 
 ALTER TABLE creator_media ENABLE ROW LEVEL SECURITY;
