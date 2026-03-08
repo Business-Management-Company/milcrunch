@@ -125,7 +125,7 @@ export default function CreatorPosts() {
     setLoadingDrafts(true);
     supabase
       .from("post_drafts")
-      .select("id, caption, platforms, media_url, scheduled_at, created_at")
+      .select("id, caption, platforms, media_url, scheduled_at, status, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {

@@ -1101,17 +1101,15 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
 
                     const draftPayload = {
                       caption: caption.trim(),
-                      platforms: Array.from(selected),
                       media_url: savedMediaUrl,
-                      scheduled_at: scheduledDate ? new Date(scheduledDate).toISOString() : null,
+                      platforms: JSON.stringify(Array.from(selected)),
+                      status: "draft" as const,
                     };
 
                     let error;
                     if (draftId) {
-                      // Update existing draft
                       ({ error } = await supabase.from("post_drafts").update(draftPayload).eq("id", draftId));
                     } else {
-                      // Insert new draft
                       ({ error } = await supabase.from("post_drafts").insert({ ...draftPayload, user_id: user.id }));
                     }
 
