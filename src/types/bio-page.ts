@@ -1,5 +1,5 @@
-/** Bio page layout format (Komi-style). */
-export type HeroImageFormat = "portrait" | "square" | "landscape";
+/** Bio page layout format. */
+export type HeroImageFormat = "portrait" | "landscape" | "full_blend";
 
 export type BioPageTheme = "light" | "dark" | "auto";
 

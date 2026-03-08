@@ -339,10 +339,13 @@ export default function CreatorBioPage() {
     );
   }
 
-  const isLandscape = creator.hero_image_format === "landscape";
-  const isPortrait = creator.hero_image_format === "portrait";
-  const isSquare = creator.hero_image_format === "square";
+  // Map legacy "square" to "portrait"
+  const fmt = creator.hero_image_format === "square" ? "portrait" : creator.hero_image_format;
+  const isPortrait = fmt === "portrait";
+  const isLandscape = fmt === "landscape";
+  const isFullBlend = fmt === "full_blend";
   const heroSrc = creator.hero_image_url || creator.avatar_url;
+  const profileSrc = creator.avatar_url || creator.hero_image_url;
 
   /* ---- Shared rendering blocks (used in both mobile & tablet/desktop layouts) ---- */
   const tabPills = creator.tabs.length > 0
@@ -470,64 +473,112 @@ export default function CreatorBioPage() {
         </div>
       )}
 
-      {/* ===== MOBILE LAYOUT (< 768px) — unchanged from current ===== */}
+      {/* ===== MOBILE LAYOUT (< 768px) ===== */}
       <div className="md:hidden">
-        {/* Landscape hero */}
-        {isLandscape && (
+        {/* --- PORTRAIT: hero cover + circular avatar overlap --- */}
+        {isPortrait && (
           <div className="relative w-full">
-            <div className="w-full overflow-hidden">
+            <div className="w-full overflow-hidden" style={{ height: 180 }}>
               {heroSrc ? (
-                <img src={heroSrc} alt={creator.display_name} className="w-full aspect-[4/3] object-cover block" />
+                <img src={heroSrc} alt="" className="w-full h-full object-cover block" />
               ) : (
-                <div className="w-full aspect-[4/3] bg-[#0a1628] flex items-center justify-center text-white text-4xl font-light" style={{ letterSpacing: "0.15em" }}>
+                <div className="w-full h-full bg-[#0a1628]" />
+              )}
+            </div>
+            {/* Circular avatar overlap */}
+            <div className="absolute left-1/2 -translate-x-1/2 z-10" style={{ top: 180 - 48 }}>
+              <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden bg-gray-100 shadow-md">
+                {creator.avatar_url ? (
+                  <img src={creator.avatar_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xl font-semibold bg-[#0a1628] text-white">{getInitials(creator.display_name, creatorHandle)}</div>
+                )}
+              </div>
+            </div>
+            <div className="bg-white pt-14 pb-2 text-center">
+              <h1 className="text-xl font-semibold text-gray-900 tracking-tight">
+                {creator.display_name}
+                {(creator.is_verified || creator.is_verified_veteran) && <ShieldCheck className="inline-block h-5 w-5 ml-1 text-[#F0A71F]" />}
+              </h1>
+              <p className="text-sm text-gray-500 mt-0.5">@{creatorHandle}</p>
+              {creator.branch && (
+                <div className="flex items-center justify-center gap-2 mt-1">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-700 uppercase tracking-wider">{BRANCH_LABELS[creator.branch] || creator.branch}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* --- LANDSCAPE: wide profile image crop (16:5), name/socials below --- */}
+        {isLandscape && (
+          <div className="w-full">
+            <div className="w-full overflow-hidden">
+              {profileSrc ? (
+                <img src={profileSrc} alt={creator.display_name} className="w-full object-cover block" style={{ aspectRatio: "16/5" }} />
+              ) : (
+                <div className="w-full bg-[#0a1628] flex items-center justify-center text-white text-4xl font-light" style={{ aspectRatio: "16/5", letterSpacing: "0.15em" }}>
                   {getInitials(creator.display_name, creatorHandle)}
                 </div>
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" style={{ top: "30%" }} />
-              <div className="absolute bottom-0 left-0 right-0 p-4 pb-6 text-white" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
-                <h1 className="text-xl font-light tracking-[0.15em] uppercase text-center" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
-                  {creator.display_name}
-                </h1>
-                {(creator.branch || creator.is_verified_veteran) && (
-                  <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
-                    {creator.branch && <span className="text-xs uppercase tracking-wider opacity-90">{BRANCH_LABELS[creator.branch] || creator.branch}</span>}
-                    {creator.is_verified_veteran && <ShieldCheck className="h-4 w-4 text-[#F0A71F]" aria-label="Verified Veteran" />}
-                  </div>
-                )}
-              </div>
             </div>
-            <div className="px-4 py-3 bg-white/95 text-center border-b border-gray-100">
-              <p className="text-sm text-gray-500">@{creatorHandle}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Portrait / Square */}
-        {(isPortrait || isSquare) && (
-          <div className="bg-white rounded-t-2xl shadow-sm overflow-hidden">
-            <div className="p-4 flex flex-col items-center">
-              <div className={isPortrait ? "w-32 aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 flex-shrink-0" : "w-40 aspect-square rounded-xl overflow-hidden bg-gray-100 flex-shrink-0"}>
-                {heroSrc ? (
-                  <img src={heroSrc} alt={creator.display_name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-2xl font-semibold text-gray-400">{getInitials(creator.display_name, creatorHandle)}</div>
-                )}
-              </div>
-              <h1 className="mt-4 text-xl font-semibold text-gray-900 tracking-tight">
+            <div className="bg-white px-4 py-4 text-center">
+              <h1 className="text-xl font-semibold text-gray-900 tracking-tight">
                 {creator.display_name}
-                {creator.is_verified && <ShieldCheck className="inline-block h-5 w-5 ml-1 text-[#F0A71F]" aria-label="Verified" />}
-                {creator.is_verified_veteran && !creator.is_verified && <ShieldCheck className="inline-block h-5 w-5 ml-1 text-[#F0A71F]" aria-label="Verified Veteran" />}
+                {(creator.is_verified || creator.is_verified_veteran) && <ShieldCheck className="inline-block h-5 w-5 ml-1 text-[#F0A71F]" />}
               </h1>
               <p className="text-sm text-gray-500 mt-0.5">@{creatorHandle}</p>
-              {creator.service_line && <p className="text-xs text-gray-500 mt-1">{creator.service_line}</p>}
+              {creator.branch && (
+                <div className="flex items-center justify-center gap-2 mt-1">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-700 uppercase tracking-wider">{BRANCH_LABELS[creator.branch] || creator.branch}</span>
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Social icons */}
-        <div className="bg-white px-4 py-3 flex items-center justify-center gap-4 border-b border-gray-100">
-          {renderSocialRow(20)}
-        </div>
+        {/* --- FULL BLEND: profile image fills background, radial vignette, white text --- */}
+        {isFullBlend && (
+          <div className="relative w-full overflow-hidden" style={{ minHeight: 320 }}>
+            {profileSrc ? (
+              <img src={profileSrc} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            ) : (
+              <div className="absolute inset-0 bg-[#0a1628]" />
+            )}
+            {/* Radial vignette: clear center, edges fade to white */}
+            <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 60% 50% at 50% 50%, transparent 0%, rgba(255,255,255,0.85) 100%)" }} />
+            {/* Content centered over image */}
+            <div className="relative z-10 flex flex-col items-center justify-center py-16 px-4" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.4)" }}>
+              <h1 className="text-2xl font-bold text-white tracking-tight text-center">
+                {creator.display_name}
+                {(creator.is_verified || creator.is_verified_veteran) && <ShieldCheck className="inline-block h-5 w-5 ml-1.5 text-[#F0A71F]" />}
+              </h1>
+              <p className="text-sm text-white/80 mt-0.5">@{creatorHandle}</p>
+              {creator.branch && (
+                <div className="flex items-center justify-center gap-2 mt-1.5">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/20 text-white uppercase tracking-wider backdrop-blur-sm">{BRANCH_LABELS[creator.branch] || creator.branch}</span>
+                </div>
+              )}
+              {/* Social icons inline */}
+              <div className="flex items-center justify-center gap-3 mt-3">
+                {creator.socialAccounts.length > 0
+                  ? creator.socialAccounts.map((acc) => (
+                      <a key={acc.platform} href={socialUrl(acc.platform, acc.platform_username)} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-full text-white/90 hover:text-white transition-colors" aria-label={acc.platform}>
+                        <PlatformIcon platform={acc.platform} size={20} />
+                      </a>
+                    ))
+                  : null}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Social icons (portrait & landscape only — full_blend has them inline) */}
+        {!isFullBlend && (
+          <div className="bg-white px-4 py-3 flex items-center justify-center gap-4 border-b border-gray-100">
+            {renderSocialRow(20)}
+          </div>
+        )}
 
         {/* Bio */}
         {creator.bio && (
@@ -550,72 +601,98 @@ export default function CreatorBioPage() {
       {/* ===== TABLET + DESKTOP LAYOUT (>= 768px) ===== */}
       <div className="hidden md:block">
         <div className="md:max-w-[600px] lg:max-w-[960px] mx-auto mt-8 mb-8 rounded-2xl overflow-hidden shadow-xl bg-white">
-          {/* Cover image — 200px tablet, 240px desktop */}
-          <div className="relative w-full md:h-[200px] lg:h-[240px] overflow-hidden">
-            {heroSrc ? (
-              <img src={heroSrc} alt={creator.display_name} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-[#0a1628] flex items-center justify-center">
-                <span className="text-white text-4xl font-light" style={{ letterSpacing: "0.15em" }}>
-                  {getInitials(creator.display_name, creatorHandle)}
-                </span>
-              </div>
-            )}
-            {/* Avatar overlapping cover — centered on tablet, left-aligned on desktop */}
-            <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 lg:left-8 lg:translate-x-0 z-10">
-              <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden bg-gray-100 shadow-md">
-                {creator.avatar_url ? (
-                  <img src={creator.avatar_url} alt="" className="w-full h-full object-cover" />
+
+          {/* --- PORTRAIT header: cover + avatar overlap --- */}
+          {isPortrait && (
+            <>
+              <div className="relative w-full md:h-[200px] lg:h-[240px] overflow-hidden">
+                {heroSrc ? (
+                  <img src={heroSrc} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xl font-semibold bg-[#0a1628] text-white">
-                    {getInitials(creator.display_name, creatorHandle)}
+                  <div className="w-full h-full bg-[#0a1628]" />
+                )}
+                <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 lg:left-8 lg:translate-x-0 z-10">
+                  <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden bg-gray-100 shadow-md">
+                    {creator.avatar_url ? (
+                      <img src={creator.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xl font-semibold bg-[#0a1628] text-white">{getInitials(creator.display_name, creatorHandle)}</div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
-            </div>
-          </div>
+              <div className="h-14" />
+            </>
+          )}
 
-          {/* Spacer for avatar overlap */}
-          <div className="h-14" />
-
-          {/* Single column on tablet, two columns on desktop */}
-          <div className="lg:flex">
-            {/* Profile info — centered on tablet, left sidebar on desktop */}
-            <div className="lg:w-[280px] lg:shrink-0 lg:border-r lg:border-[#E5E7EB] px-8 lg:px-6 pb-4 lg:pb-6 lg:sticky lg:top-0 lg:self-start text-center lg:text-left">
-              <h1 className="text-2xl lg:text-[28px] font-semibold lg:font-bold text-gray-900 leading-tight">
-                {creator.display_name}
-                {(creator.is_verified || creator.is_verified_veteran) && (
-                  <ShieldCheck className="inline-block h-5 w-5 ml-1.5 text-[#F0A71F]" />
-                )}
-              </h1>
-              <p className="text-sm text-gray-500 mt-0.5">@{creatorHandle}</p>
-              {creator.service_line && <p className="text-xs text-gray-500 mt-1">{creator.service_line}</p>}
-
-              {creator.branch && (
-                <div className="flex items-center justify-center lg:justify-start gap-2 mt-2">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 uppercase tracking-wider">
-                    {BRANCH_LABELS[creator.branch] || creator.branch}
-                  </span>
+          {/* --- LANDSCAPE header: wide profile image crop (16:5) --- */}
+          {isLandscape && (
+            <div className="w-full overflow-hidden">
+              {profileSrc ? (
+                <img src={profileSrc} alt={creator.display_name} className="w-full object-cover" style={{ aspectRatio: "16/5" }} />
+              ) : (
+                <div className="w-full bg-[#0a1628] flex items-center justify-center text-white text-4xl font-light" style={{ aspectRatio: "16/5", letterSpacing: "0.15em" }}>
+                  {getInitials(creator.display_name, creatorHandle)}
                 </div>
               )}
+            </div>
+          )}
 
-              {creator.bio && (
-                <p className="text-sm text-gray-600 mt-3 leading-relaxed">{creator.bio}</p>
+          {/* --- FULL BLEND header: profile image fills area, radial vignette --- */}
+          {isFullBlend && (
+            <div className="relative w-full overflow-hidden" style={{ minHeight: 300 }}>
+              {profileSrc ? (
+                <img src={profileSrc} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              ) : (
+                <div className="absolute inset-0 bg-[#0a1628]" />
               )}
-
-              {/* Social icons — 32px on tablet, 20px on desktop */}
-              <div className="flex items-center justify-center lg:justify-start gap-3 mt-4 flex-wrap">
-                {/* Tablet icons (32px) */}
-                <span className="contents lg:hidden">{renderSocialRow(32)}</span>
-                {/* Desktop icons (20px) */}
-                <span className="hidden lg:contents">{renderSocialRow(20)}</span>
+              <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 60% 50% at 50% 50%, transparent 0%, rgba(255,255,255,0.85) 100%)" }} />
+              <div className="relative z-10 flex flex-col items-center justify-center py-16 px-8" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.4)" }}>
+                <h1 className="text-3xl font-bold text-white tracking-tight text-center">
+                  {creator.display_name}
+                  {(creator.is_verified || creator.is_verified_veteran) && <ShieldCheck className="inline-block h-6 w-6 ml-2 text-[#F0A71F]" />}
+                </h1>
+                <p className="text-sm text-white/80 mt-1">@{creatorHandle}</p>
+                {creator.branch && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 mt-2 rounded-full text-xs font-medium bg-white/20 text-white uppercase tracking-wider backdrop-blur-sm">{BRANCH_LABELS[creator.branch] || creator.branch}</span>
+                )}
+                <div className="flex items-center justify-center gap-3 mt-3">
+                  {creator.socialAccounts.map((acc) => (
+                    <a key={acc.platform} href={socialUrl(acc.platform, acc.platform_username)} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-full text-white/90 hover:text-white transition-colors" aria-label={acc.platform}>
+                      <PlatformIcon platform={acc.platform} size={24} />
+                    </a>
+                  ))}
+                </div>
               </div>
             </div>
+          )}
 
-            {/* Content area */}
-            <div className="flex-1 min-w-0">
-              {/* Separator on tablet between profile info and content */}
-              <div className="lg:hidden border-b border-gray-100 mx-8 mt-2" />
+          {/* Two columns on desktop, single column on tablet (portrait & landscape only) */}
+          {!isFullBlend ? (
+            <div className="lg:flex">
+              {/* Profile info sidebar */}
+              <div className="lg:w-[280px] lg:shrink-0 lg:border-r lg:border-[#E5E7EB] px-8 lg:px-6 pb-4 lg:pb-6 lg:sticky lg:top-0 lg:self-start text-center lg:text-left">
+                <h1 className="text-2xl lg:text-[28px] font-semibold lg:font-bold text-gray-900 leading-tight">
+                  {creator.display_name}
+                  {(creator.is_verified || creator.is_verified_veteran) && <ShieldCheck className="inline-block h-5 w-5 ml-1.5 text-[#F0A71F]" />}
+                </h1>
+                <p className="text-sm text-gray-500 mt-0.5">@{creatorHandle}</p>
+                {creator.service_line && <p className="text-xs text-gray-500 mt-1">{creator.service_line}</p>}
+                {creator.branch && (
+                  <div className="flex items-center justify-center lg:justify-start gap-2 mt-2">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 uppercase tracking-wider">{BRANCH_LABELS[creator.branch] || creator.branch}</span>
+                  </div>
+                )}
+                {creator.bio && <p className="text-sm text-gray-600 mt-3 leading-relaxed">{creator.bio}</p>}
+                <div className="flex items-center justify-center lg:justify-start gap-3 mt-4 flex-wrap">
+                  <span className="contents lg:hidden">{renderSocialRow(32)}</span>
+                  <span className="hidden lg:contents">{renderSocialRow(20)}</span>
+                </div>
+              </div>
+
+              {/* Content area */}
+              <div className="flex-1 min-w-0">
+                <div className="lg:hidden border-b border-gray-100 mx-8 mt-2" />
 
               {/* Tabs */}
               {tabPills && (
@@ -628,6 +705,22 @@ export default function CreatorBioPage() {
               <div className="px-8 lg:px-6 py-6 pb-8">{tabContent}</div>
             </div>
           </div>
+          ) : (
+            /* Full Blend: single column content below the hero */
+            <div>
+              {creator.bio && (
+                <div className="px-8 py-3 border-b border-gray-100">
+                  <p className="text-sm text-gray-600 text-center max-w-md mx-auto">{creator.bio}</p>
+                </div>
+              )}
+              {tabPills && (
+                <div className="border-b border-gray-100 overflow-x-auto no-scrollbar">
+                  <div className="flex gap-1 p-3 px-8 min-w-0">{tabPills}</div>
+                </div>
+              )}
+              <div className="px-8 py-6 pb-8">{tabContent}</div>
+            </div>
+          )}
         </div>
       </div>
 

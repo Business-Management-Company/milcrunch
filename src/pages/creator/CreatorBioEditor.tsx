@@ -224,7 +224,7 @@ export default function CreatorBioEditor() {
 
   /* ── Hero image fields (migrated from CreatorProfile) ── */
   const [heroImageUrl, setHeroImageUrl] = useState<string | null>(null);
-  const [heroImageFormat, setHeroImageFormat] = useState<HeroImageFormat>("landscape");
+  const [heroImageFormat, setHeroImageFormat] = useState<HeroImageFormat>("portrait");
   const [heroDominantColor, setHeroDominantColor] = useState<string | null>(null);
   const [uploadingHero, setUploadingHero] = useState(false);
   const heroInputRef = useRef<HTMLInputElement>(null);
@@ -301,7 +301,8 @@ export default function CreatorBioEditor() {
     setProfileAvatar((meta.avatar_url as string) ?? null);
     if (meta.image_style) setImageStyle(meta.image_style as ImageStyle);
     setHeroImageUrl((meta.hero_image_url as string) ?? null);
-    setHeroImageFormat((meta.hero_image_format as HeroImageFormat) ?? "landscape");
+    const rawFmt = (meta.hero_image_format as string) ?? "portrait";
+    setHeroImageFormat((rawFmt === "square" ? "portrait" : rawFmt) as HeroImageFormat);
     setHeroDominantColor((meta.hero_dominant_color as string) ?? null);
     const cl = meta.custom_links;
     const config = normalizeCustomLinks(cl);
@@ -824,24 +825,30 @@ export default function CreatorBioEditor() {
                   </button>
                 </div>
 
-                {/* 2. Image Style */}
+                {/* 2. Layout Mode */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Image Style</label>
+                  <label className="text-xs font-medium text-muted-foreground">Layout Mode</label>
+                  <p className="text-[10px] text-muted-foreground/80">Controls how your profile and hero images display on your bio page.</p>
                   <div className="flex gap-1 rounded-full border border-border p-0.5">
-                    {(["circular", "square", "portrait"] as ImageStyle[]).map((style) => (
+                    {(["portrait", "landscape", "full_blend"] as HeroImageFormat[]).map((mode) => (
                       <button
-                        key={style}
+                        key={mode}
                         onClick={() => {
-                          setImageStyle(style);
-                          debouncedProfileSave({ image_style: style });
+                          setHeroImageFormat(mode);
+                          if (mode === "portrait") {
+                            setImageStyle("circular");
+                            debouncedProfileSave({ hero_image_format: mode, image_style: "circular" });
+                          } else {
+                            debouncedProfileSave({ hero_image_format: mode });
+                          }
                         }}
-                        className={`flex-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors capitalize ${
-                          imageStyle === style
+                        className={`flex-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                          heroImageFormat === mode
                             ? "bg-[#1B3A6B] text-white"
                             : "text-muted-foreground hover:text-foreground"
                         }`}
                       >
-                        {style}
+                        {mode === "full_blend" ? "Full Blend" : mode.charAt(0).toUpperCase() + mode.slice(1)}
                       </button>
                     ))}
                   </div>
@@ -871,92 +878,75 @@ export default function CreatorBioEditor() {
                   </div>
                 </div>
 
-                {/* 3. Hero / Cover Image Upload */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-medium text-muted-foreground">Hero / Cover Image</label>
-                    <Switch
-                      checked={theme.showHeroImage}
-                      onCheckedChange={(v) => {
-                        const updated = { ...theme, showHeroImage: v };
-                        setTheme(updated);
-                        persistTheme(updated);
-                      }}
-                      className="scale-75 origin-right data-[state=checked]:bg-[#1B3A6B]"
-                    />
-                  </div>
-                  <input
-                    ref={heroInputRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={uploadHero}
-                    className="hidden"
-                  />
-                  <button
-                    onClick={() => theme.showHeroImage && heroInputRef.current?.click()}
-                    className={`w-full rounded-lg border-2 border-dashed transition-colors p-4 flex flex-col items-center gap-2 ${
-                      theme.showHeroImage ? "border-border hover:border-[#1B3A6B]" : "border-border/50 opacity-50 cursor-not-allowed"
-                    }`}
-                  >
-                    {heroImageUrl ? (
-                      <img
-                        src={heroImageUrl}
-                        alt="Hero"
-                        className="w-full h-24 object-cover rounded-md"
-                      />
-                    ) : uploadingHero ? (
-                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    ) : (
-                      <ImagePlus className="h-8 w-8 text-muted-foreground" />
-                    )}
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {heroImageUrl ? "Change hero image" : "Upload hero image"}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground/70">PNG, JPG up to 10MB</span>
-                  </button>
-                  {heroImageUrl && (
-                    <button
-                      className="text-xs font-medium text-red-600 hover:text-red-700 hover:underline transition-colors mt-1"
-                      onClick={() => {
-                        setHeroImageUrl(null);
-                        setHeroDominantColor(null);
-                        debouncedProfileSave({ hero_image_url: null, hero_dominant_color: null });
-                      }}
-                    >
-                      Remove hero image
-                    </button>
-                  )}
-                  {heroDominantColor && (
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-3 w-3 rounded-sm border border-border" style={{ backgroundColor: heroDominantColor }} />
-                      <span className="text-[10px] text-muted-foreground">Extracted accent: {heroDominantColor}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* 4. Hero Image Format */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Hero Format</label>
-                  <p className="text-[10px] text-muted-foreground/80">How the hero image displays on your public bio page.</p>
-                  <div className="flex gap-1 rounded-full border border-border p-0.5">
-                    {(["portrait", "square", "landscape"] as HeroImageFormat[]).map((fmt) => (
-                      <button
-                        key={fmt}
-                        onClick={() => {
-                          setHeroImageFormat(fmt);
-                          debouncedProfileSave({ hero_image_format: fmt });
+                {/* 3. Hero / Cover Image Upload (Portrait mode only) */}
+                {heroImageFormat === "portrait" ? (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-medium text-muted-foreground">Hero / Cover Image</label>
+                      <Switch
+                        checked={theme.showHeroImage}
+                        onCheckedChange={(v) => {
+                          const updated = { ...theme, showHeroImage: v };
+                          setTheme(updated);
+                          persistTheme(updated);
                         }}
-                        className={`flex-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors capitalize ${
-                          heroImageFormat === fmt
-                            ? "bg-[#1B3A6B] text-white"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
+                        className="scale-75 origin-right data-[state=checked]:bg-[#1B3A6B]"
+                      />
+                    </div>
+                    <input
+                      ref={heroInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={uploadHero}
+                      className="hidden"
+                    />
+                    <button
+                      onClick={() => theme.showHeroImage && heroInputRef.current?.click()}
+                      className={`w-full rounded-lg border-2 border-dashed transition-colors p-4 flex flex-col items-center gap-2 ${
+                        theme.showHeroImage ? "border-border hover:border-[#1B3A6B]" : "border-border/50 opacity-50 cursor-not-allowed"
+                      }`}
+                    >
+                      {heroImageUrl ? (
+                        <img
+                          src={heroImageUrl}
+                          alt="Hero"
+                          className="w-full h-24 object-cover rounded-md"
+                        />
+                      ) : uploadingHero ? (
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      ) : (
+                        <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                      )}
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {heroImageUrl ? "Change hero image" : "Upload hero image"}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground/70">PNG, JPG up to 10MB</span>
+                    </button>
+                    {heroImageUrl && (
+                      <button
+                        className="text-xs font-medium text-red-600 hover:text-red-700 hover:underline transition-colors mt-1"
+                        onClick={() => {
+                          setHeroImageUrl(null);
+                          setHeroDominantColor(null);
+                          debouncedProfileSave({ hero_image_url: null, hero_dominant_color: null });
+                        }}
                       >
-                        {fmt}
+                        Remove hero image
                       </button>
-                    ))}
+                    )}
+                    {heroDominantColor && (
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-3 w-3 rounded-sm border border-border" style={{ backgroundColor: heroDominantColor }} />
+                        <span className="text-[10px] text-muted-foreground">Extracted accent: {heroDominantColor}</span>
+                      </div>
+                    )}
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Hero / Cover Image</label>
+                    <p className="text-[10px] text-muted-foreground/80 italic">Hero image not used in this layout.</p>
+                  </div>
+                )}
 
                 {/* 5. Display Name */}
                 <div className="space-y-1.5">
