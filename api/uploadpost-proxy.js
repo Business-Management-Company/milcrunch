@@ -36,16 +36,170 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed. Use GET for health check or POST with { endpoint, method, body }." });
   }
 
-  const { endpoint, method, body } = req.body || {};
-
-  if (!endpoint) {
-    return res.status(400).json({ error: "Missing 'endpoint' field in request body." });
-  }
+  const { endpoint, method, body, action } = req.body || {};
 
   const apiKey = process.env.UPLOAD_POST_API_KEY || process.env.VITE_UPLOAD_POST_API_KEY;
   if (!apiKey) {
     console.error("[uploadpost-proxy] No API key found in env (UPLOAD_POST_API_KEY / VITE_UPLOAD_POST_API_KEY)");
     return res.status(500).json({ error: "UPLOAD_POST_API_KEY not configured on server." });
+  }
+
+  // ── Direct action: upload_photos ──
+  if (action === "upload_photos") {
+    const { user, platform, title, photos, scheduled_date, async_upload, first_comment } = req.body;
+    if (!user) return res.status(400).json({ error: "Missing 'user'" });
+    if (!photos || !Array.isArray(photos) || photos.length === 0) return res.status(400).json({ error: "Missing 'photos' array" });
+
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
+    let resolvedUser = user;
+    if (UUID_RE.test(user)) {
+      try {
+        const listRes = await fetch("https://api.upload-post.com/api/uploadposts/users", {
+          method: "GET",
+          headers: { "Content-Type": "application/json", apikey: apiKey, Authorization: `Apikey ${apiKey}` },
+        });
+        const listData = await listRes.json();
+        const users = Array.isArray(listData) ? listData : listData?.profiles ?? listData?.users ?? listData?.data ?? [];
+        const nonUuid = users.find((u) => u.username && !UUID_RE.test(u.username));
+        if (nonUuid) resolvedUser = nonUuid.username;
+      } catch (e) { console.warn("[uploadpost-proxy] UUID resolve failed:", e.message); }
+    }
+
+    console.log("[uploadpost-proxy] action=upload_photos user:", resolvedUser, "photos:", photos.length);
+    try {
+      const form = new FormData();
+      form.append("user", String(resolvedUser));
+      if (Array.isArray(platform)) { for (const p of platform) form.append("platform[]", String(p)); }
+      if (title) form.append("title", String(title));
+      if (scheduled_date) form.append("scheduled_date", String(scheduled_date));
+      if (async_upload) form.append("async_upload", "true");
+      if (first_comment) form.append("first_comment", String(first_comment));
+
+      for (const photoUrl of photos) {
+        const urlStr = String(photoUrl);
+        console.log("[uploadpost-proxy] Fetching photo:", urlStr);
+        const imgRes = await fetch(urlStr);
+        if (!imgRes.ok) return res.status(502).json({ error: `Photo fetch failed: HTTP ${imgRes.status}` });
+        const buffer = Buffer.from(await imgRes.arrayBuffer());
+        const contentType = imgRes.headers.get("content-type") || "image/jpeg";
+        if (buffer.byteLength === 0) return res.status(502).json({ error: "Photo empty" });
+        form.append("photo", new Blob([buffer], { type: contentType }), "photo.jpg");
+        console.log("[uploadpost-proxy] Photo fetched:", buffer.byteLength, "bytes");
+      }
+
+      const upRes = await fetch("https://app.upload-post.com/api/upload_photos", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}` },
+        body: form,
+      });
+      const upText = await upRes.text();
+      let upData;
+      try { upData = JSON.parse(upText); } catch { upData = { _raw: upText }; }
+      console.log("[uploadpost-proxy] upload_photos response:", upRes.status, JSON.stringify(upData).slice(0, 2000));
+      return res.status(upRes.status).json(upData);
+    } catch (err) {
+      console.error("[uploadpost-proxy] upload_photos error:", err.message);
+      return res.status(502).json({ error: `Upload failed: ${err.message}` });
+    }
+  }
+
+  // ── Direct action: upload_text ──
+  if (action === "upload_text") {
+    const { user, platform, title, scheduled_date, async_upload, first_comment } = req.body;
+    if (!user) return res.status(400).json({ error: "Missing 'user'" });
+
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
+    let resolvedUser = user;
+    if (UUID_RE.test(user)) {
+      try {
+        const listRes = await fetch("https://api.upload-post.com/api/uploadposts/users", {
+          method: "GET",
+          headers: { "Content-Type": "application/json", apikey: apiKey, Authorization: `Apikey ${apiKey}` },
+        });
+        const listData = await listRes.json();
+        const users = Array.isArray(listData) ? listData : listData?.profiles ?? listData?.users ?? listData?.data ?? [];
+        const nonUuid = users.find((u) => u.username && !UUID_RE.test(u.username));
+        if (nonUuid) resolvedUser = nonUuid.username;
+      } catch (e) { console.warn("[uploadpost-proxy] UUID resolve failed:", e.message); }
+    }
+
+    console.log("[uploadpost-proxy] action=upload_text user:", resolvedUser);
+    try {
+      const form = new FormData();
+      form.append("user", String(resolvedUser));
+      if (Array.isArray(platform)) { for (const p of platform) form.append("platform[]", String(p)); }
+      if (title) form.append("title", String(title));
+      if (scheduled_date) form.append("scheduled_date", String(scheduled_date));
+      if (async_upload) form.append("async_upload", "true");
+      if (first_comment) form.append("first_comment", String(first_comment));
+
+      const upRes = await fetch("https://app.upload-post.com/api/upload_text", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}` },
+        body: form,
+      });
+      const upText = await upRes.text();
+      let upData;
+      try { upData = JSON.parse(upText); } catch { upData = { _raw: upText }; }
+      console.log("[uploadpost-proxy] upload_text response:", upRes.status, JSON.stringify(upData).slice(0, 2000));
+      return res.status(upRes.status).json(upData);
+    } catch (err) {
+      console.error("[uploadpost-proxy] upload_text error:", err.message);
+      return res.status(502).json({ error: `Upload failed: ${err.message}` });
+    }
+  }
+
+  // ── Direct action: upload_videos ──
+  if (action === "upload_videos") {
+    const { user, platform, title, video, scheduled_date, async_upload, first_comment } = req.body;
+    if (!user) return res.status(400).json({ error: "Missing 'user'" });
+    if (!video) return res.status(400).json({ error: "Missing 'video' URL" });
+
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
+    let resolvedUser = user;
+    if (UUID_RE.test(user)) {
+      try {
+        const listRes = await fetch("https://api.upload-post.com/api/uploadposts/users", {
+          method: "GET",
+          headers: { "Content-Type": "application/json", apikey: apiKey, Authorization: `Apikey ${apiKey}` },
+        });
+        const listData = await listRes.json();
+        const users = Array.isArray(listData) ? listData : listData?.profiles ?? listData?.users ?? listData?.data ?? [];
+        const nonUuid = users.find((u) => u.username && !UUID_RE.test(u.username));
+        if (nonUuid) resolvedUser = nonUuid.username;
+      } catch (e) { console.warn("[uploadpost-proxy] UUID resolve failed:", e.message); }
+    }
+
+    console.log("[uploadpost-proxy] action=upload_videos user:", resolvedUser);
+    try {
+      const form = new FormData();
+      form.append("user", String(resolvedUser));
+      if (Array.isArray(platform)) { for (const p of platform) form.append("platform[]", String(p)); }
+      if (title) form.append("title", String(title));
+      form.append("video", String(video));
+      if (scheduled_date) form.append("scheduled_date", String(scheduled_date));
+      if (async_upload) form.append("async_upload", "true");
+      if (first_comment) form.append("first_comment", String(first_comment));
+
+      const upRes = await fetch("https://app.upload-post.com/api/upload_videos", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}` },
+        body: form,
+      });
+      const upText = await upRes.text();
+      let upData;
+      try { upData = JSON.parse(upText); } catch { upData = { _raw: upText }; }
+      console.log("[uploadpost-proxy] upload_videos response:", upRes.status, JSON.stringify(upData).slice(0, 2000));
+      return res.status(upRes.status).json(upData);
+    } catch (err) {
+      console.error("[uploadpost-proxy] upload_videos error:", err.message);
+      return res.status(502).json({ error: `Upload failed: ${err.message}` });
+    }
+  }
+
+  // ── Legacy endpoint-based proxy (non-action requests) ──
+  if (!endpoint) {
+    return res.status(400).json({ error: "Missing 'endpoint' or 'action' field in request body." });
   }
 
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
