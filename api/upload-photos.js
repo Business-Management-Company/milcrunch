@@ -2,22 +2,36 @@
  * Dedicated Vercel serverless function for uploading photos to UploadPost.
  * Separate from uploadpost-proxy to avoid nginx POST routing issues.
  *
- * POST /api/upload-photos
+ * GET  /api/upload-photos → health check
+ * POST /api/upload-photos → upload photo(s) to UploadPost
  *   body: { user, platform, title, photos, scheduled_date?, async_upload?, first_comment? }
  */
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "10mb",
+    },
+  },
+};
+
 export default async function handler(req, res) {
   console.log("[upload-photos] handler invoked:", req.method, req.url);
 
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") {
     return res.status(204).end();
   }
 
+  if (req.method === "GET") {
+    return res.status(200).json({ status: "upload-photos alive", timestamp: new Date().toISOString() });
+  }
+
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "POST only" });
+    return res.status(405).json({ error: "Use GET for health check or POST to upload photos" });
   }
 
   const apiKey = process.env.UPLOAD_POST_API_KEY || process.env.VITE_UPLOAD_POST_API_KEY;

@@ -2,6 +2,12 @@
   "crons": [
     { "path": "/api/refresh-avatars", "schedule": "0 6 * * *" }
   ],
+  "functions": {
+    "api/upload-photos.js": { "maxDuration": 60 },
+    "api/upload-text.js": { "maxDuration": 60 },
+    "api/upload-videos.js": { "maxDuration": 60 },
+    "api/uploadpost-proxy.js": { "maxDuration": 60 }
+  },
   "headers": [
     {
       "source": "/assets/(.*)",
@@ -47,6 +53,11 @@
     {"source": "/api/resend/:path*", "destination": "https://api.resend.com/:path*"},
     {"source": "/api/resolve-handle", "destination": "/api/resolve-handle"},
     {"source": "/api/generate-caption", "destination": "/api/generate-caption"},
+    {"source": "/api/upload-photos", "destination": "/api/upload-photos"},
+    {"source": "/api/upload-text", "destination": "/api/upload-text"},
+    {"source": "/api/upload-videos", "destination": "/api/upload-videos"},
+    {"source": "/api/uploadpost-proxy", "destination": "/api/uploadpost-proxy"},
+    {"source": "/api/shorten-url", "destination": "/api/shorten-url"},
     {"source": "/((?!api/).*)", "destination": "/index.html"}
   ]
 }

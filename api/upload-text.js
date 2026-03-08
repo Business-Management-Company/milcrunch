@@ -1,18 +1,29 @@
 /**
  * Dedicated Vercel serverless function for uploading text posts to UploadPost.
  *
- * POST /api/upload-text
+ * GET  /api/upload-text → health check
+ * POST /api/upload-text → upload text post
  *   body: { user, platform, title, scheduled_date?, async_upload?, first_comment? }
  */
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "10mb",
+    },
+  },
+};
+
 export default async function handler(req, res) {
   console.log("[upload-text] handler invoked:", req.method, req.url);
 
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(204).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
+  if (req.method === "GET") return res.status(200).json({ status: "upload-text alive", timestamp: new Date().toISOString() });
+  if (req.method !== "POST") return res.status(405).json({ error: "Use GET for health check or POST to upload text" });
 
   const apiKey = process.env.UPLOAD_POST_API_KEY || process.env.VITE_UPLOAD_POST_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "UPLOAD_POST_API_KEY not configured." });
