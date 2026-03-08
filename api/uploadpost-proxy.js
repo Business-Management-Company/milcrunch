@@ -9,6 +9,18 @@
  *   with apikey header added server-side.
  */
 export default async function handler(req, res) {
+  console.log("[uploadpost-proxy] handler invoked:", req.method, req.url);
+
+  // CORS headers — allow browser preflight and cross-origin requests
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return res.status(204).end();
+  }
+
   // Health check — visit /api/uploadpost-proxy in browser to verify function is live
   if (req.method === "GET") {
     const hasKey = !!(process.env.UPLOAD_POST_API_KEY || process.env.VITE_UPLOAD_POST_API_KEY);
