@@ -241,22 +241,27 @@ export async function seedDemoConnectedAccounts(userId: string): Promise<Connect
   return seeded.length > 0 ? seeded : buildFallbackRows(userId);
 }
 
+/** Check if a string looks like a UUID (ghost profile created by old broken code). */
+function looksLikeUuid(s: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(s);
+}
+
 /**
  * Resolve the UploadPost profile username/slug for a Supabase user.
  * UploadPost profiles may have been created with a custom slug (e.g. "johnny-rocket")
  * rather than the Supabase UUID. This function finds the correct slug and caches it.
  */
 export async function resolveUploadPostUsername(supabaseUserId: string): Promise<string> {
-  // 1. Check localStorage cache — but skip if it cached the UUID (that's the bug)
+  // 1. Check localStorage cache — reject if cached value looks like a UUID
   const cacheKey = `up_slug_${supabaseUserId}`;
   const cached = localStorage.getItem(cacheKey);
-  if (cached && cached !== supabaseUserId) {
+  if (cached && !looksLikeUuid(cached)) {
     console.log("[UploadPost] Resolved slug from cache:", cached);
     return cached;
   }
   // Clear stale UUID-as-slug cache entries
-  if (cached === supabaseUserId) {
-    console.log("[UploadPost] Clearing stale UUID cache entry");
+  if (cached && looksLikeUuid(cached)) {
+    console.log("[UploadPost] Clearing stale UUID cache entry:", cached);
     localStorage.removeItem(cacheKey);
   }
 
@@ -264,33 +269,36 @@ export async function resolveUploadPostUsername(supabaseUserId: string): Promise
   const users = await listUploadPostUsers();
   console.log("[UploadPost] Listed profiles:", users.length, "full list:", JSON.stringify(users.map((u) => ({ username: u.username, keys: Object.keys(u) }))));
 
-  // 3. Try exact UUID match first
-  const byUuid = users.find((u) => u.username === supabaseUserId);
-  if (byUuid) {
-    console.log("[UploadPost] Found profile by UUID:", byUuid.username);
-    localStorage.setItem(cacheKey, byUuid.username);
-    return byUuid.username;
-  }
+  // 3. Filter out ghost UUID profiles — always prefer non-UUID slugs
+  const nonUuidUsers = users.filter((u) => !looksLikeUuid(u.username));
+  console.log("[UploadPost] Non-UUID profiles:", nonUuidUsers.length, nonUuidUsers.map((u) => u.username));
 
-  // 4. No UUID match — if existing profiles exist, use the first one
-  //    (covers setups where profile was created with a custom slug like "johnny-rocket")
-  if (users.length > 0) {
-    const slug = users[0].username;
-    console.log("[UploadPost] No UUID match, using existing profile:", slug);
+  // 4. Use the first non-UUID profile if one exists (e.g. "johnny-rocket")
+  if (nonUuidUsers.length > 0) {
+    const slug = nonUuidUsers[0].username;
+    console.log("[UploadPost] Using non-UUID profile:", slug);
     localStorage.setItem(cacheKey, slug);
     return slug;
   }
 
-  // 5. No profiles at all — create one with the UUID
+  // 5. Only UUID profiles exist — use UUID match as fallback
+  const byUuid = users.find((u) => u.username === supabaseUserId);
+  if (byUuid) {
+    console.log("[UploadPost] Only UUID profiles found, using UUID match:", byUuid.username);
+    // Don't cache UUID slugs — they should be replaced
+    return byUuid.username;
+  }
+
+  // 6. No profiles at all — create one with the UUID
   console.log("[UploadPost] No profiles found. Creating profile with UUID:", supabaseUserId);
   const createResult = await createUploadPostProfile(supabaseUserId);
   if (!createResult.error) {
     console.log("[UploadPost] Created new profile:", supabaseUserId);
-    localStorage.setItem(cacheKey, supabaseUserId);
+    // Don't cache UUID slugs
     return supabaseUserId;
   }
 
-  // 6. Creation also failed — return UUID as last resort
+  // 7. Creation also failed — return UUID as last resort
   console.warn("[UploadPost] No profiles found and creation failed. Using UUID:", supabaseUserId);
   return supabaseUserId;
 }

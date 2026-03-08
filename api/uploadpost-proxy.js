@@ -36,11 +36,41 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "UPLOAD_POST_API_KEY not configured on server." });
   }
 
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
+
+  // If the request body has a "user" field that looks like a UUID, try to swap it
+  // for a real slug from the users list before sending to UploadPost
+  let resolvedBody = body;
+  if (body && body.user && UUID_RE.test(body.user)) {
+    console.warn(`[uploadpost-proxy] WARNING: "user" field is a UUID: ${body.user} — attempting to resolve a real slug`);
+    try {
+      const listRes = await fetch("https://api.upload-post.com/api/uploadposts/users", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: apiKey,
+          Authorization: `Apikey ${apiKey}`,
+        },
+      });
+      const listData = await listRes.json();
+      const users = Array.isArray(listData) ? listData : listData?.users ?? listData?.data ?? [];
+      const nonUuid = users.find((u) => u.username && !UUID_RE.test(u.username));
+      if (nonUuid) {
+        console.log(`[uploadpost-proxy] Resolved UUID user to slug: ${nonUuid.username}`);
+        resolvedBody = { ...body, user: nonUuid.username };
+      } else {
+        console.warn("[uploadpost-proxy] No non-UUID profile found, proceeding with UUID");
+      }
+    } catch (lookupErr) {
+      console.warn("[uploadpost-proxy] Failed to resolve UUID user:", lookupErr.message);
+    }
+  }
+
   const url = `https://api.upload-post.com${endpoint}`;
   const httpMethod = (method || "GET").toUpperCase();
 
   console.log(`[uploadpost-proxy] ${httpMethod} ${url}`);
-  if (body) console.log("[uploadpost-proxy] body:", JSON.stringify(body).slice(0, 2000));
+  if (resolvedBody) console.log("[uploadpost-proxy] body:", JSON.stringify(resolvedBody).slice(0, 2000));
 
   try {
     const fetchOptions = {
@@ -52,8 +82,8 @@ export default async function handler(req, res) {
       },
     };
 
-    if (body && httpMethod !== "GET" && httpMethod !== "HEAD") {
-      fetchOptions.body = JSON.stringify(body);
+    if (resolvedBody && httpMethod !== "GET" && httpMethod !== "HEAD") {
+      fetchOptions.body = JSON.stringify(resolvedBody);
     }
 
     const response = await fetch(url, fetchOptions);
