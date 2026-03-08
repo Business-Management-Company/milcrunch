@@ -45,6 +45,7 @@ interface DraftRow {
   caption: string | null;
   platforms: string[] | null;
   media_url: string | null;
+  media_type: string | null;
   scheduled_at: string | null;
   created_at: string;
 }
@@ -125,7 +126,7 @@ export default function CreatorPosts() {
     setLoadingDrafts(true);
     supabase
       .from("post_drafts")
-      .select("id, caption, platforms, media_url, scheduled_at, created_at")
+      .select("id, caption, platforms, media_url, media_type, scheduled_at, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
@@ -166,6 +167,7 @@ export default function CreatorPosts() {
         user: upUser,
         platforms: draft.platforms as UploadPostPlatform[],
         media_url: draft.media_url || undefined,
+        media_type: (draft.media_type as "photo" | "video") || undefined,
       });
       if (result.success) {
         await supabase.from("post_drafts").delete().eq("id", draft.id);
@@ -359,6 +361,7 @@ export default function CreatorPosts() {
                                 caption: draft.caption,
                                 platforms: draft.platforms,
                                 media_url: draft.media_url,
+                                media_type: draft.media_type,
                                 scheduled_at: draft.scheduled_at,
                               });
                               setActiveTab("create");

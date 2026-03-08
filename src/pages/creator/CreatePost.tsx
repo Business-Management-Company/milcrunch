@@ -343,7 +343,8 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
   const displayName = creatorProfile?.display_name ?? user?.user_metadata?.full_name ?? "Creator";
   const creatorHandle = creatorProfile?.handle ?? "creator";
   const avatarInitial = (displayName || "C").charAt(0).toUpperCase();
-  const firstPreviewUrl = previewUrls.find((_, i) => mediaFiles[i]?.type.startsWith("image/")) ?? null;
+  const firstPreviewUrl = previewUrls.find((_, i) => mediaFiles[i]?.type.startsWith("image/"))
+    ?? (mediaType === "photo" && mediaUrl.trim() ? mediaUrl.trim() : null);
 
   /* ── Platform validation warnings ── */
   const warnings = useMemo(() => {
@@ -902,6 +903,23 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
                       className="h-8 text-xs"
                     />
                   )}
+                  {/* Image preview for pasted/draft URL */}
+                  {mediaType === "photo" && mediaUrl.trim() && (
+                    <div className="relative group inline-block">
+                      <img
+                        src={mediaUrl.trim()}
+                        alt="Media preview"
+                        className="h-[200px] max-w-full rounded-lg object-cover border border-border"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                      <button
+                        onClick={() => { setMediaUrl(""); setMediaType("none"); }}
+                        className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1091,6 +1109,7 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
                       caption: caption.trim(),
                       platforms: Array.from(selected),
                       media_url: savedMediaUrl,
+                      media_type: savedMediaUrl ? (mediaType === "video" ? "video" : "photo") : null,
                       scheduled_at: scheduledDate ? new Date(scheduledDate).toISOString() : null,
                     };
 
