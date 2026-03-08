@@ -11,7 +11,7 @@ import { getConnectedAccounts, resolveUploadPostUsername, type ConnectedAccountR
 import { createUploadPost, type UploadPostPlatform } from "@/services/upload-post";
 import CadenceCampaign from "./CadenceCampaign";
 import {
-  Loader2, Check, X, Link2, Plus, Eye, EyeOff, Sparkles,
+  Loader2, Check, X, Link2, Plus, Sparkles,
   Upload, Image, Video, FileText, Download, Camera, Palette,
   Hash, Smile, Braces, Calendar, Tag, Copy,
   ChevronDown, LayoutGrid, AlertTriangle, CheckCircle2,
@@ -33,14 +33,6 @@ const ALL_PLATFORMS = [
   "instagram", "facebook", "x", "linkedin",
   "tiktok", "youtube", "threads", "pinterest",
   "reddit", "bluesky", "google_business",
-];
-
-/* AI post ideas */
-const AI_IDEAS = [
-  "Share a behind-the-scenes look at your daily routine as a veteran creator.",
-  "Post a 'then vs now' side-by-side showing your military journey to civilian life.",
-  "Ask your audience: 'What does service mean to you?' to spark engagement.",
-  "Highlight a fellow veteran creator or small business you admire.",
 ];
 
 /* Platform-specific content limits */
@@ -97,7 +89,6 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
   const [captionBeforeShorten, setCaptionBeforeShorten] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
-  const [showIdeas, setShowIdeas] = useState(false);
   const [showAiInput, setShowAiInput] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
@@ -537,46 +528,13 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
         {activeTab === "single" && <>
         {/* ── SCROLLABLE CONTENT ── */}
         <div className="flex-1 overflow-y-auto" style={{ backgroundColor: "#F5F7FA" }}>
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-28">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-36">
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
               {/* ═══ LEFT COLUMN — FORM ═══ */}
               <div className="lg:col-span-3 space-y-6">
 
-            {/* ── 1. INSPIRATION BANNER ── */}
-            <div className="rounded-xl border border-green-200 bg-green-50 dark:bg-green-900/10 dark:border-green-800/40 px-4 py-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-green-800 dark:text-green-300 font-medium">
-                  <span className="mr-1.5">💡</span>
-                  Need inspiration for your post?
-                  <span className="ml-1 text-xs text-green-600 dark:text-green-400">({AI_IDEAS.length})</span>
-                </p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-800/20 text-xs h-7 gap-1"
-                  onClick={() => setShowIdeas(!showIdeas)}
-                >
-                  {showIdeas ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                  {showIdeas ? "Hide" : "Show"}
-                </Button>
-              </div>
-              {showIdeas && (
-                <div className="mt-3 space-y-2">
-                  {AI_IDEAS.map((idea, i) => (
-                    <button
-                      key={i}
-                      onClick={() => { setCaption(idea); setShowIdeas(false); toast.success("Idea applied!"); }}
-                      className="w-full text-left rounded-lg border border-green-200 dark:border-green-800/40 bg-white dark:bg-green-900/20 px-3 py-2.5 text-sm text-green-900 dark:text-green-200 hover:bg-green-100 dark:hover:bg-green-800/30 transition-colors"
-                    >
-                      <span className="text-green-500 mr-1.5">✦</span>{idea}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* ── 2. SELECT SOCIAL ACCOUNTS ── */}
+            {/* ── 1. SELECT SOCIAL ACCOUNTS ── */}
             <div className="bg-white dark:bg-card rounded-2xl p-6 space-y-4" style={{ borderLeft: "4px solid #1B3A6B", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
               <h2 className="text-lg font-semibold text-foreground flex items-center gap-3">
                 <span className="flex items-center justify-center h-8 w-8 rounded-full text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#1B3A6B" }}>A</span>
@@ -1070,12 +1028,12 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
         </div>
 
         {/* ── FIXED BOTTOM ACTION BAR ── */}
-        <div className="fixed bottom-0 right-0 md:left-60 left-0 z-50 border-t border-border bg-white dark:bg-card px-4 sm:px-6 py-3">
+        <div className="fixed bottom-0 right-0 md:left-60 left-0 z-50 bg-[#1B3A6B] px-4 sm:px-6 py-3" style={{ boxShadow: "0 -4px 20px rgba(0,0,0,0.15)" }}>
           <div className="max-w-6xl mx-auto flex items-center justify-between">
             <Button
               variant="outline"
               size="sm"
-              className="h-9 text-xs"
+              className="h-9 text-xs border-white/40 text-white hover:bg-white/10 hover:text-white"
               onClick={() => toast.info("Progress saved!")}
             >
               Save progress
@@ -1085,7 +1043,7 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-9 text-xs gap-1 pr-7"
+                  className="h-9 text-xs gap-1 pr-7 border-white/40 text-white hover:bg-white/10 hover:text-white"
                   onClick={async () => {
                     if (!user?.id) return;
                     if (!caption.trim() && selected.size === 0) {
@@ -1147,12 +1105,12 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
                 >
                   Save as draft
                 </Button>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-white/60 pointer-events-none" />
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 text-xs"
+                className="h-9 text-xs border-white/40 text-white hover:bg-white/10 hover:text-white"
                 onClick={() => handlePost()}
                 disabled={posting || noAccounts || hasErrors}
               >
@@ -1162,7 +1120,7 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
               </Button>
               <Button
                 size="sm"
-                className="h-9 text-xs bg-[#1B3A6B] hover:bg-[#152d54] text-white"
+                className="h-9 text-xs bg-white hover:bg-gray-100 text-[#1B3A6B] font-semibold shadow-sm"
                 onClick={() => handlePostNow()}
                 disabled={posting || noAccounts || hasErrors}
               >
