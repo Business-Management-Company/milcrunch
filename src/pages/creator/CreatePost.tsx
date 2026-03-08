@@ -67,6 +67,7 @@ export interface DraftEdit {
   caption: string | null;
   platforms: string[] | null;
   media_url: string | null;
+  media_type: string | null;
   scheduled_at: string | null;
 }
 
@@ -110,7 +111,12 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
     setCaption(editDraft.caption ?? "");
     setSelected(new Set(editDraft.platforms ?? []));
     setMediaUrl(editDraft.media_url ?? "");
-    setMediaType(editDraft.media_url ? "photo" : "none");
+    setMediaType(
+      editDraft.media_type === "video" ? "video"
+        : editDraft.media_type === "photo" ? "photo"
+        : editDraft.media_url ? "photo"
+        : "none"
+    );
     setScheduledDate(editDraft.scheduled_at ? editDraft.scheduled_at.slice(0, 16) : "");
     setMediaFiles([]);
     setPostName("");
@@ -768,9 +774,9 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
             )}
 
             {/* ── 4. ADD MEDIA ── */}
-            <div className="bg-white dark:bg-card rounded-2xl p-6 space-y-4" style={{ borderLeft: "4px solid #7C3AED", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
+            <div className="bg-white dark:bg-card rounded-2xl p-6 space-y-4" style={{ borderLeft: "4px solid #1B3A6B", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
               <h2 className="text-lg font-semibold text-foreground flex items-center gap-3">
-                <span className="flex items-center justify-center h-8 w-8 rounded-full text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#7C3AED" }}>C</span>
+                <span className="flex items-center justify-center h-8 w-8 rounded-full text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#1B3A6B" }}>C</span>
                 Add Media
                 {mediaFiles.length > 0 && (
                   <span className="ml-1 text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
@@ -810,7 +816,7 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
               {mediaFiles.length === 0 && (
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full rounded-xl border-2 border-dashed border-border hover:border-[#7C3AED]/40 transition-colors p-8 flex flex-col items-center gap-3"
+                  className="w-full rounded-xl border-2 border-dashed border-border hover:border-[#1B3A6B]/40 transition-colors p-8 flex flex-col items-center gap-3"
                 >
                   <div className="relative w-16 h-16">
                     <div className="absolute inset-0 rotate-[-6deg] rounded-lg border-2 border-border bg-muted/50" />
@@ -901,9 +907,9 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
             </div>
 
             {/* ── 5. POST DETAILS ── */}
-            <div className="bg-white dark:bg-card rounded-2xl p-6 space-y-4" style={{ borderLeft: "4px solid #0D9488", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
+            <div className="bg-white dark:bg-card rounded-2xl p-6 space-y-4" style={{ borderLeft: "4px solid #1B3A6B", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
               <h2 className="text-lg font-semibold text-foreground flex items-center gap-3">
-                <span className="flex items-center justify-center h-8 w-8 rounded-full text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#0D9488" }}>D</span>
+                <span className="flex items-center justify-center h-8 w-8 rounded-full text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#1B3A6B" }}>D</span>
                 Post Details
               </h2>
               <div className="space-y-3">
@@ -980,7 +986,7 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
                                 : "bg-muted text-muted-foreground hover:text-foreground"
                             )}
                           >
-                            <PlatformIcon platform={p} size={14} />
+                            {p !== "x" && <PlatformIcon platform={p} size={14} />}
                             {PLATFORM_NAMES[p] ?? p}
                           </button>
                         ))}
