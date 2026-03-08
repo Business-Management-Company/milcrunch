@@ -58,6 +58,7 @@
     {"source": "/api/upload-videos", "destination": "/api/upload-videos"},
     {"source": "/api/uploadpost-proxy", "destination": "/api/uploadpost-proxy"},
     {"source": "/api/shorten-url", "destination": "/api/shorten-url"},
-    {"source": "/((?!api/).*)", "destination": "/index.html"}
+    {"source": "/api/:path(.*)", "destination": "/api/:path"},
+    {"source": "/(.*)", "destination": "/index.html"}
   ]
 }
