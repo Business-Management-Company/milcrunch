@@ -67,7 +67,6 @@ export interface DraftEdit {
   caption: string | null;
   platforms: string[] | null;
   media_url: string | null;
-  media_type: string | null;
   scheduled_at: string | null;
 }
 
@@ -111,12 +110,7 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
     setCaption(editDraft.caption ?? "");
     setSelected(new Set(editDraft.platforms ?? []));
     setMediaUrl(editDraft.media_url ?? "");
-    setMediaType(
-      editDraft.media_type === "video" ? "video"
-        : editDraft.media_type === "photo" ? "photo"
-        : editDraft.media_url ? "photo"
-        : "none"
-    );
+    setMediaType(editDraft.media_url ? "photo" : "none");
     setScheduledDate(editDraft.scheduled_at ? editDraft.scheduled_at.slice(0, 16) : "");
     setMediaFiles([]);
     setPostName("");
