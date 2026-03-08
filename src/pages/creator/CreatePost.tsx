@@ -85,6 +85,8 @@ export default function CreatePost({ noLayout, postType }: { noLayout?: boolean;
   const [postName, setPostName] = useState("");
   const [postLabel, setPostLabel] = useState("");
   const [shortenUrls, setShortenUrls] = useState(false);
+  const [shortening, setShortening] = useState(false);
+  const [captionBeforeShorten, setCaptionBeforeShorten] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
   const [showIdeas, setShowIdeas] = useState(false);
   const [showAiInput, setShowAiInput] = useState(false);
@@ -257,6 +259,51 @@ export default function CreatePost({ noLayout, postType }: { noLayout?: boolean;
       setMediaType(files[0].type.startsWith("video") ? "video" : "photo");
     }
     e.target.value = "";
+  };
+
+  const handleShortenToggle = async (checked: boolean) => {
+    if (checked) {
+      // Find all URLs in the caption
+      const urlRegex = /https?:\/\/[^\s]+/g;
+      const urls = caption.match(urlRegex);
+      if (!urls || urls.length === 0) {
+        setShortenUrls(true);
+        toast.info("No URLs found in caption to shorten.");
+        return;
+      }
+      // Save original so we can restore on toggle off
+      setCaptionBeforeShorten(caption);
+      setShortenUrls(true);
+      setShortening(true);
+      try {
+        let updated = caption;
+        for (const url of urls) {
+          const res = await fetch("/api/shorten-url", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url }),
+          });
+          if (res.ok) {
+            const { short } = await res.json();
+            if (short) updated = updated.replace(url, short);
+          }
+        }
+        setCaption(updated);
+        toast.success(`Shortened ${urls.length} URL${urls.length !== 1 ? "s" : ""}`);
+      } catch {
+        toast.error("URL shortening failed.");
+      } finally {
+        setShortening(false);
+      }
+    } else {
+      // Restore original caption with full URLs
+      setShortenUrls(false);
+      if (captionBeforeShorten !== null) {
+        setCaption(captionBeforeShorten);
+        setCaptionBeforeShorten(null);
+        toast.success("Original URLs restored");
+      }
+    }
   };
 
   const connectedPlatforms = new Set(accounts.map((a) => a.platform));
@@ -564,7 +611,14 @@ export default function CreatePost({ noLayout, postType }: { noLayout?: boolean;
               <div className="rounded-xl border border-border overflow-hidden">
                 <Textarea
                   value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
+                  onChange={(e) => {
+                    setCaption(e.target.value);
+                    // If user edits while shortened, the stored original is stale
+                    if (captionBeforeShorten !== null) {
+                      setCaptionBeforeShorten(null);
+                      setShortenUrls(false);
+                    }
+                  }}
                   placeholder="What do you want to talk about?"
                   className="border-0 focus-visible:ring-0 resize-none min-h-[120px] text-sm rounded-none"
                 />
@@ -601,7 +655,8 @@ export default function CreatePost({ noLayout, postType }: { noLayout?: boolean;
                 </div>
                 <div className="flex items-center justify-between px-3 py-2 border-t border-border">
                   <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                    <Checkbox checked={shortenUrls} onCheckedChange={(v) => setShortenUrls(!!v)} className="h-3.5 w-3.5" />
+                    <Checkbox checked={shortenUrls} onCheckedChange={(v) => handleShortenToggle(!!v)} disabled={shortening} className="h-3.5 w-3.5" />
+                    {shortening ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                     Shorten URLs
                   </label>
                   <div className="flex items-center gap-1">
