@@ -336,6 +336,12 @@ export async function resolveUploadPostUsername(supabaseUserId: string): Promise
     return supabaseUserId;
   }
 
+  // 409 = profile already exists but wasn't listed — treat as success
+  if (createResult.error.includes("409") || createResult.error.toLowerCase().includes("already")) {
+    console.log("[UploadPost] 409 — profile already exists:", supabaseUserId);
+    return supabaseUserId;
+  }
+
   // 5. Creation failed — return UUID as last resort
   console.warn("[UploadPost] Profile creation failed. Using UUID:", supabaseUserId);
   return supabaseUserId;
@@ -377,6 +383,12 @@ export async function ensureUploadPostProfile(userId: string): Promise<{ ok: boo
     console.log("[ensureUploadPostProfile] No profile for this user. Creating:", userId);
     const createResult = await createUploadPostProfile(userId);
     if (createResult.error) {
+      // 409 = "Username already in use" — profile exists but wasn't listed (API timing).
+      // Treat as success since the profile does exist.
+      if (createResult.error.includes("409") || createResult.error.toLowerCase().includes("already")) {
+        console.log("[ensureUploadPostProfile] 409 — profile already exists, treating as success:", userId);
+        return { ok: true, username: userId };
+      }
       console.error("[ensureUploadPostProfile] Create failed:", createResult.error);
       return { ok: false, username: userId, error: createResult.error };
     }

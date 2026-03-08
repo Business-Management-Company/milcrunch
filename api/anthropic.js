@@ -1,13 +1,20 @@
 module.exports = async function handler(req, res) {
+  // CORS
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return res.status(204).end();
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const key =
-    process.env.ANTHROPIC_API_KEY ||
-    process.env.VITE_ANTHROPIC_API_KEY;
+  // Read key — strip quotes/whitespace that break auth
+  const raw = process.env.ANTHROPIC_API_KEY || process.env.VITE_ANTHROPIC_API_KEY || "";
+  const key = raw.replace(/^["' ]+|["' ]+$/g, "").trim();
 
   if (!key) {
+    console.error("[anthropic] No API key found. ANTHROPIC_API_KEY:", !!process.env.ANTHROPIC_API_KEY, "VITE_ANTHROPIC_API_KEY:", !!process.env.VITE_ANTHROPIC_API_KEY);
     return res.status(500).json({ error: "ANTHROPIC_API_KEY not configured" });
   }
 
@@ -23,11 +30,17 @@ module.exports = async function handler(req, res) {
     });
 
     const data = await resp.text();
+
+    if (resp.status === 401) {
+      console.error("[anthropic] 401 from Anthropic API. Key length:", key.length, "Key prefix:", key.slice(0, 8) + "...");
+    }
+
     res
       .status(resp.status)
       .setHeader("Content-Type", "application/json")
       .send(data);
   } catch (e) {
+    console.error("[anthropic] Proxy error:", e.message);
     res
       .status(502)
       .json({ error: "Anthropic proxy error", message: e.message });
