@@ -4,6 +4,31 @@ import { supabase } from "@/integrations/supabase/client";
 import { enrichOAuthUser } from "@/lib/oauth-enrichment";
 import { Loader2 } from "lucide-react";
 
+/** Query creator_profiles + user_roles to determine the right post-login destination. */
+async function getRedirectForUser(userId: string): Promise<string> {
+  // Check role from user_roles table first
+  const { data: roleRow } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .single();
+
+  const role = roleRow?.role;
+
+  if (role === "super_admin") return "/admin/dashboard";
+  if (role === "admin" || role === "brand") return "/brand/dashboard";
+
+  // Creator path — check onboarding status
+  const { data: profile } = await supabase
+    .from("creator_profiles")
+    .select("onboarding_completed")
+    .eq("user_id", userId)
+    .single();
+
+  if (!profile || !profile.onboarding_completed) return "/creator/onboard";
+  return "/creator/dashboard";
+}
+
 export default function AuthCallback() {
   const navigate = useNavigate();
   const handled = useRef(false);
@@ -39,9 +64,12 @@ export default function AuthCallback() {
         // Fire-and-forget: enrich profile via PDL on first OAuth login
         if (data.session?.user) {
           enrichOAuthUser(data.session.user).catch(() => {});
+          const dest = await getRedirectForUser(data.session.user.id);
+          console.log("[AuthCallback] PKCE redirect →", dest);
+          navigate(dest, { replace: true });
+        } else {
+          navigate("/login?error=auth_failed", { replace: true });
         }
-
-        navigate("/", { replace: true });
         return;
       }
 
@@ -49,13 +77,9 @@ export default function AuthCallback() {
       if (window.location.hash && window.location.hash.includes("access_token")) {
         console.log("[AuthCallback] Implicit flow — processing hash tokens");
 
-        // Supabase client auto-processes hash tokens when detectSessionInUrl is true.
-        // Give it a moment to settle, then check for a valid session.
-        // Wait for onAuthStateChange to fire with the session.
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error || !session) {
-          // Hash may not be processed yet — listen for the auth state change
           console.log("[AuthCallback] getSession returned null, waiting for auth state change...");
           const timeout = setTimeout(() => {
             console.error("[AuthCallback] Timed out waiting for session from hash");
@@ -63,12 +87,14 @@ export default function AuthCallback() {
           }, 10000);
 
           const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            (event, session) => {
+            async (event, session) => {
               if (session) {
                 clearTimeout(timeout);
                 subscription.unsubscribe();
                 enrichOAuthUser(session.user).catch(() => {});
-                navigate("/", { replace: true });
+                const dest = await getRedirectForUser(session.user.id);
+                console.log("[AuthCallback] Implicit (async) redirect →", dest);
+                navigate(dest, { replace: true });
               }
             }
           );
@@ -76,7 +102,9 @@ export default function AuthCallback() {
         }
 
         enrichOAuthUser(session.user).catch(() => {});
-        navigate("/", { replace: true });
+        const dest = await getRedirectForUser(session.user.id);
+        console.log("[AuthCallback] Implicit redirect →", dest);
+        navigate(dest, { replace: true });
         return;
       }
 
