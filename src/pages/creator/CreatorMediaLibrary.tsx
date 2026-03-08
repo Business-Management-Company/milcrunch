@@ -44,6 +44,8 @@ export default function CreatorMediaLibrary({ noLayout }: { noLayout?: boolean }
   const [showUntagged, setShowUntagged] = useState(false);
   const [campaignsExpanded, setCampaignsExpanded] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const uploadInputRef = React.useRef<HTMLInputElement>(null);
 
   // Fetch media and campaigns
   useEffect(() => {
@@ -103,6 +105,36 @@ export default function CreatorMediaLibrary({ noLayout }: { noLayout?: boolean }
     setMedia((prev) => prev.filter((m) => m.id !== item.id));
     setDeleting(null);
     toast.success("File deleted");
+  };
+
+  const handleDirectUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length || !user?.id) return;
+    e.target.value = "";
+    setUploading(true);
+    let count = 0;
+    for (const file of files) {
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `${user.id}/media/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("post-media")
+        .upload(path, file, { contentType: file.type });
+      if (upErr) { console.error("[MediaLibrary] upload error:", upErr); continue; }
+      const { data: urlData } = supabase.storage.from("post-media").getPublicUrl(path);
+      const fileUrl = urlData.publicUrl;
+      const { data: row, error: dbErr } = await supabase.from("creator_media").insert({
+        user_id: user.id,
+        filename: file.name,
+        file_url: fileUrl,
+        file_type: file.type.startsWith("video/") ? "video" : "image",
+        file_size: file.size,
+      }).select().single();
+      if (dbErr) { console.error("[MediaLibrary] insert error:", dbErr); continue; }
+      if (row) setMedia((prev) => [row as MediaRecord, ...prev]);
+      count++;
+    }
+    setUploading(false);
+    if (count > 0) toast.success(`Uploaded ${count} file${count !== 1 ? "s" : ""}`);
   };
 
   // Get unique cadence tags for filter dropdown
@@ -220,13 +252,24 @@ export default function CreatorMediaLibrary({ noLayout }: { noLayout?: boolean }
                   {showUntagged && " without cadence tags"}
                 </p>
               </div>
-              <Button
-                className="bg-[#1B3A6B] hover:bg-[#152d54] text-white text-xs"
-                onClick={() => navigate("/creator/post?tab=cadence")}
-              >
-                <Upload className="h-3.5 w-3.5 mr-1.5" />
-                Upload via Campaign
-              </Button>
+              <div className="flex items-center gap-2">
+                <input
+                  ref={uploadInputRef}
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple
+                  onChange={handleDirectUpload}
+                  className="hidden"
+                />
+                <Button
+                  className="bg-[#1B3A6B] hover:bg-[#152d54] text-white text-xs"
+                  onClick={() => uploadInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 mr-1.5" />}
+                  {uploading ? "Uploading..." : "Upload Media"}
+                </Button>
+              </div>
             </div>
 
             {/* Filter bar */}
@@ -289,14 +332,15 @@ export default function CreatorMediaLibrary({ noLayout }: { noLayout?: boolean }
                 <Image className="h-12 w-12 text-muted-foreground/30 mb-3" />
                 <h3 className="text-lg font-semibold text-muted-foreground">No media yet</h3>
                 <p className="text-sm text-muted-foreground/70 mt-1 max-w-xs">
-                  Upload media from a Cadence Campaign to build your library
+                  Upload images and videos to build your media library
                 </p>
                 <Button
-                  variant="outline"
-                  className="mt-4 text-xs"
-                  onClick={() => navigate("/creator/post?tab=cadence")}
+                  className="mt-4 text-xs bg-[#1B3A6B] hover:bg-[#152d54] text-white"
+                  onClick={() => uploadInputRef.current?.click()}
+                  disabled={uploading}
                 >
-                  Create a Campaign
+                  <Upload className="h-3.5 w-3.5 mr-1.5" />
+                  Upload Media
                 </Button>
               </div>
             ) : (

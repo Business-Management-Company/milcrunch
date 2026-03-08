@@ -211,6 +211,17 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
           .getPublicUrl(path);
         finalMediaUrl = urlData.publicUrl;
         console.log("[PostNow] uploaded media URL:", finalMediaUrl);
+
+        // Save to Media Library (fire-and-forget)
+        supabase.from("creator_media").insert({
+          user_id: user.id,
+          filename: file.name,
+          file_url: finalMediaUrl,
+          file_type: file.type.startsWith("video/") ? "video" : "image",
+          file_size: file.size,
+        }).then(({ error: mlErr }) => {
+          if (mlErr) console.error("[MediaLibrary] insert error:", mlErr);
+        });
       } else if (mediaType !== "none" && mediaUrl.trim()) {
         finalMediaUrl = mediaUrl.trim();
         finalMediaType = mediaType as "photo" | "video";
@@ -1097,6 +1108,17 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
                       }
                       const { data: urlData } = supabase.storage.from("post-media").getPublicUrl(path);
                       savedMediaUrl = urlData.publicUrl;
+
+                      // Save to Media Library (fire-and-forget)
+                      supabase.from("creator_media").insert({
+                        user_id: user.id,
+                        filename: file.name,
+                        file_url: savedMediaUrl,
+                        file_type: file.type.startsWith("video/") ? "video" : "image",
+                        file_size: file.size,
+                      }).then(({ error: mlErr }) => {
+                        if (mlErr) console.error("[MediaLibrary] insert error:", mlErr);
+                      });
                     }
 
                     const draftPayload = {
