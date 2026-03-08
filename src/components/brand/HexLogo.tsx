@@ -1,7 +1,7 @@
 /** MilCrunch tower + moat logo icon + "MilCrunch" wordmark in Sora 800. */
 export function HexIcon({ size = 24, className, variant = "light" }: { size?: number; className?: string; variant?: "dark" | "light" }) {
   // "dark" = gold icon on dark bg, "light" = amber icon on light bg
-  const accent = variant === "dark" ? "#C8A84B" : "#f59e0b";
+  const accent = variant === "dark" ? "#1B3A6B" : "#f59e0b";
   const bgOuter = variant === "dark" ? "#0f1a2e" : "#0d1525";
   const bgInner = variant === "dark" ? "#152d54" : "#0f1a2e";
   return (

@@ -176,11 +176,11 @@ export default function CreatorDashboard() {
         </div>
 
         {/* ── 2. AI AGENT CHAT BAR ── */}
-        <Card className="rounded-2xl bg-white dark:bg-card border border-gray-200 dark:border-border shadow-sm" style={{ borderBottom: "2px solid #C8A84B" }}>
+        <Card className="rounded-2xl bg-white dark:bg-card border border-gray-200 dark:border-border shadow-sm" style={{ borderBottom: "2px solid #1B3A6B" }}>
           <CardContent className="py-6 px-8">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-3 flex-1 rounded-xl bg-[#F3F4F6] dark:bg-white/5 px-4 py-3 cursor-pointer" onClick={() => chatRef.current?.open()}>
-                <Sparkles className="h-5 w-5 text-[#C8A84B] shrink-0" />
+                <Sparkles className="h-5 w-5 text-[#1B3A6B] shrink-0" />
                 <span className="text-sm text-[#6B7280]">What do you need help with today?</span>
               </div>
               <Button size="sm" className="bg-[#1B3A6B] hover:bg-[#152d54] text-white h-11 px-5 shrink-0" onClick={() => chatRef.current?.open()}>

@@ -802,7 +802,7 @@ export default function CreatorBioEditor() {
                   <button
                     onClick={() => theme.showProfileImage && avatarInputRef.current?.click()}
                     className={`w-full rounded-lg border-2 border-dashed transition-colors p-4 flex flex-col items-center gap-2 ${
-                      theme.showProfileImage ? "border-border hover:border-[#C8A84B]" : "border-border/50 opacity-50 cursor-not-allowed"
+                      theme.showProfileImage ? "border-border hover:border-[#1B3A6B]" : "border-border/50 opacity-50 cursor-not-allowed"
                     }`}
                   >
                     {profileAvatar ? (
@@ -895,7 +895,7 @@ export default function CreatorBioEditor() {
                   <button
                     onClick={() => theme.showHeroImage && heroInputRef.current?.click()}
                     className={`w-full rounded-lg border-2 border-dashed transition-colors p-4 flex flex-col items-center gap-2 ${
-                      theme.showHeroImage ? "border-border hover:border-[#C8A84B]" : "border-border/50 opacity-50 cursor-not-allowed"
+                      theme.showHeroImage ? "border-border hover:border-[#1B3A6B]" : "border-border/50 opacity-50 cursor-not-allowed"
                     }`}
                   >
                     {heroImageUrl ? (
@@ -1135,11 +1135,11 @@ export default function CreatorBioEditor() {
                         onClick={() => scrollToDesignSection(item.id)}
                         className={`flex flex-col items-center justify-center gap-1 w-[68px] h-[72px] rounded-xl transition-colors ${
                           active
-                            ? "text-[#1B3A6B] dark:text-[#C8A84B]"
+                            ? "text-[#1B3A6B] dark:text-[#1B3A6B]"
                             : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         }`}
                       >
-                        <div className={`h-[28px] w-[28px] rounded-full flex items-center justify-center transition-colors ${active ? "bg-[#1B3A6B]/15 dark:bg-[#C8A84B]/20" : ""}`}>
+                        <div className={`h-[28px] w-[28px] rounded-full flex items-center justify-center transition-colors ${active ? "bg-[#1B3A6B]/15 dark:bg-[#1B3A6B]/20" : ""}`}>
                           <Icon className="h-[14px] w-[14px]" />
                         </div>
                         <span className="text-[11px] font-medium leading-none">{item.label}</span>
@@ -1437,7 +1437,7 @@ export default function CreatorBioEditor() {
                         />
                         <button
                           onClick={() => bgImageInputRef.current?.click()}
-                          className="w-full rounded-xl border-2 border-dashed border-border hover:border-[#C8A84B] transition-colors p-4 flex flex-col items-center gap-2"
+                          className="w-full rounded-xl border-2 border-dashed border-border hover:border-[#1B3A6B] transition-colors p-4 flex flex-col items-center gap-2"
                         >
                           {theme.bgImageUrl ? (
                             <img src={theme.bgImageUrl} alt="Background" className="w-full h-20 object-cover rounded-lg" />
@@ -1594,7 +1594,7 @@ export default function CreatorBioEditor() {
                       key={section.id}
                       className={`flex items-center gap-2.5 rounded-lg border p-2.5 transition-colors ${
                         section.visible ? "bg-card border-border" : "bg-muted/50 border-border/50 opacity-60"
-                      } ${isGrouped ? "ml-5 border-l-[3px] border-l-[#C8A84B]" : ""}`}
+                      } ${isGrouped ? "ml-5 border-l-[3px] border-l-[#1B3A6B]" : ""}`}
                     >
                       <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 cursor-grab" />
                       <div className="flex items-center justify-center h-8 w-8 rounded-md bg-[#1B3A6B]/10 text-[#1B3A6B] shrink-0">
@@ -1674,7 +1674,7 @@ export default function CreatorBioEditor() {
                 )}
                 <div className="rounded-lg border border-dashed border-border p-4 space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center justify-center h-8 w-8 rounded-md bg-[#1B3A6B]/10 text-[#C8A84B] shrink-0"><CreditCard className="h-4 w-4" /></div>
+                    <div className="flex items-center justify-center h-8 w-8 rounded-md bg-[#1B3A6B]/10 text-[#1B3A6B] shrink-0"><CreditCard className="h-4 w-4" /></div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <p className="text-xs font-medium">NFC Creator Card</p>
@@ -2029,7 +2029,7 @@ export default function CreatorBioEditor() {
                     ) : (
                       <button
                         onClick={() => sectionIconInputRefs.current[section.id]?.click()}
-                        className="h-12 w-12 rounded-lg border-2 border-dashed border-border hover:border-[#C8A84B] transition-colors flex items-center justify-center"
+                        className="h-12 w-12 rounded-lg border-2 border-dashed border-border hover:border-[#1B3A6B] transition-colors flex items-center justify-center"
                       >
                         <Upload className="h-4 w-4 text-muted-foreground" />
                       </button>
@@ -2167,7 +2167,7 @@ export default function CreatorBioEditor() {
                                 ) : (
                                   <button
                                     onClick={() => linkImageInputRefs.current[link.id]?.click()}
-                                    className="w-full rounded-lg border-2 border-dashed border-border hover:border-[#C8A84B] transition-colors p-3 flex flex-col items-center gap-1"
+                                    className="w-full rounded-lg border-2 border-dashed border-border hover:border-[#1B3A6B] transition-colors p-3 flex flex-col items-center gap-1"
                                   >
                                     <Upload className="h-5 w-5 text-muted-foreground" />
                                     <span className="text-[10px] text-muted-foreground">Upload {imgType === "icon" ? "icon" : "image"}</span>

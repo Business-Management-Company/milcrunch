@@ -243,8 +243,8 @@ export default function CreatorPosts() {
                     isActive
                       ? isFailed && count > 0
                         ? "bg-red-500 text-white"
-                        : "bg-[#C8A84B] text-white"
-                      : "bg-[#F3F4F6] dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-300"
+                        : "bg-[#1B3A6B] text-white"
+                      : "bg-[#F3F4F6] dark:bg-gray-800 text-[#374151] dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-300"
                   )}
                 >
                   {tab.label}

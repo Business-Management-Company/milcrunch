@@ -1210,9 +1210,9 @@ export default function CadenceCampaign({ prefilledCreatorId, prefilledCreatorNa
         </div>
 
         {/* ── Section B: Tone & Voice Profile ── */}
-        <div className="bg-white dark:bg-card rounded-2xl p-6 space-y-3" style={{ borderLeft: "4px solid #C8A84B", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
+        <div className="bg-white dark:bg-card rounded-2xl p-6 space-y-3" style={{ borderLeft: "4px solid #1B3A6B", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
           <h2 className="text-lg font-semibold text-foreground flex items-center gap-3">
-            <span className="flex items-center justify-center h-8 w-8 rounded-full text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#C8A84B" }}>B</span>
+            <span className="flex items-center justify-center h-8 w-8 rounded-full text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#1B3A6B" }}>B</span>
             Tone & Voice Profile
           </h2>
 

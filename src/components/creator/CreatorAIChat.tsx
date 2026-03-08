@@ -169,7 +169,7 @@ const CreatorAIChat = forwardRef<CreatorAIChatRef>(function CreatorAIChat(_, ref
             </>
           ) : (
             <>
-              <Sparkles className="h-4 w-4 text-[#C8A84B]" />
+              <Sparkles className="h-4 w-4 text-[#1B3A6B]" />
               <span>MilCrunch AI</span>
             </>
           )}
@@ -187,7 +187,7 @@ const CreatorAIChat = forwardRef<CreatorAIChatRef>(function CreatorAIChat(_, ref
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-[#1B3A6B]">
               <div className="flex items-center gap-2.5">
-                <Sparkles className="h-5 w-5 text-[#C8A84B]" />
+                <Sparkles className="h-5 w-5 text-[#1B3A6B]" />
                 <div>
                   <p className="font-semibold text-sm text-white">MilCrunch AI Assistant</p>
                 </div>
@@ -241,9 +241,9 @@ const CreatorAIChat = forwardRef<CreatorAIChatRef>(function CreatorAIChat(_, ref
                   {m.loading ? (
                     <div className="flex items-center gap-2 py-1">
                       <div className="flex gap-1">
-                        <span className="w-2 h-2 bg-[#C8A84B] rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                        <span className="w-2 h-2 bg-[#C8A84B] rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                        <span className="w-2 h-2 bg-[#C8A84B] rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                        <span className="w-2 h-2 bg-[#1B3A6B] rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <span className="w-2 h-2 bg-[#1B3A6B] rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <span className="w-2 h-2 bg-[#1B3A6B] rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                       </div>
                       <span className="text-sm text-muted-foreground italic">Thinking...</span>
                     </div>

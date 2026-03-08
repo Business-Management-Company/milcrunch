@@ -19,7 +19,7 @@ export default function ThemeToggle({ variant = "default" }: { variant?: "defaul
         className={cn(
           "h-8 w-8 rounded-md",
           isSidebar
-            ? mode === "light" ? "bg-[#C8A84B]/20 text-[#C8A84B] shadow-sm" : "text-white/50 hover:text-white/80 hover:bg-white/5"
+            ? mode === "light" ? "bg-[#1B3A6B]/20 text-[#1B3A6B] shadow-sm" : "text-white/50 hover:text-white/80 hover:bg-white/5"
             : mode === "light" && "bg-background text-foreground shadow-sm"
         )}
         onClick={() => setMode("light")}
@@ -33,7 +33,7 @@ export default function ThemeToggle({ variant = "default" }: { variant?: "defaul
         className={cn(
           "h-8 w-8 rounded-md",
           isSidebar
-            ? mode === "dark" ? "bg-[#C8A84B]/20 text-[#C8A84B] shadow-sm" : "text-white/50 hover:text-white/80 hover:bg-white/5"
+            ? mode === "dark" ? "bg-[#1B3A6B]/20 text-[#1B3A6B] shadow-sm" : "text-white/50 hover:text-white/80 hover:bg-white/5"
             : mode === "dark" && "bg-background text-foreground shadow-sm"
         )}
         onClick={() => setMode("dark")}
@@ -47,7 +47,7 @@ export default function ThemeToggle({ variant = "default" }: { variant?: "defaul
         className={cn(
           "h-8 w-8 rounded-md",
           isSidebar
-            ? mode === "auto" ? "bg-[#C8A84B]/20 text-[#C8A84B] shadow-sm" : "text-white/50 hover:text-white/80 hover:bg-white/5"
+            ? mode === "auto" ? "bg-[#1B3A6B]/20 text-[#1B3A6B] shadow-sm" : "text-white/50 hover:text-white/80 hover:bg-white/5"
             : mode === "auto" && "bg-background text-foreground shadow-sm"
         )}
         onClick={() => setMode("auto")}

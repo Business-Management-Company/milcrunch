@@ -523,7 +523,7 @@ export default function CreatePost({ noLayout, postType }: { noLayout?: boolean;
                         <div className="relative">
                           <div
                             className={cn(
-                              "h-[52px] w-[52px] rounded-full flex items-center justify-center transition-all",
+                              "h-[60px] w-[60px] rounded-full flex items-center justify-center transition-all",
                               connected
                                 ? isSelected
                                   ? "ring-2 ring-offset-2 ring-[#1B3A6B] dark:ring-blue-400"
@@ -531,7 +531,7 @@ export default function CreatePost({ noLayout, postType }: { noLayout?: boolean;
                                 : "grayscale opacity-40 hover:opacity-60"
                             )}
                           >
-                            <PlatformIcon platform={platform} size={28} />
+                            <PlatformIcon platform={platform} size={32} />
                           </div>
                           {/* Badge — bottom right */}
                           {connected ? (
@@ -556,9 +556,9 @@ export default function CreatePost({ noLayout, postType }: { noLayout?: boolean;
             </div>
 
             {/* ── 3. WRITE A CAPTION ── */}
-            <div className="bg-white dark:bg-card rounded-2xl p-6 space-y-4" style={{ borderLeft: "4px solid #C8A84B", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
+            <div className="bg-white dark:bg-card rounded-2xl p-6 space-y-4" style={{ borderLeft: "4px solid #1B3A6B", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
               <h2 className="text-lg font-semibold text-foreground flex items-center gap-3">
-                <span className="flex items-center justify-center h-8 w-8 rounded-full text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#C8A84B" }}>B</span>
+                <span className="flex items-center justify-center h-8 w-8 rounded-full text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#1B3A6B" }}>B</span>
                 Write a Caption
               </h2>
               <div className="rounded-xl border border-border overflow-hidden">
