@@ -273,10 +273,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Wait for profile fetch (including user_roles query) to finish
     if (!profileLoaded) return null;
 
-    // Role comes from user_roles table (via creatorProfile.role)
-    const role: UserRole = creatorProfile?.role || "creator";
+    // Role comes from user_roles table (via creatorProfile.role), fallback to user_metadata
+    const metaRole = user.user_metadata?.role as string | undefined;
+    const role: UserRole = creatorProfile?.role || (metaRole as UserRole) || "creator";
 
-    console.log("[getRedirectPath] User:", user.email, "| role:", role, "| onboarding_complete:", creatorProfile?.onboarding_completed);
+    console.log("[getRedirectPath] User:", user.email, "| role:", role, "| metaRole:", metaRole, "| onboarding_complete:", creatorProfile?.onboarding_completed);
 
     if (role === "super_admin") return "/admin/dashboard";
     if (role === "admin" || role === "brand") return "/brand/dashboard";
@@ -285,7 +286,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return "/creator/dashboard";
   }, [user, creatorProfile, profileLoaded]);
 
-  const resolvedRole: UserRole = creatorProfile?.role || "creator";
+  const metaRoleValue = user?.user_metadata?.role as string | undefined;
+  const resolvedRole: UserRole = creatorProfile?.role || (metaRoleValue as UserRole) || "creator";
   const isSuperAdmin = !!user && profileLoaded && resolvedRole === "super_admin";
   const effectiveUserId = user?.id === DEMO_USER_ID ? DEMO_OWNER_ID : user?.id;
 

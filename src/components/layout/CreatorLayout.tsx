@@ -102,14 +102,14 @@ function saveCollapsedSections(state: Record<string, boolean>) {
 const CreatorLayout = ({ children }: CreatorLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, creatorProfile, signOut } = useAuth();
+  const { user, creatorProfile, signOut, role: authRole } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const navRef = useRef<HTMLElement>(null);
   const scrollPos = useRef(0);
 
-  const role = (creatorProfile?.role as string) || "creator";
+  const role = authRole || (creatorProfile?.role as string) || "creator";
   if (["super_admin", "admin", "brand"].includes(role)) {
     // Do not redirect non-creator roles to onboarding
   } else if (!creatorProfile?.onboarding_completed && !location.pathname.startsWith("/creator/onboard")) {
