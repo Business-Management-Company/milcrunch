@@ -1893,8 +1893,8 @@ export default function CreatorBioEditor() {
                                     if (showFeatured) {
                                       return (
                                         <div key={link.id} className="overflow-hidden" style={{ ...getLinkItemStyle(), padding: 0 }}>
-                                          <img src={imgUrl} alt="" className="w-full h-14 object-cover" />
-                                          <div className="text-[11px] py-1.5 px-3 text-center truncate font-medium">
+                                          <img src={imgUrl} alt="" className="w-full h-[60px] object-cover" style={{ borderRadius: `${linkRadius} ${linkRadius} 0 0` }} />
+                                          <div className="text-[11px] py-2 px-3 text-center truncate font-medium">
                                             {link.label || link.url || "Untitled link"}
                                           </div>
                                         </div>
@@ -1902,9 +1902,9 @@ export default function CreatorBioEditor() {
                                     }
 
                                     return (
-                                      <div key={link.id} className="text-[11px] py-2 px-3 text-center truncate font-medium flex items-center gap-2" style={getLinkItemStyle()}>
-                                        {showIcon && <img src={imgUrl} alt="" className="h-5 w-5 rounded-full object-cover shrink-0" />}
-                                        <span className="truncate flex-1">{link.label || link.url || "Untitled link"}</span>
+                                      <div key={link.id} className="text-[11px] py-2 px-3 font-medium flex items-center gap-2.5" style={getLinkItemStyle()}>
+                                        {showIcon && <img src={imgUrl} alt="" className="w-[28px] h-[28px] rounded-md object-cover shrink-0" />}
+                                        <span className="truncate flex-1 text-center">{link.label || link.url || "Untitled link"}</span>
                                       </div>
                                     );
                                   })}
