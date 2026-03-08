@@ -18,7 +18,7 @@ module.exports = async function handler(req, res) {
 
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return res.status(204).end();
+    return res.status(200).end();
   }
 
   // Debug: log every request
