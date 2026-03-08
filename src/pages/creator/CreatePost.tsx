@@ -560,14 +560,27 @@ export default function CreatePost({ noLayout, postType }: { noLayout?: boolean;
                     const connected = connectedPlatforms.has(platform);
                     const isSelected = selected.has(platform);
                     const label = PLATFORM_NAMES[platform] ?? platform;
+                    const tooltipText = !connected
+                      ? "Not connected \u2014 click to connect"
+                      : isSelected
+                        ? "\u2713 Selected for this post \u2014 click to deselect"
+                        : "\u2713 Connected \u2014 click to select";
                     return (
                       <button
                         key={platform}
                         onClick={() => connected ? toggle(platform) : navigate("/creator/socials")}
-                        className="group flex flex-col items-center gap-1.5"
-                        title={connected ? (isSelected ? `Deselect ${label}` : `Select ${label}`) : `Connect ${label}`}
+                        className="group/icon flex flex-col items-center gap-1.5 cursor-pointer"
                       >
                         <div className="relative">
+                          {/* Tooltip */}
+                          <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50 opacity-0 group-hover/icon:opacity-100 transition-opacity delay-150 group-hover/icon:delay-150">
+                            <div className="whitespace-nowrap rounded-lg bg-[#1B3A6B] text-white text-[12px] font-medium px-3 py-1.5 shadow-lg">
+                              {tooltipText}
+                            </div>
+                            <div className="flex justify-center -mt-px">
+                              <div className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-[#1B3A6B]" />
+                            </div>
+                          </div>
                           <div
                             className={cn(
                               "h-[60px] w-[60px] rounded-full flex items-center justify-center transition-all",
@@ -582,9 +595,9 @@ export default function CreatePost({ noLayout, postType }: { noLayout?: boolean;
                           </div>
                           {/* Badge — bottom right */}
                           {connected ? (
-                            <span className="absolute -bottom-0.5 -right-0.5 h-[16px] w-[16px] rounded-full bg-green-500 border-2 border-white dark:border-card flex items-center justify-center group-hover:bg-red-500 transition-colors">
-                              <Check className="h-2 w-2 text-white group-hover:hidden" />
-                              <X className="h-2 w-2 text-white hidden group-hover:block" />
+                            <span className="absolute -bottom-0.5 -right-0.5 h-[16px] w-[16px] rounded-full bg-green-500 border-2 border-white dark:border-card flex items-center justify-center group-hover/icon:bg-red-500 transition-colors">
+                              <Check className="h-2 w-2 text-white group-hover/icon:hidden" />
+                              <X className="h-2 w-2 text-white hidden group-hover/icon:block" />
                             </span>
                           ) : (
                             <span className="absolute -bottom-0.5 -right-0.5 h-[16px] w-[16px] rounded-full bg-gray-300 dark:bg-gray-600 border-2 border-white dark:border-card flex items-center justify-center">
