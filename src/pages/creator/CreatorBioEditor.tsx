@@ -854,7 +854,8 @@ export default function CreatorBioEditor() {
                   </div>
                 </div>
 
-                {/* 2b. Profile Image Size */}
+                {/* 2b. Profile Image Size (Portrait mode only) */}
+                {heroImageFormat === "portrait" && (
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">Profile Image Size</label>
                   <div className="flex gap-1 rounded-full border border-border p-0.5">
@@ -877,6 +878,7 @@ export default function CreatorBioEditor() {
                     ))}
                   </div>
                 </div>
+                )}
 
                 {/* 3. Hero / Cover Image Upload (Portrait mode only) */}
                 {heroImageFormat === "portrait" ? (
@@ -1716,9 +1718,53 @@ export default function CreatorBioEditor() {
                 <>
                   {/* Hero + Avatar composite header */}
                   {(() => {
-                    const heroVisible = !!(heroImageUrl && theme.showHeroImage);
                     const avatarVisible = theme.showProfileImage;
                     const avSize = theme.profileImageSize === "s" ? 48 : theme.profileImageSize === "l" ? 96 : 72;
+
+                    /* ── Full Blend: profile image fills background with radial vignette ── */
+                    if (heroImageFormat === "full_blend") {
+                      const bgImg = avatarUrl || heroImageUrl;
+                      return (
+                        <div className="relative w-full" style={{ height: 240 }}>
+                          {bgImg ? (
+                            <>
+                              <img src={bgImg} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                              <div className="absolute inset-0" style={{ background: "radial-gradient(circle at center 40%, transparent 30%, rgba(0,0,0,0.7) 100%)" }} />
+                            </>
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: isDark ? "#1e2433" : "#e5e7eb" }}>
+                              <div className="rounded-full flex items-center justify-center font-bold" style={{ width: 80, height: 80, fontSize: 28, color: phoneSubtext, backgroundColor: isDark ? "#2d3548" : "#d1d5db" }}>
+                                {(displayName || "?")[0].toUpperCase()}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    /* ── Landscape: profile image as wide banner ── */
+                    if (heroImageFormat === "landscape") {
+                      const bannerImg = avatarUrl || heroImageUrl;
+                      return (
+                        <div className="relative w-full" style={{ height: 180 }}>
+                          {bannerImg ? (
+                            <>
+                              <img src={bannerImg} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                              <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.6) 100%)" }} />
+                            </>
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: isDark ? "#1e2433" : "#e5e7eb" }}>
+                              <div className="rounded-full flex items-center justify-center font-bold" style={{ width: 64, height: 64, fontSize: 24, color: phoneSubtext, backgroundColor: isDark ? "#2d3548" : "#d1d5db" }}>
+                                {(displayName || "?")[0].toUpperCase()}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    /* ── Portrait (default): hero banner + circular avatar ── */
+                    const heroVisible = !!(heroImageUrl && theme.showHeroImage);
                     const headerHeight = heroVisible
                       ? (avatarVisible ? 160 + avSize / 2 + 10 : 168)
                       : (avatarVisible ? avSize + 40 : 40);
@@ -1838,9 +1884,30 @@ export default function CreatorBioEditor() {
                             <div key={section.id} style={cStyle}>
                               {links.length > 0 ? (
                                 <div className="space-y-1.5">
-                                  {links.slice(0, 3).map((link: any) => (
-                                    <div key={link.id} className="text-[11px] py-2 px-3 text-center truncate font-medium" style={getLinkItemStyle()}>{link.label || link.url || "Untitled link"}</div>
-                                  ))}
+                                  {links.slice(0, 3).map((link: any) => {
+                                    const imgType = link.imageDisplayType as string | undefined;
+                                    const imgUrl = link.imageUrl as string | undefined;
+                                    const showIcon = imgType === "icon" && imgUrl;
+                                    const showFeatured = imgType === "featured" && imgUrl;
+
+                                    if (showFeatured) {
+                                      return (
+                                        <div key={link.id} className="overflow-hidden" style={{ ...getLinkItemStyle(), padding: 0 }}>
+                                          <img src={imgUrl} alt="" className="w-full h-14 object-cover" />
+                                          <div className="text-[11px] py-1.5 px-3 text-center truncate font-medium">
+                                            {link.label || link.url || "Untitled link"}
+                                          </div>
+                                        </div>
+                                      );
+                                    }
+
+                                    return (
+                                      <div key={link.id} className="text-[11px] py-2 px-3 text-center truncate font-medium flex items-center gap-2" style={getLinkItemStyle()}>
+                                        {showIcon && <img src={imgUrl} alt="" className="h-5 w-5 rounded-full object-cover shrink-0" />}
+                                        <span className="truncate flex-1">{link.label || link.url || "Untitled link"}</span>
+                                      </div>
+                                    );
+                                  })}
                                   {links.length > 3 && <p className="text-[10px] pl-3" style={{ color: phoneSubtext }}>+{links.length - 3} more</p>}
                                 </div>
                               ) : (
@@ -2253,17 +2320,7 @@ export default function CreatorBioEditor() {
                           </div>
                         );
                       })}
-                      <Button
-                        variant="outline"
-                        className="w-full border-dashed text-xs h-8"
-                        onClick={() => {
-                          updateSectionConfig(section.id, {
-                            links: [...links, { id: generateId(), label: "", url: "", imageDisplayType: "none", description: "" }],
-                          });
-                        }}
-                      >
-                        <Plus className="h-3 w-3 mr-1.5" />Add Link
-                      </Button>
+                      {/* Add Another Link button moved to footer */}
                     </div>
                   );
                 })()}
@@ -2441,16 +2498,31 @@ export default function CreatorBioEditor() {
               </div>
 
               {/* Footer */}
-              <div className="px-5 py-3 border-t border-border shrink-0">
+              <div className="px-5 py-3 border-t border-border shrink-0 space-y-2">
                 <Button
                   className="w-full bg-[#1B3A6B] hover:bg-[#152e55] text-white text-xs"
                   onClick={() => {
                     persistSections(sections);
                     toast.success("Changes saved!");
+                    setEditingSectionId(null);
                   }}
                 >
-                  Save Changes
+                  Save &amp; Close
                 </Button>
+                {showAddBtn && (
+                  <Button
+                    variant="ghost"
+                    className="w-full text-xs text-muted-foreground"
+                    onClick={() => {
+                      const curLinks = ((section.config ?? {}) as Record<string, any>).links ?? [];
+                      updateSectionConfig(section.id, {
+                        links: [...curLinks, { id: generateId(), label: "", url: "", imageDisplayType: "none", description: "" }],
+                      });
+                    }}
+                  >
+                    <Plus className="h-3 w-3 mr-1.5" />+ Add Another Link
+                  </Button>
+                )}
               </div>
             </div>
           </>
