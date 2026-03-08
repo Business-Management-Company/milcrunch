@@ -211,6 +211,7 @@ const App = () => (
               <Route path="/sign-in" element={<Navigate to="/login" replace />} />
               <Route path="/signup" element={<SignupPage />} />
               <Route path="/signup-private" element={<SignupPrivate />} />
+
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/plans" element={<PlansPage />} />
               <Route path="/resources" element={<Resources />} />
