@@ -159,12 +159,44 @@ export default function CreatePost({ noLayout, postType }: { noLayout?: boolean;
       const upUser = await resolveUploadPostUsername(user.id);
       console.log("[PostNow] resolved UploadPost user:", upUser, "platforms:", selectedPlatforms);
       const scheduled = (!immediate && scheduledDate) ? new Date(scheduledDate).toISOString() : undefined;
+
+      // Upload file to Supabase Storage if user selected files (mediaUrl is only for pasted URLs)
+      let finalMediaUrl: string | undefined;
+      let finalMediaType: "photo" | "video" | undefined;
+
+      if (mediaFiles.length > 0) {
+        const file = mediaFiles[0];
+        finalMediaType = file.type.startsWith("video/") ? "video" : "photo";
+        const ext = file.name.split(".").pop() ?? "jpg";
+        const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        console.log("[PostNow] uploading media to Supabase Storage:", path, "type:", file.type, "size:", file.size);
+
+        const { error: upErr } = await supabase.storage
+          .from("post-media")
+          .upload(path, file, { contentType: file.type });
+
+        if (upErr) {
+          toast.error(`Media upload failed: ${upErr.message}`);
+          setPosting(false);
+          return;
+        }
+
+        const { data: urlData } = supabase.storage
+          .from("post-media")
+          .getPublicUrl(path);
+        finalMediaUrl = urlData.publicUrl;
+        console.log("[PostNow] uploaded media URL:", finalMediaUrl);
+      } else if (mediaType !== "none" && mediaUrl.trim()) {
+        finalMediaUrl = mediaUrl.trim();
+        finalMediaType = mediaType as "photo" | "video";
+      }
+
       const result = await createUploadPost({
         text: caption.trim(),
         user: upUser,
         platforms: selectedPlatforms,
-        media_url: (mediaType !== "none" && mediaUrl.trim()) ? mediaUrl.trim() : undefined,
-        media_type: mediaType === "none" ? undefined : mediaType,
+        media_url: finalMediaUrl,
+        media_type: finalMediaType,
         scheduled_at: scheduled,
       });
       if (result.success) {

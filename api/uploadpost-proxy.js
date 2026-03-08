@@ -97,8 +97,22 @@ export default async function handler(req, res) {
               form.append("platform[]", String(p));
             }
           } else if (key === "photos" && Array.isArray(value)) {
-            for (const p of value) {
-              form.append("photos[]", String(p));
+            // UploadPost requires actual file blobs for 'photo' field, not URL strings
+            for (const photoUrl of value) {
+              try {
+                console.log("[uploadpost-proxy] Fetching photo blob from:", String(photoUrl));
+                const photoRes = await fetch(String(photoUrl));
+                if (!photoRes.ok) throw new Error(`HTTP ${photoRes.status}`);
+                const buffer = await photoRes.arrayBuffer();
+                const contentType = photoRes.headers.get("content-type") || "image/jpeg";
+                const blob = new Blob([buffer], { type: contentType });
+                const ext = (contentType.split("/")[1] || "jpg").split(";")[0];
+                form.append("photo", blob, `image.${ext}`);
+                console.log("[uploadpost-proxy] Appended photo blob:", blob.size, "bytes, type:", contentType);
+              } catch (fetchErr) {
+                console.error("[uploadpost-proxy] Failed to fetch photo blob:", fetchErr.message, "— falling back to URL string");
+                form.append("photo", String(photoUrl));
+              }
             }
           } else if (Array.isArray(value)) {
             for (const v of value) {
