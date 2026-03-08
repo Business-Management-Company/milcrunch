@@ -308,7 +308,7 @@ export interface UploadResult {
   error?: string;
 }
 
-/** Upload video (URL string only — File uploads not supported through proxy). */
+/** Upload video via dedicated /api/upload-videos serverless function. */
 export async function uploadVideo(opts: UploadVideoOptions): Promise<UploadResult> {
   const body: Record<string, unknown> = {
     title: opts.title,
@@ -319,15 +319,24 @@ export async function uploadVideo(opts: UploadVideoOptions): Promise<UploadResul
   if (opts.scheduled_date) body.scheduled_date = opts.scheduled_date;
   if (opts.async_upload) body.async_upload = true;
   if (opts.first_comment) body.first_comment = opts.first_comment;
-  if (opts.media_type) body.media_type = opts.media_type;
 
-  const { status, data } = await proxyFetch("/api/upload_videos", "POST", body);
-  if (status >= 400)
-    return { success: false, error: data.message ?? data.error ?? `HTTP ${status}` };
+  console.log("[UploadPost] upload-videos direct POST:", JSON.stringify(body, null, 2));
+
+  const res = await fetch("/api/upload-videos", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  console.log("[UploadPost] upload-videos response:", res.status, JSON.stringify(data, null, 2));
+
+  if (res.status >= 400)
+    return { success: false, error: data.message ?? data.error ?? `HTTP ${res.status}` };
   return data;
 }
 
-/** Upload photos (URL strings only — File uploads not supported through proxy). */
+/** Upload photos via dedicated /api/upload-photos serverless function. */
 export async function uploadPhotos(opts: UploadPhotosOptions): Promise<UploadResult> {
   const body: Record<string, unknown> = {
     title: opts.title,
@@ -338,15 +347,24 @@ export async function uploadPhotos(opts: UploadPhotosOptions): Promise<UploadRes
   if (opts.scheduled_date) body.scheduled_date = opts.scheduled_date;
   if (opts.async_upload) body.async_upload = true;
   if (opts.first_comment) body.first_comment = opts.first_comment;
-  if (opts.media_type) body.media_type = opts.media_type;
 
-  const { status, data } = await proxyFetch("/api/upload_photos", "POST", body);
-  if (status >= 400)
-    return { success: false, error: data.message ?? data.error ?? `HTTP ${status}` };
+  console.log("[UploadPost] upload-photos direct POST:", JSON.stringify(body, null, 2));
+
+  const res = await fetch("/api/upload-photos", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  console.log("[UploadPost] upload-photos response:", res.status, JSON.stringify(data, null, 2));
+
+  if (res.status >= 400)
+    return { success: false, error: data.message ?? data.error ?? `HTTP ${res.status}` };
   return data;
 }
 
-/** Upload text-only post. */
+/** Upload text-only post via dedicated /api/upload-text serverless function. */
 export async function uploadText(opts: UploadTextOptions): Promise<UploadResult> {
   const body: Record<string, unknown> = {
     title: opts.title,
@@ -356,11 +374,20 @@ export async function uploadText(opts: UploadTextOptions): Promise<UploadResult>
   if (opts.scheduled_date) body.scheduled_date = opts.scheduled_date;
   if (opts.async_upload) body.async_upload = true;
   if (opts.first_comment) body.first_comment = opts.first_comment;
-  if (opts.media_type) body.media_type = opts.media_type;
 
-  const { status, data } = await proxyFetch("/api/upload_text", "POST", body);
-  if (status >= 400)
-    return { success: false, error: data.message ?? data.error ?? `HTTP ${status}` };
+  console.log("[UploadPost] upload-text direct POST:", JSON.stringify(body, null, 2));
+
+  const res = await fetch("/api/upload-text", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  console.log("[UploadPost] upload-text response:", res.status, JSON.stringify(data, null, 2));
+
+  if (res.status >= 400)
+    return { success: false, error: data.message ?? data.error ?? `HTTP ${res.status}` };
   return data;
 }
 
