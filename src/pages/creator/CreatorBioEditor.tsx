@@ -752,7 +752,7 @@ export default function CreatorBioEditor() {
         {/* ── BODY ── */}
         <div className="flex flex-1 min-h-0 bg-muted/30 rounded-b-xl overflow-hidden">
           {/* ── CONTENT PANEL ── */}
-          <div className={`flex-1 md:max-w-[420px] overflow-y-auto border-r border-border bg-card ${activeTab === "design" ? "" : "p-5"}`}>
+          <div className={`flex-1 md:min-w-[420px] md:max-w-[480px] overflow-y-auto border-r border-border bg-card ${activeTab === "design" ? "" : "p-5"}`}>
 
             {/* ── PROFILE TAB (inline editor) ── */}
             {activeTab === "profile" && (
@@ -1486,7 +1486,8 @@ export default function CreatorBioEditor() {
 
             {/* ── SECTIONS TAB ── */}
             {activeTab === "sections" && (
-              <div className="space-y-3">
+              <div className="flex flex-col h-full">
+              <div className="flex-1 space-y-3 overflow-y-auto pb-2">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-foreground">Page Content</h2>
                   <span className="text-[11px] text-muted-foreground">
@@ -1512,7 +1513,7 @@ export default function CreatorBioEditor() {
                     return (
                       <div
                         key={section.id}
-                        className="flex items-center gap-2 rounded-lg p-2.5 transition-colors bg-[#F0F4FF] border border-[#1B3A6B]/15"
+                        className="flex items-center gap-2.5 rounded-lg px-3 py-4 transition-colors bg-[#F0F4FF] border border-[#1B3A6B]/15"
                       >
                         <GripVertical className="h-3.5 w-3.5 text-[#1B3A6B]/40 shrink-0 cursor-grab" />
                         <button
@@ -1582,7 +1583,7 @@ export default function CreatorBioEditor() {
                   return (
                     <div
                       key={section.id}
-                      className={`flex items-center gap-2.5 rounded-lg border p-2.5 transition-colors ${
+                      className={`flex items-center gap-3 rounded-lg border px-3 py-4 transition-colors ${
                         section.visible ? "bg-card border-border" : "bg-muted/50 border-border/50 opacity-60"
                       } ${isGrouped ? "ml-5 border-l-[3px] border-l-[#1B3A6B]" : ""}`}
                     >
@@ -1592,10 +1593,11 @@ export default function CreatorBioEditor() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-medium text-xs truncate">{section.label}</span>
+                          <span className="font-medium text-sm truncate">{section.label}</span>
                           {entry.comingSoon && <Badge variant="secondary" className="text-[9px] px-1 py-0 shrink-0">Soon</Badge>}
                         </div>
                         <p className="text-[11px] text-muted-foreground truncate">{entry.description}</p>
+                        <p className="text-[10px] text-muted-foreground/50 mt-0.5">Drag to reorder &middot; Click to edit</p>
                       </div>
                       <div className="flex items-center gap-0.5 shrink-0">
                         <Button variant="ghost" size="icon" className="h-6 w-6" disabled={idx === 0} onClick={() => moveSection(section.id, "up")}>
@@ -1615,18 +1617,21 @@ export default function CreatorBioEditor() {
                     </div>
                   );
                 })}
-                <Button
-                  variant="outline"
-                  className="w-full border-dashed text-xs h-9"
-                  onClick={() => {
-                    const lastST = [...sections].reverse().find(s => s.type === "section_title");
-                    setTargetGroupId(lastST?.id ?? null);
-                    setModalOpen(true);
-                  }}
-                >
-                  <Plus className="h-3.5 w-3.5 mr-1.5" />
-                  Add Content
-                </Button>
+              </div>
+                <div className="shrink-0 pt-3 pb-1 border-t border-border bg-card sticky bottom-0">
+                  <Button
+                    variant="outline"
+                    className="w-full border-dashed text-xs h-10"
+                    onClick={() => {
+                      const lastST = [...sections].reverse().find(s => s.type === "section_title");
+                      setTargetGroupId(lastST?.id ?? null);
+                      setModalOpen(true);
+                    }}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    Add Content
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -1814,11 +1819,7 @@ export default function CreatorBioEditor() {
                         if (section.type === "podcast") {
                           return (
                             <div key={section.id} style={cStyle}>
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-bold tracking-wide" style={{ color: theme.themeColor, fontSize: "12px" }}>&bull;&bull;&bull;</span>
-                                <span className="text-[11px] font-semibold" style={{ color: theme.themeColor }}>{section.label}</span>
-                              </div>
-                              <p className="text-[10px] mt-0.5" style={{ color: phoneSubtext }}>Display your podcast episodes</p>
+                              <p className="text-[10px]" style={{ color: phoneSubtext }}>Display your podcast episodes</p>
                             </div>
                           );
                         }
@@ -1827,10 +1828,6 @@ export default function CreatorBioEditor() {
                           const links = (cfg.links as any[]) ?? [];
                           return (
                             <div key={section.id} style={cStyle}>
-                              <div className="flex items-center gap-1.5 mb-1.5">
-                                <Link className="h-3.5 w-3.5" style={{ color: theme.themeColor }} />
-                                <span className="text-[11px] font-semibold" style={{ color: theme.themeColor }}>Custom Links</span>
-                              </div>
                               {links.length > 0 ? (
                                 <div className="space-y-1.5">
                                   {links.slice(0, 3).map((link: any) => (
@@ -1848,12 +1845,8 @@ export default function CreatorBioEditor() {
                         if (section.type === "book_meeting") {
                           return (
                             <div key={section.id} style={cStyle}>
-                              <div className="flex items-center gap-2.5">
-                                <div className="flex items-center justify-center h-8 w-8 rounded-lg shrink-0" style={{ backgroundColor: `${theme.themeColor}15` }}><CalendarCheck className="h-4 w-4" style={{ color: theme.themeColor }} /></div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-[11px] font-semibold" style={{ color: theme.themeColor }}>{(cfg.buttonLabel as string) || "Book a Meeting"}</p>
-                                  <p className="text-[10px]" style={{ color: phoneSubtext }}>Schedule time with me</p>
-                                </div>
+                              <div className="text-[11px] py-2 px-3 text-center font-medium" style={getLinkItemStyle()}>
+                                {(cfg.buttonLabel as string) || "Book a Meeting"}
                               </div>
                             </div>
                           );
@@ -1861,16 +1854,7 @@ export default function CreatorBioEditor() {
 
                         return (
                           <div key={section.id} style={cStyle}>
-                            <div className="flex items-center gap-2.5">
-                              <div className="flex items-center justify-center h-8 w-8 rounded-lg shrink-0" style={{ backgroundColor: `${theme.themeColor}15`, color: theme.themeColor }}>{getSectionIcon(entry)}</div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-[11px] font-medium truncate" style={{ color: theme.themeColor }}>{section.label}</span>
-                                  {entry.comingSoon && <span className="text-[9px] px-1.5 py-px rounded font-medium" style={{ backgroundColor: isDark ? "#2d3548" : "#e5e7eb", color: phoneSubtext }}>SOON</span>}
-                                </div>
-                                <p className="text-[10px] truncate" style={{ color: phoneSubtext }}>{entry.description}</p>
-                              </div>
-                            </div>
+                            <p className="text-[10px] truncate" style={{ color: phoneSubtext }}>{entry.description}</p>
                           </div>
                         );
                       })
