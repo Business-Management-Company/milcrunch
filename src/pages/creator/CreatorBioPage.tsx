@@ -344,6 +344,110 @@ export default function CreatorBioPage() {
   const isSquare = creator.hero_image_format === "square";
   const heroSrc = creator.hero_image_url || creator.avatar_url;
 
+  /* ---- Shared rendering blocks (used in both mobile & tablet/desktop layouts) ---- */
+  const tabPills = creator.tabs.length > 0
+    ? creator.tabs.map((tab) => (
+        <button
+          key={tab.type}
+          type="button"
+          onClick={() => setActiveTab(tab.type)}
+          className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+            activeTab === tab.type
+              ? "bg-gray-900 text-white"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
+        >
+          {tab.label}
+        </button>
+      ))
+    : null;
+
+  const tabContent = (
+    <>
+      {(!activeTab || activeTab === "links") && (
+        <div className="space-y-3">
+          {creator.links.map((link, i) => (
+            <a
+              key={`${link.label}-${i}`}
+              href={link.url.startsWith("http") ? link.url : undefined}
+              target={link.url.startsWith("http") ? "_blank" : undefined}
+              rel={link.url.startsWith("http") ? "noopener noreferrer" : undefined}
+              onClick={() => {
+                if (link.url.startsWith("http")) trackBioLinkClick(creatorHandle, link.url, link.label);
+              }}
+              className="flex items-center gap-3 w-full py-3.5 px-4 rounded-xl bg-gray-900 text-white font-medium hover:bg-gray-800 active:scale-[0.98] transition-all text-left"
+            >
+              {linkIcon(link.icon)}
+              <span className="flex-1 truncate">{link.label}</span>
+              {link.url.startsWith("http") && <ExternalLink className="h-4 w-4 shrink-0 opacity-70" />}
+            </a>
+          ))}
+          {creator.links.length === 0 && (
+            <p className="text-sm text-gray-500 text-center py-4">No links yet.</p>
+          )}
+        </div>
+      )}
+      {activeTab === "events" && (
+        <div className="text-sm text-gray-500 text-center py-6">
+          Events section — coming soon. Events you&apos;re attending will appear here.
+        </div>
+      )}
+      {activeTab === "content" && (
+        <div className="text-sm text-gray-500 text-center py-6">
+          Content — recent posts from your connected platforms will appear here.
+        </div>
+      )}
+      {activeTab === "shop" && (
+        <div className="text-sm text-gray-500 text-center py-6">
+          Shop — affiliate and product links will appear here.
+        </div>
+      )}
+      {activeTab === "about" && (
+        <div className="prose prose-sm max-w-none text-gray-600">
+          {creator.bio ? <p>{creator.bio}</p> : <p className="text-gray-500">No about section yet.</p>}
+          {creator.service_line && <p className="text-sm mt-2">{creator.service_line}</p>}
+        </div>
+      )}
+    </>
+  );
+
+  const renderSocialRow = (iconSize: number) =>
+    creator.socialAccounts.length > 0 ? (
+      creator.socialAccounts.map((acc) => (
+        <a
+          key={acc.platform}
+          href={socialUrl(acc.platform, acc.platform_username)}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() =>
+            acc.platform_username &&
+            trackBioLinkClick(creatorHandle, socialUrl(acc.platform, acc.platform_username), acc.platform)
+          }
+          className="relative p-2 rounded-full text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+          aria-label={acc.platform}
+        >
+          <PlatformIcon platform={acc.platform} size={iconSize} />
+          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white" />
+        </a>
+      ))
+    ) : (
+      creator.links.slice(0, 4).map((link, i) =>
+        link.url.startsWith("http") ? (
+          <a
+            key={i}
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => trackBioLinkClick(creatorHandle, link.url, link.label)}
+            className="p-2 rounded-full text-gray-600 hover:bg-gray-100"
+            aria-label={link.label}
+          >
+            {linkIcon(link.icon)}
+          </a>
+        ) : null
+      )
+    );
+
   return (
     <div className="min-h-screen" style={bgStyle}>
       {/* Cookie consent */}
@@ -355,18 +459,10 @@ export default function CreatorBioPage() {
               consent. <a href="/privacy" className="text-[#F0A71F] hover:underline">Privacy</a>
             </p>
             <div className="flex gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={denyConsent}
-                className="px-4 py-2 rounded-lg border border-white/30 text-white/90 hover:bg-white/10"
-              >
+              <button type="button" onClick={denyConsent} className="px-4 py-2 rounded-lg border border-white/30 text-white/90 hover:bg-white/10">
                 Essential only
               </button>
-              <button
-                type="button"
-                onClick={acceptConsent}
-                className="px-4 py-2 rounded-lg bg-[#F0A71F] text-[#0a1628] font-medium hover:bg-[#e09a18]"
-              >
+              <button type="button" onClick={acceptConsent} className="px-4 py-2 rounded-lg bg-[#F0A71F] text-[#0a1628] font-medium hover:bg-[#e09a18]">
                 Allow
               </button>
             </div>
@@ -374,234 +470,172 @@ export default function CreatorBioPage() {
         </div>
       )}
 
-      {/* Desktop: centered card; mobile: full width */}
-      <div className="md:max-w-[480px] md:mx-auto md:mt-8 md:mb-8 md:rounded-2xl md:overflow-hidden md:shadow-xl">
-        {/* --- LANDSCAPE: full-bleed hero --- */}
+      {/* ===== MOBILE LAYOUT (< 768px) — unchanged from current ===== */}
+      <div className="md:hidden">
+        {/* Landscape hero */}
         {isLandscape && (
           <div className="relative w-full">
-            {/* Hero: full width, no padding on mobile */}
-            <div className="w-full overflow-hidden md:rounded-t-2xl">
+            <div className="w-full overflow-hidden">
               {heroSrc ? (
-                <img
-                  src={heroSrc}
-                  alt={creator.display_name}
-                  className="w-full aspect-[4/3] md:aspect-[3/2] object-cover block"
-                />
+                <img src={heroSrc} alt={creator.display_name} className="w-full aspect-[4/3] object-cover block" />
               ) : (
-                <div
-                  className="w-full aspect-[4/3] md:aspect-[3/2] bg-[#0a1628] flex items-center justify-center text-white text-4xl font-light"
-                  style={{ letterSpacing: "0.15em" }}
-                >
+                <div className="w-full aspect-[4/3] bg-[#0a1628] flex items-center justify-center text-white text-4xl font-light" style={{ letterSpacing: "0.15em" }}>
                   {getInitials(creator.display_name, creatorHandle)}
                 </div>
               )}
-              {/* Gradient overlay + name on image (landscape) */}
-              <div
-                className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none"
-                style={{ top: "30%" }}
-              />
-              <div
-                className="absolute bottom-0 left-0 right-0 p-4 pb-6 text-white"
-                style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}
-              >
-                <h1
-                  className="text-xl md:text-2xl font-light tracking-[0.15em] uppercase text-center"
-                  style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}
-                >
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" style={{ top: "30%" }} />
+              <div className="absolute bottom-0 left-0 right-0 p-4 pb-6 text-white" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
+                <h1 className="text-xl font-light tracking-[0.15em] uppercase text-center" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
                   {creator.display_name}
                 </h1>
                 {(creator.branch || creator.is_verified_veteran) && (
                   <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
-                    {creator.branch && (
-                      <span className="text-xs uppercase tracking-wider opacity-90">
-                        {BRANCH_LABELS[creator.branch] || creator.branch}
-                      </span>
-                    )}
-                    {creator.is_verified_veteran && (
-                      <ShieldCheck className="h-4 w-4 text-[#F0A71F]" aria-label="Verified Veteran" />
-                    )}
+                    {creator.branch && <span className="text-xs uppercase tracking-wider opacity-90">{BRANCH_LABELS[creator.branch] || creator.branch}</span>}
+                    {creator.is_verified_veteran && <ShieldCheck className="h-4 w-4 text-[#F0A71F]" aria-label="Verified Veteran" />}
                   </div>
                 )}
               </div>
             </div>
-            {/* Name below hero (alternative when no overlay) - hidden when we use overlay */}
-            <div className="px-4 py-3 bg-white/95 md:bg-white text-center border-b border-gray-100 md:hidden">
+            <div className="px-4 py-3 bg-white/95 text-center border-b border-gray-100">
               <p className="text-sm text-gray-500">@{creatorHandle}</p>
             </div>
           </div>
         )}
 
-        {/* --- PORTRAIT / SQUARE: white card with image --- */}
+        {/* Portrait / Square */}
         {(isPortrait || isSquare) && (
-          <div className="bg-white rounded-t-2xl md:rounded-t-2xl shadow-sm overflow-hidden">
-            <div className="p-4 md:p-6 flex flex-col items-center">
-              <div
-                className={
-                  isPortrait
-                    ? "w-32 md:w-40 aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 flex-shrink-0"
-                    : "w-40 md:w-48 aspect-square rounded-xl overflow-hidden bg-gray-100 flex-shrink-0"
-                }
-              >
+          <div className="bg-white rounded-t-2xl shadow-sm overflow-hidden">
+            <div className="p-4 flex flex-col items-center">
+              <div className={isPortrait ? "w-32 aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 flex-shrink-0" : "w-40 aspect-square rounded-xl overflow-hidden bg-gray-100 flex-shrink-0"}>
                 {heroSrc ? (
-                  <img
-                    src={heroSrc}
-                    alt={creator.display_name}
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={heroSrc} alt={creator.display_name} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-2xl font-semibold text-gray-400">
-                    {getInitials(creator.display_name, creatorHandle)}
-                  </div>
+                  <div className="w-full h-full flex items-center justify-center text-2xl font-semibold text-gray-400">{getInitials(creator.display_name, creatorHandle)}</div>
                 )}
               </div>
-              <h1 className="mt-4 text-xl md:text-2xl font-semibold text-gray-900 tracking-tight">
+              <h1 className="mt-4 text-xl font-semibold text-gray-900 tracking-tight">
                 {creator.display_name}
-                {creator.is_verified && (
-                  <ShieldCheck className="inline-block h-5 w-5 ml-1 text-[#F0A71F]" aria-label="Verified" />
-                )}
-                {creator.is_verified_veteran && !creator.is_verified && (
-                  <ShieldCheck className="inline-block h-5 w-5 ml-1 text-[#F0A71F]" aria-label="Verified Veteran" />
-                )}
+                {creator.is_verified && <ShieldCheck className="inline-block h-5 w-5 ml-1 text-[#F0A71F]" aria-label="Verified" />}
+                {creator.is_verified_veteran && !creator.is_verified && <ShieldCheck className="inline-block h-5 w-5 ml-1 text-[#F0A71F]" aria-label="Verified Veteran" />}
               </h1>
               <p className="text-sm text-gray-500 mt-0.5">@{creatorHandle}</p>
-              {creator.service_line && (
-                <p className="text-xs text-gray-500 mt-1">{creator.service_line}</p>
-              )}
+              {creator.service_line && <p className="text-xs text-gray-500 mt-1">{creator.service_line}</p>}
             </div>
           </div>
         )}
 
-        {/* Social icons row (below name for portrait/square; below hero block for landscape) */}
+        {/* Social icons */}
         <div className="bg-white px-4 py-3 flex items-center justify-center gap-4 border-b border-gray-100">
-          {creator.socialAccounts.length > 0 ? (
-            creator.socialAccounts.map((acc) => (
-              <a
-                key={acc.platform}
-                href={socialUrl(acc.platform, acc.platform_username)}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() =>
-                  acc.platform_username &&
-                  trackBioLinkClick(
-                    creatorHandle,
-                    socialUrl(acc.platform, acc.platform_username),
-                    acc.platform
-                  )
-                }
-                className="relative p-2 rounded-full text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
-                aria-label={acc.platform}
-              >
-                {socialIcon(acc.platform, "h-5 w-5")}
-                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white" aria-label="Verified" />
-              </a>
-            ))
-          ) : (
-            creator.links.slice(0, 4).map((link, i) =>
-              link.url.startsWith("http") ? (
-                <a
-                  key={i}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => trackBioLinkClick(creatorHandle, link.url, link.label)}
-                  className="p-2 rounded-full text-gray-600 hover:bg-gray-100"
-                  aria-label={link.label}
-                >
-                  {linkIcon(link.icon)}
-                </a>
-              ) : null
-            )
-          )}
+          {renderSocialRow(20)}
         </div>
 
-        {/* Bio text */}
+        {/* Bio */}
         {creator.bio && (
           <div className="bg-white px-4 py-3 border-b border-gray-100">
             <p className="text-sm text-gray-600 text-center max-w-md mx-auto">{creator.bio}</p>
           </div>
         )}
 
-        {/* Tabs (scrollable pills) */}
-        {creator.tabs.length > 0 && (
+        {/* Tabs */}
+        {tabPills && (
           <div className="bg-white border-b border-gray-100 overflow-x-auto no-scrollbar">
-            <div className="flex gap-1 p-2 min-w-0">
-              {creator.tabs.map((tab) => (
-                <button
-                  key={tab.type}
-                  type="button"
-                  onClick={() => setActiveTab(tab.type)}
-                  className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    activeTab === tab.type
-                      ? "bg-gray-900 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+            <div className="flex gap-1 p-2 min-w-0">{tabPills}</div>
           </div>
         )}
 
         {/* Tab content */}
-        <div className="bg-white px-4 py-6 pb-8">
-          {(!activeTab || activeTab === "links") && (
-            <div className="space-y-3">
-              {creator.links.map((link, i) => (
-                <a
-                  key={`${link.label}-${i}`}
-                  href={link.url.startsWith("http") ? link.url : undefined}
-                  target={link.url.startsWith("http") ? "_blank" : undefined}
-                  rel={link.url.startsWith("http") ? "noopener noreferrer" : undefined}
-                  onClick={() => {
-                    if (link.url.startsWith("http")) trackBioLinkClick(creatorHandle, link.url, link.label);
-                  }}
-                  className="flex items-center gap-3 w-full py-3.5 px-4 rounded-xl bg-gray-900 text-white font-medium hover:bg-gray-800 active:scale-[0.98] transition-all text-left"
-                >
-                  {linkIcon(link.icon)}
-                  <span className="flex-1 truncate">{link.label}</span>
-                  {link.url.startsWith("http") && <ExternalLink className="h-4 w-4 shrink-0 opacity-70" />}
-                </a>
-              ))}
-              {creator.links.length === 0 && (
-                <p className="text-sm text-gray-500 text-center py-4">No links yet.</p>
+        <div className="bg-white px-4 py-6 pb-8">{tabContent}</div>
+      </div>
+
+      {/* ===== TABLET + DESKTOP LAYOUT (>= 768px) ===== */}
+      <div className="hidden md:block">
+        <div className="md:max-w-[600px] lg:max-w-[960px] mx-auto mt-8 mb-8 rounded-2xl overflow-hidden shadow-xl bg-white">
+          {/* Cover image — 200px tablet, 240px desktop */}
+          <div className="relative w-full md:h-[200px] lg:h-[240px] overflow-hidden">
+            {heroSrc ? (
+              <img src={heroSrc} alt={creator.display_name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-[#0a1628] flex items-center justify-center">
+                <span className="text-white text-4xl font-light" style={{ letterSpacing: "0.15em" }}>
+                  {getInitials(creator.display_name, creatorHandle)}
+                </span>
+              </div>
+            )}
+            {/* Avatar overlapping cover — centered on tablet, left-aligned on desktop */}
+            <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 lg:left-8 lg:translate-x-0 z-10">
+              <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden bg-gray-100 shadow-md">
+                {creator.avatar_url ? (
+                  <img src={creator.avatar_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xl font-semibold bg-[#0a1628] text-white">
+                    {getInitials(creator.display_name, creatorHandle)}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Spacer for avatar overlap */}
+          <div className="h-14" />
+
+          {/* Single column on tablet, two columns on desktop */}
+          <div className="lg:flex">
+            {/* Profile info — centered on tablet, left sidebar on desktop */}
+            <div className="lg:w-[280px] lg:shrink-0 lg:border-r lg:border-[#E5E7EB] px-8 lg:px-6 pb-4 lg:pb-6 lg:sticky lg:top-0 lg:self-start text-center lg:text-left">
+              <h1 className="text-2xl lg:text-[28px] font-semibold lg:font-bold text-gray-900 leading-tight">
+                {creator.display_name}
+                {(creator.is_verified || creator.is_verified_veteran) && (
+                  <ShieldCheck className="inline-block h-5 w-5 ml-1.5 text-[#F0A71F]" />
+                )}
+              </h1>
+              <p className="text-sm text-gray-500 mt-0.5">@{creatorHandle}</p>
+              {creator.service_line && <p className="text-xs text-gray-500 mt-1">{creator.service_line}</p>}
+
+              {creator.branch && (
+                <div className="flex items-center justify-center lg:justify-start gap-2 mt-2">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 uppercase tracking-wider">
+                    {BRANCH_LABELS[creator.branch] || creator.branch}
+                  </span>
+                </div>
               )}
+
+              {creator.bio && (
+                <p className="text-sm text-gray-600 mt-3 leading-relaxed">{creator.bio}</p>
+              )}
+
+              {/* Social icons — 32px on tablet, 20px on desktop */}
+              <div className="flex items-center justify-center lg:justify-start gap-3 mt-4 flex-wrap">
+                {/* Tablet icons (32px) */}
+                <span className="contents lg:hidden">{renderSocialRow(32)}</span>
+                {/* Desktop icons (20px) */}
+                <span className="hidden lg:contents">{renderSocialRow(20)}</span>
+              </div>
             </div>
-          )}
-          {activeTab === "events" && (
-            <div className="text-sm text-gray-500 text-center py-6">
-              Events section — coming soon. Events you&apos;re attending will appear here.
+
+            {/* Content area */}
+            <div className="flex-1 min-w-0">
+              {/* Separator on tablet between profile info and content */}
+              <div className="lg:hidden border-b border-gray-100 mx-8 mt-2" />
+
+              {/* Tabs */}
+              {tabPills && (
+                <div className="border-b border-gray-100 overflow-x-auto no-scrollbar">
+                  <div className="flex gap-1 p-3 px-8 lg:px-4 min-w-0">{tabPills}</div>
+                </div>
+              )}
+
+              {/* Tab content */}
+              <div className="px-8 lg:px-6 py-6 pb-8">{tabContent}</div>
             </div>
-          )}
-          {activeTab === "content" && (
-            <div className="text-sm text-gray-500 text-center py-6">
-              Content — recent posts from your connected platforms will appear here.
-            </div>
-          )}
-          {activeTab === "shop" && (
-            <div className="text-sm text-gray-500 text-center py-6">
-              Shop — affiliate and product links will appear here.
-            </div>
-          )}
-          {activeTab === "about" && (
-            <div className="prose prose-sm max-w-none text-gray-600">
-              {creator.bio ? <p>{creator.bio}</p> : <p className="text-gray-500">No about section yet.</p>}
-              {creator.service_line && <p className="text-sm mt-2">{creator.service_line}</p>}
-            </div>
-          )}
+          </div>
         </div>
       </div>
 
-      {/* Powered by MilCrunch bar (dismissible) */}
+      {/* Powered by MilCrunch bar */}
       {!poweredByDismissed && (
-        <div className="sticky bottom-0 left-0 right-0 z-40 flex items-center justify-center gap-2 py-2 px-4 bg-white/90 backdrop-blur border-t border-gray-200 md:max-w-[480px] md:mx-auto md:rounded-b-2xl md:mb-8">
+        <div className="sticky bottom-0 left-0 right-0 z-40 flex items-center justify-center gap-2 py-2 px-4 bg-white/90 backdrop-blur border-t border-gray-200 md:max-w-[600px] lg:max-w-[960px] md:mx-auto md:rounded-b-2xl md:mb-8">
           <span className="text-xs text-gray-500">Powered by MilCrunch</span>
-          <button
-            type="button"
-            onClick={() => setPoweredByDismissed(true)}
-            className="text-xs text-gray-400 hover:text-gray-600"
-            aria-label="Dismiss"
-          >
+          <button type="button" onClick={() => setPoweredByDismissed(true)} className="text-xs text-gray-400 hover:text-gray-600" aria-label="Dismiss">
             ×
           </button>
         </div>
