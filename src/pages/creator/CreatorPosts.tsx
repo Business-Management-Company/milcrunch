@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import CreatorLayout from "@/components/layout/CreatorLayout";
 import CreatePost from "./CreatePost";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,14 +17,21 @@ import {
   Trash2,
   Send,
   Pencil,
+  LayoutGrid,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createUploadPost, type UploadPostPlatform } from "@/services/upload-post";
 import { resolveUploadPostUsername } from "@/lib/upload-post-sync";
 
-type TopTab = "create" | "drafts" | "scheduled" | "published" | "failed";
+type PostType = "single" | "cadence";
+type StatusTab = "create" | "drafts" | "scheduled" | "published" | "failed";
 
-const TABS: { value: TopTab; label: string; icon: typeof PenSquare }[] = [
+const POST_TYPE_TABS: { value: PostType; label: string; icon: typeof FileText }[] = [
+  { value: "single", label: "Single Post", icon: FileText },
+  { value: "cadence", label: "Cadence Campaign", icon: LayoutGrid },
+];
+
+const STATUS_TABS: { value: StatusTab; label: string; icon: typeof PenSquare }[] = [
   { value: "create", label: "Create", icon: PenSquare },
   { value: "drafts", label: "Drafts", icon: FileText },
   { value: "scheduled", label: "Scheduled", icon: Calendar },
@@ -44,13 +51,29 @@ interface DraftRow {
   created_at: string;
 }
 
+interface StatusCounts {
+  drafts: number;
+  scheduled: number;
+  published: number;
+  failed: number;
+}
+
 export default function CreatorPosts() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const tabParam = searchParams.get("tab") as TopTab | null;
-  const [activeTab, setActiveTab] = useState<TopTab>(
-    tabParam && TABS.some((t) => t.value === tabParam) ? tabParam : "create"
+
+  const tabParam = searchParams.get("tab") as StatusTab | null;
+  const typeParam = searchParams.get("type") as PostType | null;
+
+  const [postType, setPostType] = useState<PostType>(
+    typeParam && POST_TYPE_TABS.some((t) => t.value === typeParam) ? typeParam : "single"
   );
+  const [activeTab, setActiveTab] = useState<StatusTab>(
+    tabParam && STATUS_TABS.some((t) => t.value === tabParam) ? tabParam : "create"
+  );
+
+  // Counts
+  const [counts, setCounts] = useState<StatusCounts>({ drafts: 0, scheduled: 0, published: 0, failed: 0 });
 
   // Drafts state
   const [drafts, setDrafts] = useState<DraftRow[]>([]);
@@ -58,10 +81,41 @@ export default function CreatorPosts() {
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const switchTab = (tab: TopTab) => {
+  const switchTab = (tab: StatusTab) => {
     setActiveTab(tab);
-    setSearchParams(tab === "create" ? {} : { tab });
+    const params: Record<string, string> = {};
+    if (tab !== "create") params.tab = tab;
+    if (postType !== "single") params.type = postType;
+    setSearchParams(params);
   };
+
+  const switchPostType = (type: PostType) => {
+    setPostType(type);
+    const params: Record<string, string> = {};
+    if (activeTab !== "create") params.tab = activeTab;
+    if (type !== "single") params.type = type;
+    setSearchParams(params);
+  };
+
+  // Fetch counts on mount and when user changes
+  useEffect(() => {
+    if (!user?.id) return;
+    const fetchCounts = async () => {
+      const [draftsRes, scheduledRes, publishedRes, failedRes] = await Promise.all([
+        supabase.from("post_drafts").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("social_posts").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "scheduled"),
+        supabase.from("social_posts").select("id", { count: "exact", head: true }).eq("user_id", user.id).in("status", ["success", "published"]),
+        supabase.from("social_posts").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "failed"),
+      ]);
+      setCounts({
+        drafts: draftsRes.count ?? 0,
+        scheduled: scheduledRes.count ?? 0,
+        published: publishedRes.count ?? 0,
+        failed: failedRes.count ?? 0,
+      });
+    };
+    fetchCounts();
+  }, [user?.id, activeTab]);
 
   // Fetch drafts when tab activates
   useEffect(() => {
@@ -86,6 +140,7 @@ export default function CreatorPosts() {
       toast.error("Failed to delete draft");
     } else {
       setDrafts((prev) => prev.filter((d) => d.id !== id));
+      setCounts((prev) => ({ ...prev, drafts: Math.max(0, prev.drafts - 1) }));
       toast.success("Draft deleted");
     }
     setDeletingId(null);
@@ -117,6 +172,7 @@ export default function CreatorPosts() {
       if (result.success) {
         await supabase.from("post_drafts").delete().eq("id", draft.id);
         setDrafts((prev) => prev.filter((d) => d.id !== draft.id));
+        setCounts((prev) => ({ ...prev, drafts: Math.max(0, prev.drafts - 1) }));
         toast.success(`Published to ${draft.platforms.length} platform(s)!`);
       } else {
         toast.error("Publish failed — check your connected accounts");
@@ -135,25 +191,67 @@ export default function CreatorPosts() {
       minute: "2-digit",
     });
 
+  const getTabLabel = (tab: StatusTab): React.ReactNode => {
+    const count =
+      tab === "drafts" ? counts.drafts
+      : tab === "scheduled" ? counts.scheduled
+      : tab === "published" ? counts.published
+      : tab === "failed" ? counts.failed
+      : 0;
+
+    if (count === 0 || tab === "create") return tab === "create" ? "Create" : STATUS_TABS.find((t) => t.value === tab)!.label;
+
+    const label = STATUS_TABS.find((t) => t.value === tab)!.label;
+    return (
+      <>
+        {label}{" "}
+        <span className={cn("font-semibold", tab === "failed" && "text-red-500")}>
+          ({count})
+        </span>
+      </>
+    );
+  };
+
   return (
     <CreatorLayout>
       <div className="flex flex-col h-[calc(100vh-2rem)] -mt-2">
-        {/* ── TOP TAB BAR ── */}
+        {/* ── ROW 1: Post Type Tabs ── */}
         <div className="shrink-0 border-b border-border bg-card">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 flex overflow-x-auto">
-            {TABS.map((tab) => (
+            {POST_TYPE_TABS.map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => switchPostType(tab.value)}
+                className={cn(
+                  "px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap",
+                  postType === tab.value
+                    ? "border-[#1B3A6B] text-[#1B3A6B] dark:text-blue-400 dark:border-blue-400"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <tab.icon className="h-3.5 w-3.5" />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── ROW 2: Status Tabs ── */}
+        <div className="shrink-0 border-b border-border bg-card/80">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 flex overflow-x-auto">
+            {STATUS_TABS.map((tab) => (
               <button
                 key={tab.value}
                 onClick={() => switchTab(tab.value)}
                 className={cn(
-                  "px-4 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap",
+                  "px-4 py-2 text-[13px] font-medium border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap",
                   activeTab === tab.value
                     ? "border-[#1B3A6B] text-[#1B3A6B] dark:text-blue-400 dark:border-blue-400"
                     : "border-transparent text-muted-foreground hover:text-foreground"
                 )}
               >
-                <tab.icon className="h-4 w-4" />
-                {tab.label}
+                <tab.icon className="h-3.5 w-3.5" />
+                {getTabLabel(tab.value)}
               </button>
             ))}
           </div>
@@ -162,7 +260,7 @@ export default function CreatorPosts() {
         {/* ── CREATE TAB — embeds full CreatePost ── */}
         {activeTab === "create" && (
           <div className="flex-1 overflow-hidden flex flex-col">
-            <CreatePost noLayout />
+            <CreatePost noLayout postType={postType} />
           </div>
         )}
 

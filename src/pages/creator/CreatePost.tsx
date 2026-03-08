@@ -62,7 +62,7 @@ const platformRules: Record<string, {
   googlebusiness: { maxChars: 1500, maxImageMB: 5 },
 };
 
-export default function CreatePost({ noLayout }: { noLayout?: boolean } = {}) {
+export default function CreatePost({ noLayout, postType }: { noLayout?: boolean; postType?: "single" | "cadence" } = {}) {
   const { user, creatorProfile } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -72,7 +72,8 @@ export default function CreatePost({ noLayout }: { noLayout?: boolean } = {}) {
   const qCreatorName = searchParams.get("creatorName") ?? undefined;
   const qCreatorId = searchParams.get("creatorId") ?? undefined;
 
-  const [activeTab, setActiveTab] = useState<"single" | "cadence">(qTab === "cadence" ? "cadence" : "single");
+  const [ownTab, setOwnTab] = useState<"single" | "cadence">(qTab === "cadence" ? "cadence" : "single");
+  const activeTab = postType ?? ownTab;
   const [accounts, setAccounts] = useState<ConnectedAccountRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [caption, setCaption] = useState("");
@@ -380,12 +381,13 @@ export default function CreatePost({ noLayout }: { noLayout?: boolean } = {}) {
   return (
     <Wrapper>
       <div className="flex flex-col h-[calc(100vh-2rem)] -mt-2">
-        {/* ── TAB BAR ── */}
+        {/* ── TAB BAR (only when NOT embedded with postType from parent) ── */}
+        {!postType && (
         <div className="shrink-0 border-b border-border bg-card">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 flex">
             <button
-              onClick={() => setActiveTab("single")}
-              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+              onClick={() => setOwnTab("single")}
+              className={`px-4 py-3 text-[13px] font-medium border-b-2 transition-colors flex items-center gap-2 ${
                 activeTab === "single"
                   ? "border-[#1B3A6B] text-[#1B3A6B] dark:text-blue-400 dark:border-blue-400"
                   : "border-transparent text-muted-foreground hover:text-foreground"
@@ -395,8 +397,8 @@ export default function CreatePost({ noLayout }: { noLayout?: boolean } = {}) {
               Single Post
             </button>
             <button
-              onClick={() => setActiveTab("cadence")}
-              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+              onClick={() => setOwnTab("cadence")}
+              className={`px-4 py-3 text-[13px] font-medium border-b-2 transition-colors flex items-center gap-2 ${
                 activeTab === "cadence"
                   ? "border-[#1B3A6B] text-[#1B3A6B] dark:text-blue-400 dark:border-blue-400"
                   : "border-transparent text-muted-foreground hover:text-foreground"
@@ -407,6 +409,7 @@ export default function CreatePost({ noLayout }: { noLayout?: boolean } = {}) {
             </button>
           </div>
         </div>
+        )}
 
         {/* ── CADENCE CAMPAIGN TAB ── */}
         {activeTab === "cadence" && (
