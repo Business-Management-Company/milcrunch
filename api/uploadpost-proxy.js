@@ -89,50 +89,75 @@ export default async function handler(req, res) {
       if (isUploadEndpoint) {
         // Build multipart/form-data for upload endpoints
         const form = new FormData();
-        for (const [key, value] of Object.entries(resolvedBody)) {
-          if (value == null) continue;
-          if (key === "platform" && Array.isArray(value)) {
-            // UploadPost requires platform[] array bracket syntax
-            for (const p of value) {
-              form.append("platform[]", String(p));
-            }
-          } else if (key === "photos" && Array.isArray(value)) {
-            // UploadPost requires actual file blobs for 'photo' field, not URL strings
-            for (const photoUrl of value) {
-              try {
-                console.log("[uploadpost-proxy] Fetching photo blob from:", String(photoUrl));
-                const photoRes = await fetch(String(photoUrl));
-                if (!photoRes.ok) throw new Error(`HTTP ${photoRes.status}`);
-                const buffer = await photoRes.arrayBuffer();
-                const contentType = photoRes.headers.get("content-type") || "image/jpeg";
-                const blob = new Blob([buffer], { type: contentType });
-                const ext = (contentType.split("/")[1] || "jpg").split(";")[0];
-                form.append("photo", blob, `image.${ext}`);
-                console.log("[uploadpost-proxy] Appended photo blob:", blob.size, "bytes, type:", contentType);
-              } catch (fetchErr) {
-                console.error("[uploadpost-proxy] Failed to fetch photo blob:", fetchErr.message, "— falling back to URL string");
-                form.append("photo", String(photoUrl));
+
+        if (endpoint.startsWith("/api/upload_photos") && Array.isArray(resolvedBody.photos)) {
+          // ── upload_photos: fetch image URLs → binary blobs ──
+          for (const photoUrl of resolvedBody.photos) {
+            const urlStr = String(photoUrl);
+            console.log("[uploadpost-proxy] Fetching photo binary from:", urlStr);
+            try {
+              const imageRes = await fetch(urlStr);
+              if (!imageRes.ok) {
+                console.error("[uploadpost-proxy] Photo fetch HTTP error:", imageRes.status, imageRes.statusText);
+                return res.status(502).json({
+                  error: `Failed to fetch photo: HTTP ${imageRes.status}`,
+                  url: urlStr.slice(0, 200),
+                });
               }
+              const imageBuffer = await imageRes.arrayBuffer();
+              const contentType = imageRes.headers.get("content-type") || "image/jpeg";
+              const ext = (contentType.split("/")[1] || "jpg").split(";")[0];
+              console.log("[uploadpost-proxy] Photo fetched:", imageBuffer.byteLength, "bytes, content-type:", contentType);
+
+              if (imageBuffer.byteLength === 0) {
+                return res.status(502).json({ error: "Photo URL returned empty response", url: urlStr.slice(0, 200) });
+              }
+
+              const blob = new Blob([imageBuffer], { type: contentType });
+              form.append("photo", blob, `image.${ext}`);
+              console.log("[uploadpost-proxy] Appended photo blob to FormData:", blob.size, "bytes");
+            } catch (fetchErr) {
+              console.error("[uploadpost-proxy] Photo fetch/processing failed:", fetchErr.message);
+              return res.status(502).json({
+                error: `Photo processing failed: ${fetchErr.message}`,
+                url: urlStr.slice(0, 200),
+              });
             }
-          } else if (Array.isArray(value)) {
-            for (const v of value) {
-              form.append(`${key}[]`, String(v));
+          }
+
+          // Append remaining fields (user, platform[], title, etc.)
+          if (resolvedBody.user) form.append("user", String(resolvedBody.user));
+          if (resolvedBody.title) form.append("title", String(resolvedBody.title));
+          if (Array.isArray(resolvedBody.platform)) {
+            for (const p of resolvedBody.platform) form.append("platform[]", String(p));
+          }
+          if (resolvedBody.scheduled_date) form.append("scheduled_date", String(resolvedBody.scheduled_date));
+          if (resolvedBody.async_upload) form.append("async_upload", "true");
+          if (resolvedBody.first_comment) form.append("first_comment", String(resolvedBody.first_comment));
+        } else {
+          // ── upload_text / upload_videos / generic upload: string fields only ──
+          for (const [key, value] of Object.entries(resolvedBody)) {
+            if (value == null) continue;
+            if (key === "platform" && Array.isArray(value)) {
+              for (const p of value) form.append("platform[]", String(p));
+            } else if (Array.isArray(value)) {
+              for (const v of value) form.append(`${key}[]`, String(v));
+            } else {
+              form.append(key, String(value));
             }
-          } else {
-            form.append(key, String(value));
           }
         }
+
         // Log form fields for debugging
-        const formFields = {};
+        const fieldSummary = [];
         for (const [k, v] of form.entries()) {
-          if (formFields[k]) {
-            if (!Array.isArray(formFields[k])) formFields[k] = [formFields[k]];
-            formFields[k].push(v);
+          if (v instanceof Blob) {
+            fieldSummary.push(`${k}: [Blob ${v.size} bytes, ${v.type}]`);
           } else {
-            formFields[k] = v;
+            fieldSummary.push(`${k}: ${String(v).slice(0, 100)}`);
           }
         }
-        console.log("[uploadpost-proxy] FormData fields:", JSON.stringify(formFields));
+        console.log("[uploadpost-proxy] FormData fields:", fieldSummary.join(" | "));
         fetchOptions.body = form;
         // Do NOT set Content-Type — fetch sets the multipart boundary automatically
       } else {
