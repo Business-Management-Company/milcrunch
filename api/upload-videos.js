@@ -10,10 +10,10 @@ const handler = async function handler(req, res) {
   console.log("[upload-videos] handler invoked:", req.method, req.url);
 
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
-  if (req.method === "OPTIONS") return res.status(204).end();
+  if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method === "GET") return res.status(200).json({ status: "upload-videos alive", timestamp: new Date().toISOString() });
   if (req.method !== "POST") return res.status(405).json({ error: "Use GET for health check or POST to upload video" });
 

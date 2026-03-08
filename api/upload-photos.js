@@ -11,11 +11,11 @@ const handler = async function handler(req, res) {
   console.log("[upload-photos] handler invoked:", req.method, req.url);
 
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   if (req.method === "OPTIONS") {
-    return res.status(204).end();
+    return res.status(200).end();
   }
 
   if (req.method === "GET") {
