@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import CreatorLayout from "@/components/layout/CreatorLayout";
-import CreatePost from "./CreatePost";
+import CreatePost, { type DraftEdit } from "./CreatePost";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -45,10 +45,7 @@ interface DraftRow {
   caption: string | null;
   platforms: string[] | null;
   media_url: string | null;
-  media_type: string | null;
-  post_name: string | null;
-  label: string | null;
-  account_ids: string[] | null;
+  scheduled_at: string | null;
   created_at: string;
 }
 
@@ -73,6 +70,9 @@ export default function CreatorPosts() {
     tabParam && STATUS_TABS.some((t) => t.value === tabParam) ? tabParam : "create"
   );
 
+  // Draft editing
+  const [editingDraft, setEditingDraft] = useState<DraftEdit | null>(null);
+
   // Counts
   const [counts, setCounts] = useState<StatusCounts>({ drafts: 0, scheduled: 0, published: 0, failed: 0 });
 
@@ -84,6 +84,7 @@ export default function CreatorPosts() {
 
   const switchTab = (tab: StatusTab) => {
     setActiveTab(tab);
+    if (tab !== "create") setEditingDraft(null);
     const params: Record<string, string> = {};
     if (tab !== "create") params.tab = tab;
     if (postType !== "single") params.type = postType;
@@ -124,7 +125,7 @@ export default function CreatorPosts() {
     setLoadingDrafts(true);
     supabase
       .from("post_drafts")
-      .select("*")
+      .select("id, caption, platforms, media_url, scheduled_at, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
@@ -165,10 +166,6 @@ export default function CreatorPosts() {
         user: upUser,
         platforms: draft.platforms as UploadPostPlatform[],
         media_url: draft.media_url || undefined,
-        media_type:
-          draft.media_type === "video" || draft.media_type === "photo"
-            ? draft.media_type
-            : undefined,
       });
       if (result.success) {
         await supabase.from("post_drafts").delete().eq("id", draft.id);
@@ -269,7 +266,7 @@ export default function CreatorPosts() {
         {/* ── CREATE TAB — embeds full CreatePost ── */}
         {activeTab === "create" && (
           <div className="flex-1 overflow-hidden flex flex-col">
-            <CreatePost noLayout postType={postType} />
+            <CreatePost noLayout postType={postType} editDraft={editingDraft} />
           </div>
         )}
 
@@ -322,13 +319,9 @@ export default function CreatorPosts() {
                         className="rounded-xl border border-border bg-white dark:bg-card p-4 flex items-start gap-4 hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
                       >
                         {/* Media thumbnail */}
-                        <div className="shrink-0 h-14 w-14 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+                        <div className="shrink-0 h-[60px] w-[60px] rounded-lg bg-muted flex items-center justify-center overflow-hidden">
                           {draft.media_url ? (
-                            draft.media_type === "video" ? (
-                              <video src={draft.media_url} className="h-full w-full object-cover" muted />
-                            ) : (
-                              <img src={draft.media_url} alt="" className="h-full w-full object-cover" />
-                            )
+                            <img src={draft.media_url} alt="" className="h-full w-full object-cover" />
                           ) : (
                             <FileText className="h-5 w-5 text-muted-foreground/40" />
                           )}
@@ -336,18 +329,6 @@ export default function CreatorPosts() {
 
                         {/* Content */}
                         <div className="flex-1 min-w-0">
-                          {(draft.post_name || draft.label) && (
-                            <div className="flex items-center gap-2 mb-0.5">
-                              {draft.post_name && (
-                                <span className="text-sm font-semibold truncate">{draft.post_name}</span>
-                              )}
-                              {draft.label && (
-                                <span className="text-[10px] font-medium bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full shrink-0">
-                                  {draft.label}
-                                </span>
-                              )}
-                            </div>
-                          )}
                           <p className="text-sm text-muted-foreground line-clamp-2 mb-1.5">
                             {captionPreview}
                           </p>
@@ -373,8 +354,14 @@ export default function CreatorPosts() {
                             size="sm"
                             className="h-7 text-xs gap-1"
                             onClick={() => {
-                              switchTab("create");
-                              // TODO: load draft into CreatePost form
+                              setEditingDraft({
+                                id: draft.id,
+                                caption: draft.caption,
+                                platforms: draft.platforms,
+                                media_url: draft.media_url,
+                                scheduled_at: draft.scheduled_at,
+                              });
+                              setActiveTab("create");
                             }}
                           >
                             <Pencil className="h-3 w-3" />

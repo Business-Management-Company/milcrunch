@@ -62,7 +62,15 @@ const platformRules: Record<string, {
   googlebusiness: { maxChars: 1500, maxImageMB: 5 },
 };
 
-export default function CreatePost({ noLayout, postType }: { noLayout?: boolean; postType?: "single" | "cadence" } = {}) {
+export interface DraftEdit {
+  id: string;
+  caption: string | null;
+  platforms: string[] | null;
+  media_url: string | null;
+  scheduled_at: string | null;
+}
+
+export default function CreatePost({ noLayout, postType, editDraft }: { noLayout?: boolean; postType?: "single" | "cadence"; editDraft?: DraftEdit | null } = {}) {
   const { user, creatorProfile } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -88,11 +96,26 @@ export default function CreatePost({ noLayout, postType }: { noLayout?: boolean;
   const [shortening, setShortening] = useState(false);
   const [captionBeforeShorten, setCaptionBeforeShorten] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
+  const [draftId, setDraftId] = useState<string | null>(null);
   const [showIdeas, setShowIdeas] = useState(false);
   const [showAiInput, setShowAiInput] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [previewPlatform, setPreviewPlatform] = useState("instagram");
+
+  /* Populate form when editing a draft */
+  useEffect(() => {
+    if (!editDraft) { setDraftId(null); return; }
+    setDraftId(editDraft.id);
+    setCaption(editDraft.caption ?? "");
+    setSelected(new Set(editDraft.platforms ?? []));
+    setMediaUrl(editDraft.media_url ?? "");
+    setMediaType(editDraft.media_url ? "photo" : "none");
+    setScheduledDate(editDraft.scheduled_at ? editDraft.scheduled_at.slice(0, 16) : "");
+    setMediaFiles([]);
+    setPostName("");
+    setPostLabel("");
+  }, [editDraft]);
 
   /* Image preview URLs */
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
@@ -1040,20 +1063,47 @@ export default function CreatePost({ noLayout, postType }: { noLayout?: boolean;
                       toast.error("Add a caption or select platforms first");
                       return;
                     }
-                    const { error } = await supabase.from("post_drafts").insert({
-                      user_id: user.id,
+
+                    // Upload media files to Supabase Storage if any
+                    let savedMediaUrl = mediaUrl || null;
+                    if (mediaFiles.length > 0) {
+                      const file = mediaFiles[0];
+                      const ext = file.name.split(".").pop() ?? "jpg";
+                      const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+                      const { error: upErr } = await supabase.storage
+                        .from("post-media")
+                        .upload(path, file, { contentType: file.type });
+                      if (upErr) {
+                        toast.error(`Media upload failed: ${upErr.message}`);
+                        return;
+                      }
+                      const { data: urlData } = supabase.storage.from("post-media").getPublicUrl(path);
+                      savedMediaUrl = urlData.publicUrl;
+                    }
+
+                    const draftPayload = {
                       caption: caption.trim(),
                       platforms: Array.from(selected),
-                      media_url: mediaUrl || null,
+                      media_url: savedMediaUrl,
                       scheduled_at: scheduledDate ? new Date(scheduledDate).toISOString() : null,
-                    });
+                    };
+
+                    let error;
+                    if (draftId) {
+                      // Update existing draft
+                      ({ error } = await supabase.from("post_drafts").update(draftPayload).eq("id", draftId));
+                    } else {
+                      // Insert new draft
+                      ({ error } = await supabase.from("post_drafts").insert({ ...draftPayload, user_id: user.id }));
+                    }
+
                     if (error) {
                       console.error("Draft save error:", error);
                       toast.error("Failed to save draft");
                     } else {
-                      toast.success("Saved as draft!");
+                      toast.success(draftId ? "Draft updated!" : "Saved as draft!");
                       setCaption(""); setMediaUrl(""); setScheduledDate("");
-                      setPostName(""); setPostLabel("");
+                      setPostName(""); setPostLabel(""); setMediaFiles([]); setDraftId(null);
                     }
                   }}
                 >
