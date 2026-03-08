@@ -19,16 +19,18 @@ import {
   Pencil,
   LayoutGrid,
   CalendarRange,
+  Layers,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createUploadPost, type UploadPostPlatform } from "@/services/upload-post";
 import { resolveUploadPostUsername } from "@/lib/upload-post-sync";
 
-type PostType = "single" | "cadence";
+type PostType = "single" | "campaign" | "cadence";
 type StatusTab = "create" | "drafts" | "scheduled" | "published" | "failed";
 
 const POST_TYPE_TABS: { value: PostType; label: string; icon: typeof FileText }[] = [
   { value: "single", label: "Single Post", icon: Pencil },
+  { value: "campaign", label: "Campaign", icon: Layers },
   { value: "cadence", label: "Cadence Campaign", icon: CalendarRange },
 ];
 

@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getConnectedAccounts, resolveUploadPostUsername, type ConnectedAccountRow } from "@/lib/upload-post-sync";
 import { createUploadPost, type UploadPostPlatform } from "@/services/upload-post";
 import CadenceCampaign from "./CadenceCampaign";
+import CampaignTab from "./CampaignTab";
 import {
   Loader2, Check, X, Link2, Plus, Sparkles,
   Upload, Image, Video, FileText, Download, Camera, Palette,
@@ -62,7 +63,7 @@ export interface DraftEdit {
   scheduled_at: string | null;
 }
 
-export default function CreatePost({ noLayout, postType, editDraft }: { noLayout?: boolean; postType?: "single" | "cadence"; editDraft?: DraftEdit | null } = {}) {
+export default function CreatePost({ noLayout, postType, editDraft }: { noLayout?: boolean; postType?: "single" | "campaign" | "cadence"; editDraft?: DraftEdit | null } = {}) {
   const { user, creatorProfile } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -72,7 +73,7 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
   const qCreatorName = searchParams.get("creatorName") ?? undefined;
   const qCreatorId = searchParams.get("creatorId") ?? undefined;
 
-  const [ownTab, setOwnTab] = useState<"single" | "cadence">(qTab === "cadence" ? "cadence" : "single");
+  const [ownTab, setOwnTab] = useState<"single" | "campaign" | "cadence">(qTab === "cadence" ? "cadence" : qTab === "campaign" ? "campaign" : "single");
   const activeTab = postType ?? ownTab;
   const [accounts, setAccounts] = useState<ConnectedAccountRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -597,6 +598,9 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
             prefilledCreatorName={qCreatorName}
           />
         )}
+
+        {/* ── CAMPAIGN TAB ── */}
+        {activeTab === "campaign" && <CampaignTab />}
 
         {/* ── SINGLE POST TAB ── */}
         {activeTab === "single" && <>
