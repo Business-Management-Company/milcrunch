@@ -1,45 +1,62 @@
+import { useState } from "react";
 import CreatorLayout from "@/components/layout/CreatorLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { useUploadPostConnect } from "@/hooks/useUploadPostConnect";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Settings,
   Bell,
   Shield,
   Download,
-  Link2,
   Loader2,
-  RefreshCw,
-  ExternalLink,
+  Mail,
+  User,
 } from "lucide-react";
-import { PlatformIcon } from "@/lib/platform-icons";
-
-interface PlatformDef {
-  id: string;
-  name: string;
-}
-
-const PLATFORMS: PlatformDef[] = [
-  { id: "instagram", name: "Instagram" },
-  { id: "tiktok", name: "TikTok" },
-  { id: "youtube", name: "YouTube" },
-  { id: "x", name: "Twitter / X" },
-  { id: "facebook", name: "Facebook" },
-  { id: "linkedin", name: "LinkedIn" },
-];
-
-function formatFollowers(n: number | null | undefined): string {
-  if (n == null) return "";
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return String(n);
-}
+import { toast } from "sonner";
 
 export default function CreatorSettings() {
-  const { accounts, loading, connectLoading, syncing, openConnectPopup, syncAccounts } = useUploadPostConnect();
+  const { user, creatorProfile, refetchCreatorProfile } = useAuth();
+  const [handle, setHandle] = useState(creatorProfile?.handle ?? "");
+  const [savingHandle, setSavingHandle] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
+
+  const saveHandle = async () => {
+    if (!user?.id) return;
+    const trimmed = handle.replace(/^@/, "").trim().toLowerCase();
+    if (!trimmed) { toast.error("Handle cannot be empty"); return; }
+    setSavingHandle(true);
+    const { error } = await supabase
+      .from("creator_profiles")
+      .update({ handle: trimmed })
+      .eq("user_id", user.id);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      // Also update user_metadata so AuthContext stays in sync
+      await supabase.auth.updateUser({ data: { handle: trimmed } });
+      await refetchCreatorProfile();
+      toast.success("Handle updated!");
+    }
+    setSavingHandle(false);
+  };
+
+  const sendPasswordReset = async () => {
+    if (!user?.email) return;
+    setSendingReset(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: "https://www.milcrunch.com/auth/callback",
+    });
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success(`Password reset email sent to ${user.email}`);
+    }
+    setSendingReset(false);
+  };
 
   return (
     <CreatorLayout>
@@ -48,76 +65,56 @@ export default function CreatorSettings() {
         <p className="text-muted-foreground">Account, notifications, privacy, and data.</p>
       </div>
       <div className="space-y-6 max-w-xl">
-        {/* Connected Accounts */}
-        <Card className="rounded-xl border-border">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Link2 className="h-5 w-5" /> Connected Accounts</CardTitle>
-            <CardDescription>Manage your linked social media accounts via Upload-Post.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" onClick={openConnectPopup} disabled={connectLoading}>
-                {connectLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ExternalLink className="h-3 w-3 mr-1" />}
-                Connect / Add Platform
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => syncAccounts()} disabled={syncing}>
-                {syncing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />}
-                Sync
-              </Button>
-            </div>
-            {loading ? (
-              <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading connections...
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {PLATFORMS.map((p) => {
-                  const conn = accounts.find((a) => a.platform === p.id);
-                  return (
-                    <div key={p.id} className="flex items-center gap-3 p-3 rounded-lg border border-border">
-                      <PlatformIcon platform={p.id} size={20} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{p.name}</p>
-                        {conn ? (
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
-                            <span className="text-xs text-green-600 font-medium truncate">
-                              {conn.platform_username ? `@${conn.platform_username}` : "Connected"}
-                            </span>
-                            {conn.followers_count != null && conn.followers_count > 0 && (
-                              <span className="text-xs text-muted-foreground">
-                                {formatFollowers(conn.followers_count)} followers
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">Not connected</span>
-                        )}
-                      </div>
-                      {conn ? (
-                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-0 text-xs">Connected</Badge>
-                      ) : (
-                        <Button size="sm" variant="outline" onClick={openConnectPopup} disabled={connectLoading}>
-                          Connect
-                        </Button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
         {/* Account */}
         <Card className="rounded-xl border-border">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Settings className="h-5 w-5" /> Account</CardTitle>
-            <CardDescription>Email, password, delete account</CardDescription>
+            <CardDescription>Username, email, and password</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">Account settings and password change will go here.</p>
+          <CardContent className="space-y-5">
+            {/* Username / Handle */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 text-sm font-medium">
+                <User className="h-4 w-4 text-muted-foreground" />
+                Username
+              </Label>
+              <p className="text-xs text-muted-foreground">Your bio page URL: milcrunch.com/c/{handle || "yourhandle"}</p>
+              <div className="flex gap-2">
+                <Input
+                  value={handle}
+                  onChange={(e) => setHandle(e.target.value.replace(/^@/, "").toLowerCase())}
+                  placeholder="yourhandle"
+                  className="flex-1"
+                />
+                <Button size="sm" onClick={saveHandle} disabled={savingHandle}>
+                  {savingHandle ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                  Save
+                </Button>
+              </div>
+            </div>
+
+            {/* Email (read-only) */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 text-sm font-medium">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                Email
+              </Label>
+              <Input value={user?.email ?? ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+            </div>
+
+            {/* Reset Password */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Password</Label>
+              <div>
+                <Button variant="outline" size="sm" onClick={sendPasswordReset} disabled={sendingReset}>
+                  {sendingReset ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Mail className="h-3 w-3 mr-1" />}
+                  Send reset email
+                </Button>
+                <p className="text-xs text-muted-foreground mt-1">
+                  We'll send a password reset link to {user?.email ?? "your email"}.
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -130,15 +127,15 @@ export default function CreatorSettings() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <Label>Brand outreach</Label>
-              <Switch defaultChecked />
+              <Switch defaultChecked className="data-[state=checked]:bg-[#1B3A6B]" />
             </div>
             <div className="flex items-center justify-between">
               <Label>Event invites</Label>
-              <Switch defaultChecked />
+              <Switch defaultChecked className="data-[state=checked]:bg-[#1B3A6B]" />
             </div>
             <div className="flex items-center justify-between">
               <Label>Milestones</Label>
-              <Switch defaultChecked />
+              <Switch defaultChecked className="data-[state=checked]:bg-[#1B3A6B]" />
             </div>
           </CardContent>
         </Card>
