@@ -1802,7 +1802,7 @@ export default function CreatorBioEditor() {
                         if (section.type === "section_title") {
                           const stStyle = (cfg.style as string) || "heading";
                           const stAlign = (cfg.align as string) || "center";
-                          const stTitle = (cfg.title as string) || section.label;
+                          const stTitle = (cfg.title as string) || "Untitled";
                           const alignClass = stAlign === "left" ? "text-left" : stAlign === "right" ? "text-right" : "text-center";
                           return (
                             <div key={section.id} className={`px-1 ${alignClass}`}>
@@ -1817,9 +1817,17 @@ export default function CreatorBioEditor() {
                         }
 
                         if (section.type === "podcast") {
+                          const podTitle = (cfg.podcastTitle as string) || "";
+                          const feedUrl = (cfg.feedUrl as string) || "";
                           return (
                             <div key={section.id} style={cStyle}>
-                              <p className="text-[10px]" style={{ color: phoneSubtext }}>Display your podcast episodes</p>
+                              {podTitle ? (
+                                <p className="text-[11px] font-medium truncate" style={{ color: phoneText }}>{podTitle}</p>
+                              ) : feedUrl ? (
+                                <p className="text-[10px] truncate" style={{ color: phoneSubtext }}>{feedUrl}</p>
+                              ) : (
+                                <p className="text-[10px]" style={{ color: phoneSubtext }}>Add a podcast feed to display episodes</p>
+                              )}
                             </div>
                           );
                         }
@@ -1852,9 +1860,37 @@ export default function CreatorBioEditor() {
                           );
                         }
 
+                        if (section.type === "featured_video") {
+                          const videoUrl = (cfg.videoUrl as string) || "";
+                          return (
+                            <div key={section.id} style={cStyle}>
+                              {videoUrl ? (
+                                <div className="text-[11px] py-2 px-3 text-center font-medium truncate" style={getLinkItemStyle()}>{videoUrl}</div>
+                              ) : (
+                                <p className="text-[10px]" style={{ color: phoneSubtext }}>Add a video URL to display here</p>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        if (section.type === "promo_codes") {
+                          const code = (cfg.promoCode as string) || "";
+                          const desc = (cfg.promoDescription as string) || "";
+                          return (
+                            <div key={section.id} style={cStyle}>
+                              {code ? (
+                                <div className="text-[11px] py-2 px-3 text-center font-medium" style={getLinkItemStyle()}>{code}{desc ? ` — ${desc}` : ""}</div>
+                              ) : (
+                                <p className="text-[10px]" style={{ color: phoneSubtext }}>Add a promo code to display here</p>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        /* Generic fallback — show content placeholder, never the block type name */
                         return (
                           <div key={section.id} style={cStyle}>
-                            <p className="text-[10px] truncate" style={{ color: phoneSubtext }}>{entry.description}</p>
+                            <p className="text-[10px]" style={{ color: phoneSubtext }}>Configure this block to display content</p>
                           </div>
                         );
                       })
