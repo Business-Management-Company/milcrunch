@@ -149,7 +149,8 @@ export default function CreatorPosts() {
   };
 
   const handlePublishDraft = async (draft: DraftRow) => {
-    if (!draft.platforms?.length) {
+    const plats = parsePlatforms(draft.platforms);
+    if (!plats.length) {
       toast.error("No platforms selected for this draft");
       return;
     }
@@ -164,14 +165,14 @@ export default function CreatorPosts() {
       const result = await createUploadPost({
         text: draft.caption,
         user: upUser,
-        platforms: draft.platforms as UploadPostPlatform[],
+        platforms: plats as UploadPostPlatform[],
         media_url: draft.media_url || undefined,
       });
       if (result.success) {
         await supabase.from("post_drafts").delete().eq("id", draft.id);
         setDrafts((prev) => prev.filter((d) => d.id !== draft.id));
         setCounts((prev) => ({ ...prev, drafts: Math.max(0, prev.drafts - 1) }));
-        toast.success(`Published to ${draft.platforms.length} platform(s)!`);
+        toast.success(`Published to ${plats.length} platform(s)!`);
       } else {
         toast.error("Publish failed — check your connected accounts");
       }
@@ -179,6 +180,13 @@ export default function CreatorPosts() {
       toast.error("Publish failed");
     }
     setPublishingId(null);
+  };
+
+  /** Defensively parse platforms — may be string (double-encoded jsonb) or array */
+  const parsePlatforms = (raw: unknown): string[] => {
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === "string") { try { const p = JSON.parse(raw); if (Array.isArray(p)) return p; } catch {} }
+    return [];
   };
 
   const formatDate = (iso: string) =>
@@ -306,7 +314,7 @@ export default function CreatorPosts() {
                   {drafts.map((draft) => {
                     const isPublishing = publishingId === draft.id;
                     const isDeleting = deletingId === draft.id;
-                    const platforms = draft.platforms ?? [];
+                    const platforms = parsePlatforms(draft.platforms);
                     const captionPreview = draft.caption
                       ? draft.caption.length > 140
                         ? draft.caption.slice(0, 140) + "..."
@@ -357,7 +365,7 @@ export default function CreatorPosts() {
                               setEditingDraft({
                                 id: draft.id,
                                 caption: draft.caption,
-                                platforms: draft.platforms,
+                                platforms: parsePlatforms(draft.platforms),
                                 media_url: draft.media_url,
                                 scheduled_at: draft.scheduled_at,
                               });

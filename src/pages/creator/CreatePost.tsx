@@ -1102,7 +1102,7 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
                     const draftPayload = {
                       caption: caption.trim(),
                       media_url: savedMediaUrl,
-                      platforms: JSON.stringify(Array.from(selected)),
+                      platforms: Array.from(selected),
                       status: "draft" as const,
                     };
 
