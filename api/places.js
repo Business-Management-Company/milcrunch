@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   const key = process.env.GOOGLE_PLACES_API_KEY;
   if (!key) {
     return res.status(500).json({ error: "GOOGLE_PLACES_API_KEY not configured" });

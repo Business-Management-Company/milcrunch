@@ -1,6 +1,6 @@
 const MIN_AVATAR_BYTES = 5000; // IC placeholder is ~2556 bytes
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
     const { imageUrl, handle } = req.body;
     if (!imageUrl || !handle) return res.status(400).json({ error: "Missing imageUrl or handle" });

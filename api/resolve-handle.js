@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+const { createClient } = require("@supabase/supabase-js");
 
 /**
  * GET /api/resolve-handle?handle=johnny-rocket
@@ -7,7 +7,7 @@ import { createClient } from "@supabase/supabase-js";
  * Returns the public bio fields needed to render /c/:handle.
  * Uses the service role key to read auth.users (not accessible from client).
  */
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }

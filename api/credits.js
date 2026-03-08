@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   const apiKey = req.headers.authorization?.replace("Bearer ", "") || process.env.VITE_INFLUENCERS_CLUB_API_KEY;
   if (!apiKey) return res.status(401).json({ error: "No API key" });
 

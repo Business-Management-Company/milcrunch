@@ -1,6 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
+const { createClient } = require("@supabase/supabase-js");
 
-export const config = { maxDuration: 300 };
+const config = { maxDuration: 300 };
 
 const DISCOVERY_URL = "https://api-dashboard.influencers.club/public/v1/discovery/";
 const AVATAR_FIELDS = [
@@ -44,7 +44,7 @@ async function getFreshAvatarUrl(handle, platform, apiKey) {
   );
 }
 
-export default async function handler(req, res) {
+const handler = async function handler(req, res) {
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   const apiKey = process.env.INFLUENCERS_CLUB_API_KEY || process.env.VITE_INFLUENCERS_CLUB_API_KEY;
@@ -131,3 +131,6 @@ export default async function handler(req, res) {
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+module.exports = handler;
+module.exports.config = config;

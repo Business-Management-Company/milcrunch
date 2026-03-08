@@ -1,16 +1,16 @@
-import { createClient } from "@supabase/supabase-js";
+const { createClient } = require("@supabase/supabase-js");
 
 const BUCKET = "creator-avatars";
 const MIN_IMAGE_BYTES = 5000;
 
-export const config = { maxDuration: 60 };
+const config = { maxDuration: 60 };
 
 /**
  * POST /api/cleanup-avatars
  * Finds corrupted files in creator-avatars (< 5 KB or HTML content)
  * and deletes them + nulls out directory_members URLs.
  */
-export default async function handler(req, res) {
+const handler = async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "POST only" });
   }
@@ -108,3 +108,6 @@ export default async function handler(req, res) {
 
   return res.json({ total: rootEntries.length, deleted, nulled, details });
 }
+
+module.exports = handler;
+module.exports.config = config;

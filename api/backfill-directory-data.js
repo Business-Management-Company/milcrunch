@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+const { createClient } = require("@supabase/supabase-js");
 
 /**
  * Backfill missing bio, category, and platform_urls on directory_members
@@ -7,7 +7,7 @@ import { createClient } from "@supabase/supabase-js";
  * POST /api/backfill-directory-data           — backfill all rows with missing data
  * POST /api/backfill-directory-data?debug=1   — dry run: show what would be updated
  */
-export const config = { maxDuration: 120 };
+const config = { maxDuration: 120 };
 
 const PLATFORM_ORDER = ["instagram", "tiktok", "youtube", "facebook", "twitter"];
 
@@ -60,7 +60,7 @@ function extractCategory(enrichmentData) {
   return null;
 }
 
-export default async function handler(req, res) {
+const handler = async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "POST only" });
   }
@@ -187,3 +187,6 @@ export default async function handler(req, res) {
     details: details.slice(0, 50),
   });
 }
+
+module.exports = handler;
+module.exports.config = config;

@@ -1,11 +1,11 @@
-import { createClient } from "@supabase/supabase-js";
+const { createClient } = require("@supabase/supabase-js");
 
 /**
  * POST /api/ensure-post-drafts
  * Creates the post_drafts table (if missing) and ensures RLS policies exist.
  * Requires SUPABASE_SERVICE_ROLE_KEY in Vercel env to bypass RLS for DDL.
  */
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "POST only" });
   }

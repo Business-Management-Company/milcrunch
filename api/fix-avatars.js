@@ -1,6 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
+const { createClient } = require("@supabase/supabase-js");
 
-export const config = { maxDuration: 300 };
+const config = { maxDuration: 300 };
 
 /**
  * POST /api/fix-avatars
@@ -180,7 +180,7 @@ async function scanTable(sb, tableName, cfg) {
   return { total: (allRows || []).length, broken, details };
 }
 
-export default async function handler(req, res) {
+const handler = async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
 
   const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
@@ -384,3 +384,6 @@ export default async function handler(req, res) {
   const failed = results.filter(r => r.status !== "fixed").length;
   return res.json({ message: `${fixed} fixed, ${failed} failed`, results });
 }
+
+module.exports = handler;
+module.exports.config = config;

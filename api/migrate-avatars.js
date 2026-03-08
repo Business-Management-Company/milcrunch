@@ -1,6 +1,6 @@
-export const config = { maxDuration: 300 };
+const config = { maxDuration: 300 };
 
-export default async function handler(req, res) {
+const handler = async function handler(req, res) {
   try {
     const { createClient } = await import("@supabase/supabase-js");
     const supabase = createClient(
@@ -109,3 +109,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
+
+module.exports = handler;
+module.exports.config = config;

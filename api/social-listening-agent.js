@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+const { createClient } = require("@supabase/supabase-js");
 
 /**
  * Social Listening AI Agent — multi-turn chat about brand mentions.
@@ -8,9 +8,9 @@ import { createClient } from "@supabase/supabase-js";
  * POST /api/social-listening-agent
  * Body: { prompt: string, monitor_id: string, history?: {role,content}[] }
  */
-export const config = { maxDuration: 60 };
+const config = { maxDuration: 60 };
 
-export default async function handler(req, res) {
+const handler = async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -253,3 +253,6 @@ ${otherBrands.length > 0 ? otherBrands.join(", ") : "None"}
 - Do not make up data — only reference what's in the mentions above
 - Keep responses focused and under 500 words unless the user asks for detail`;
 }
+
+module.exports = handler;
+module.exports.config = config;

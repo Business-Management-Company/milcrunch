@@ -8,7 +8,7 @@
  * Proxy forwards: <method> https://api.upload-post.com<endpoint>
  *   with apikey header added server-side.
  */
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   console.log("[uploadpost-proxy] handler invoked:", req.method, req.url);
 
   // CORS headers — allow browser preflight and cross-origin requests

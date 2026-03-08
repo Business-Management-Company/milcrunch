@@ -1,6 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
+const { createClient } = require("@supabase/supabase-js");
 
-export const config = { maxDuration: 300 };
+const config = { maxDuration: 300 };
 
 const DISCOVERY_URL = "https://api-dashboard.influencers.club/public/v1/discovery/";
 const AVATAR_FIELDS = [
@@ -81,7 +81,7 @@ async function tryUploadToStorage(handle, cdnUrl, baseUrl) {
  * - Daily cron (GET): refreshes all approved members missing permanent avatars.
  * - Manual (POST { directory_id }): refreshes one directory.
  */
-export default async function handler(req, res) {
+const handler = async function handler(req, res) {
   if (req.method !== "POST" && req.method !== "GET") {
     return res.status(405).json({ error: "GET or POST only" });
   }
@@ -157,3 +157,6 @@ export default async function handler(req, res) {
   console.log("[refresh-avatars] updated:", updated, "skipped:", skipped, "failed:", failed, "of", members.length);
   return res.json({ total: members.length, updated, failed, skipped });
 }
+
+module.exports = handler;
+module.exports.config = config;

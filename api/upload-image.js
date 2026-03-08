@@ -1,10 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
+const { createClient } = require("@supabase/supabase-js");
 
-export const config = {
-  api: { bodyParser: { sizeLimit: "6mb" } },
-};
-
-export default async function handler(req, res) {
+const handler = async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -51,3 +47,8 @@ export default async function handler(req, res) {
     return res.status(502).json({ error: "Upload failed", message: e.message });
   }
 }
+
+module.exports = handler;
+module.exports.config = {
+  api: { bodyParser: { sizeLimit: "6mb" } },
+};

@@ -6,15 +6,7 @@
  *   body: { user, platform, title, scheduled_date?, async_upload?, first_comment? }
  */
 
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: "10mb",
-    },
-  },
-};
-
-export default async function handler(req, res) {
+const handler = async function handler(req, res) {
   console.log("[upload-text] handler invoked:", req.method, req.url);
 
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -78,3 +70,8 @@ export default async function handler(req, res) {
     return res.status(502).json({ error: `Upload failed: ${err.message}` });
   }
 }
+
+module.exports = handler;
+module.exports.config = {
+  api: { bodyParser: { sizeLimit: "10mb" } },
+};

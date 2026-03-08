@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+const { createClient } = require("@supabase/supabase-js");
 
 /**
  * Social Listening Scan — scans creator_enrichment_cache for brand keyword
@@ -8,9 +8,9 @@ import { createClient } from "@supabase/supabase-js";
  * POST /api/social-listening-scan
  * Body: { monitor_id, action?: "scan" | "seed" | "ensure_tables" }
  */
-export const config = { maxDuration: 120 };
+const config = { maxDuration: 120 };
 
-export default async function handler(req, res) {
+const handler = async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -718,3 +718,6 @@ async function seedDemoData(supabase, res) {
     message: "Demo data seeded successfully",
   });
 }
+
+module.exports = handler;
+module.exports.config = config;

@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+const { createClient } = require("@supabase/supabase-js");
 
 /**
  * Backfill: refresh ic_avatar_url + banner_image_url for directory_members.
@@ -11,9 +11,9 @@ import { createClient } from "@supabase/supabase-js";
  * POST /api/backfill-avatars?fromCache=1  — extract avatars from existing enrichment_data/creator_enrichment_cache (ZERO API credits)
  * POST /api/backfill-avatars?debug=1      — return current avatar state
  */
-export const config = { maxDuration: 300 };
+const config = { maxDuration: 300 };
 
-export default async function handler(req, res) {
+const handler = async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "POST only" });
   }
@@ -455,3 +455,6 @@ function extractBanner(data) {
 
   return null;
 }
+
+module.exports = handler;
+module.exports.config = config;
