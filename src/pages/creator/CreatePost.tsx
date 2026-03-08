@@ -1103,7 +1103,6 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
                       caption: caption.trim(),
                       platforms: Array.from(selected),
                       media_url: savedMediaUrl,
-                      media_type: savedMediaUrl ? (mediaType === "video" ? "video" : "photo") : null,
                       scheduled_at: scheduledDate ? new Date(scheduledDate).toISOString() : null,
                     };
 
