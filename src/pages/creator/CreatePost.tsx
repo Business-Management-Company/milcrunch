@@ -943,15 +943,9 @@ export default function CreatePost({ noLayout, postType }: { noLayout?: boolean;
                     const { error } = await supabase.from("post_drafts").insert({
                       user_id: user.id,
                       caption: caption.trim(),
-                      platforms: JSON.stringify(Array.from(selected)),
+                      platforms: Array.from(selected),
                       media_url: mediaUrl || null,
-                      media_type: mediaType === "none" ? null : mediaType,
                       scheduled_at: scheduledDate ? new Date(scheduledDate).toISOString() : null,
-                      post_name: postName.trim() || null,
-                      label: postLabel.trim() || null,
-                      account_ids: JSON.stringify(accounts
-                        .filter((a) => selected.has(a.platform) && a.platform_user_id)
-                        .map((a) => a.platform_user_id!)),
                     });
                     if (error) {
                       console.error("Draft save error:", error);
