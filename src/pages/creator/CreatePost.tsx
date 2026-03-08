@@ -380,7 +380,7 @@ export default function CreatePost({ noLayout, postType }: { noLayout?: boolean;
 
   return (
     <Wrapper>
-      <div className="flex flex-col h-[calc(100vh-2rem)] -mt-2">
+      <div className="flex flex-col min-h-screen -mt-2">
         {/* ── TAB BAR (only when NOT embedded with postType from parent) ── */}
         {!postType && (
         <div className="shrink-0 border-b border-border bg-card">
@@ -423,7 +423,7 @@ export default function CreatePost({ noLayout, postType }: { noLayout?: boolean;
         {activeTab === "single" && <>
         {/* ── SCROLLABLE CONTENT ── */}
         <div className="flex-1 overflow-y-auto" style={{ backgroundColor: "#F5F7FA" }}>
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-28">
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
               {/* ═══ LEFT COLUMN — FORM ═══ */}
@@ -912,8 +912,8 @@ export default function CreatePost({ noLayout, postType }: { noLayout?: boolean;
           </div>
         </div>
 
-        {/* ── STICKY BOTTOM ACTION BAR ── */}
-        <div className="shrink-0 border-t border-border bg-card px-4 sm:px-6 py-3">
+        {/* ── FIXED BOTTOM ACTION BAR ── */}
+        <div className="fixed bottom-0 right-0 md:left-60 left-0 z-50 border-t border-border bg-white dark:bg-card px-4 sm:px-6 py-3">
           <div className="max-w-6xl mx-auto flex items-center justify-between">
             <Button
               variant="outline"
