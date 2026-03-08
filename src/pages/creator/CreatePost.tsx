@@ -12,7 +12,7 @@ import { createUploadPost, type UploadPostPlatform } from "@/services/upload-pos
 import CadenceCampaign from "./CadenceCampaign";
 import CampaignTab from "./CampaignTab";
 import {
-  Loader2, Check, X, Link2, Plus, Sparkles,
+  Loader2, Check, X, Link2, Plus, Sparkles, ArrowRight,
   Upload, Image, Video, FileText, Download, Camera, Palette,
   Hash, Smile, Braces, Calendar, Tag, Copy,
   LayoutGrid, AlertTriangle, CheckCircle2,
@@ -258,7 +258,14 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
           ? `Posted successfully to ${selectedPlatforms.length} platform${selectedPlatforms.length !== 1 ? "s" : ""}!`
           : "Post scheduled!");
         setCaption(""); setMediaUrl(""); setScheduledDate(""); setSelected(new Set()); setMediaFiles([]);
-      } else { toast.error(result.error ?? "Post failed."); }
+      } else {
+        const err = result.error ?? "Post failed.";
+        if (/not found|uuid|profile/i.test(err)) {
+          toast.error("Connect a social account to start posting. Go to My Socials to get started.");
+        } else {
+          toast.error(err);
+        }
+      }
     } catch { toast.error("Post failed."); } finally { setPosting(false); }
   };
 
@@ -663,10 +670,13 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
                 Select Social Accounts
               </h2>
               {noAccounts ? (
-                <div className="rounded-xl border border-dashed border-border p-6 text-center">
-                  <p className="text-sm text-muted-foreground mb-3">Connect your social accounts to start posting</p>
+                <div className="rounded-xl border border-dashed border-border p-8 text-center">
+                  <Link2 className="h-8 w-8 mx-auto text-muted-foreground/40 mb-3" />
+                  <p className="text-sm font-medium text-foreground mb-1">No social accounts connected yet</p>
+                  <p className="text-sm text-muted-foreground mb-4">Connect your first platform in My Socials to start posting.</p>
                   <Button size="sm" onClick={() => navigate("/creator/socials")}>
-                    <Link2 className="h-4 w-4 mr-2" />Connect Accounts
+                    Connect Socials
+                    <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
               ) : (

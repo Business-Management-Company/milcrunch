@@ -176,7 +176,12 @@ export default function CreatorPosts() {
         setCounts((prev) => ({ ...prev, drafts: Math.max(0, prev.drafts - 1) }));
         toast.success(`Published to ${plats.length} platform(s)!`);
       } else {
-        toast.error("Publish failed — check your connected accounts");
+        const err = result.error ?? "";
+        if (/not found|uuid|profile/i.test(err)) {
+          toast.error("Connect a social account to start posting. Go to My Socials to get started.");
+        } else {
+          toast.error("Publish failed — check your connected accounts");
+        }
       }
     } catch {
       toast.error("Publish failed");
