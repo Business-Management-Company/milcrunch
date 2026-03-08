@@ -304,13 +304,51 @@ export async function resolveUploadPostUsername(supabaseUserId: string): Promise
 }
 
 /** Ensure Upload-Post profile exists for this user; create if not.
+ *  NEVER creates a new profile if any non-UUID profile already exists.
  *  Returns the resolved UploadPost username/slug. */
 export async function ensureUploadPostProfile(userId: string): Promise<{ ok: boolean; username: string; error?: string }> {
   try {
-    const username = await resolveUploadPostUsername(userId);
-    return { ok: true, username };
+    // 1. List all existing profiles
+    const users = await listUploadPostUsers();
+    console.log("[ensureUploadPostProfile] Found", users.length, "profiles:", users.map((u) => u.username));
+
+    // 2. Filter out ghost UUID profiles
+    const nonUuidUsers = users.filter((u) => !looksLikeUuid(u.username));
+
+    // 3. Use first non-UUID profile if one exists (e.g. "johnny-rocket")
+    if (nonUuidUsers.length > 0) {
+      const slug = nonUuidUsers[0].username;
+      console.log("[ensureUploadPostProfile] Using existing non-UUID profile:", slug);
+      // Cache for resolveUploadPostUsername
+      const cacheKey = `up_slug_${userId}`;
+      localStorage.setItem(cacheKey, slug);
+      return { ok: true, username: slug };
+    }
+
+    // 4. Only UUID profiles exist — use the matching one but DON'T create another
+    if (users.length > 0) {
+      const match = users.find((u) => u.username === userId) ?? users[0];
+      console.log("[ensureUploadPostProfile] Only UUID profiles exist, using:", match.username);
+      return { ok: true, username: match.username };
+    }
+
+    // 5. ZERO profiles — only now create one
+    console.log("[ensureUploadPostProfile] No profiles at all. Creating with UUID:", userId);
+    const createResult = await createUploadPostProfile(userId);
+    if (createResult.error) {
+      console.error("[ensureUploadPostProfile] Create failed:", createResult.error);
+      return { ok: false, username: userId, error: createResult.error };
+    }
+    return { ok: true, username: userId };
   } catch (err) {
-    console.error("[UploadPost] ensureUploadPostProfile failed:", err);
+    console.error("[ensureUploadPostProfile] failed:", err);
+    // NEVER fall back to raw UUID without checking — try cache first
+    const cacheKey = `up_slug_${userId}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached && !looksLikeUuid(cached)) {
+      console.log("[ensureUploadPostProfile] Error recovery: using cached slug:", cached);
+      return { ok: true, username: cached };
+    }
     return { ok: false, username: userId, error: (err as Error).message };
   }
 }

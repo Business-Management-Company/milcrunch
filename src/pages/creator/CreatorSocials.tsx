@@ -20,7 +20,6 @@ import {
   syncConnectedAccountsFromUploadPost,
   getConnectedAccounts,
   ensureUploadPostProfile,
-  resolveUploadPostUsername,
   syncDirectoryMemberStats,
   type ConnectedAccountRow,
 } from "@/lib/upload-post-sync";
@@ -162,8 +161,10 @@ const CreatorSocials = () => {
     setLoading(true);
 
     // Resolve UploadPost slug and store it for connect calls
+    // Only store non-UUID slugs to prevent ghost profile creation
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
     ensureUploadPostProfile(userId).then((result) => {
-      console.log("[CreatorSocials] Resolved UploadPost slug:", result.username);
+      console.log("[CreatorSocials] Resolved UploadPost slug:", result.username, "isUUID:", UUID_RE.test(result.username));
       setUpSlug(result.username);
     }).catch(() => {});
 
@@ -198,9 +199,15 @@ const CreatorSocials = () => {
     }
     setConnecting(true);
 
-    // Resolve the UploadPost slug (use cached value or fetch fresh)
-    const slug = upSlug ?? await resolveUploadPostUsername(userId);
-    if (!upSlug) setUpSlug(slug);
+    // Always resolve a fresh slug if current one looks like a UUID or is missing
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
+    let slug = upSlug;
+    if (!slug || UUID_RE.test(slug)) {
+      console.log("[CreatorSocials] handleConnect — stale/missing slug, resolving fresh...");
+      const result = await ensureUploadPostProfile(userId);
+      slug = result.username;
+      setUpSlug(slug);
+    }
     console.log("[CreatorSocials] handleConnect — provider:", provider, "slug:", slug, "redirectUrl:", REDIRECT_URL);
 
     generateConnectUrl({

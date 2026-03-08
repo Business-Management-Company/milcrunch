@@ -154,9 +154,10 @@ export async function generateConnectUrl(
   }
   console.warn("[UploadPost] generate-jwt returned status", status, "without access_url. Response:", JSON.stringify(data));
 
-  // 409 = user already exists — create profile then retry once
+  // 409 = user already exists — just retry once WITHOUT creating a new profile.
+  // NEVER call createUploadPostProfile here — that's ensureUploadPostProfile's job.
   if (status === 409) {
-    await createUploadPostProfile(opts.userId).catch(() => {});
+    console.log("[UploadPost] 409 — user exists. Retrying generate-jwt without creating a new profile...");
     const retry = await proxyFetch("/api/uploadposts/users/generate-jwt", "POST", body);
     if (retry.status < 400 && retry.data.access_url) {
       console.log(
@@ -167,7 +168,7 @@ export async function generateConnectUrl(
       );
       return retry.data;
     }
-    return { access_url: "https://app.upload-post.com/connect", success: true };
+    return { error: data.message ?? data.error ?? "User exists but JWT generation failed" };
   }
 
   if (status >= 400)
