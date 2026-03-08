@@ -654,7 +654,7 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
               {/* ═══ LEFT COLUMN — FORM ═══ */}
-              <div className="lg:col-span-3 space-y-6">
+              <div className="lg:col-span-3 space-y-8">
 
             {/* ── 1. SELECT SOCIAL ACCOUNTS ── */}
             <div className="bg-white dark:bg-card rounded-2xl p-6 space-y-4" style={{ borderLeft: "4px solid #1B3A6B", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>

@@ -11,20 +11,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUploadPostConnect } from "@/hooks/useUploadPostConnect";
 import {
   Check,
-  Instagram,
   ArrowRight,
   ArrowLeft,
-  Link2,
   Share2,
   Sparkles,
   ExternalLink,
   Loader2,
   RefreshCw,
 } from "lucide-react";
+import { PlatformIcon } from "@/lib/platform-icons";
 import { toast } from "sonner";
 
 const PLATFORMS = [
-  { id: "instagram", name: "Instagram", icon: Instagram },
+  { id: "instagram", name: "Instagram" },
   { id: "tiktok", name: "TikTok" },
   { id: "youtube", name: "YouTube" },
   { id: "facebook", name: "Facebook" },
@@ -64,12 +63,6 @@ export default function CreatorOnboard() {
   const [rank, setRank] = useState("");
   const [yearsOfService, setYearsOfService] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
-  const [links, setLinks] = useState<{ label: string; url: string }[]>([
-    { label: "Website", url: "" },
-    { label: "Amazon Storefront", url: "" },
-    { label: "Podcast", url: "" },
-    { label: "YouTube Channel", url: "" },
-  ]);
   const [saving, setSaving] = useState(false);
   const onboardInitRef = useRef(false);
 
@@ -144,34 +137,11 @@ export default function CreatorOnboard() {
     setStep(2);
   };
 
-  const saveStep3 = async () => {
-    if (!user?.id) return;
-    setSaving(true);
-    const customLinks = {
-      tabs: [
-        { label: "My Links", type: "links", order: 1, visible: true },
-        { label: "Events", type: "events", order: 2, visible: true },
-        { label: "About", type: "about", order: 3, visible: true },
-      ],
-      links: links.filter((l) => l.url.trim()).map((l) => ({ label: l.label, url: l.url.trim() })),
-    };
-    // custom_links and onboarding_step go in user_metadata
-    const { error } = await supabase.auth.updateUser({
-      data: { custom_links: customLinks, onboarding_step: 3 },
-    });
-    setSaving(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    setStep(3);
-  };
-
   const completeOnboarding = async () => {
     if (!user?.id) return;
     setSaving(true);
     const { error } = await supabase.auth.updateUser({
-      data: { onboarding_step: 4, onboarding_completed: true },
+      data: { onboarding_step: 3, onboarding_completed: true },
     });
     setSaving(false);
     if (error) {
@@ -183,7 +153,7 @@ export default function CreatorOnboard() {
     navigate("/creator/dashboard");
   };
 
-  const progress = (step / 4) * 100;
+  const progress = (step / 3) * 100;
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
   const bioPageUrl = handle ? `${baseUrl}/c/${handle}` : "";
 
@@ -194,7 +164,7 @@ export default function CreatorOnboard() {
       <div className="max-w-xl mx-auto">
         <div className="mb-8">
           <Progress value={progress} className="h-2" />
-          <p className="text-sm text-gray-500 mt-2">Step {step} of 4</p>
+          <p className="text-sm text-gray-500 mt-2">Step {step} of 3</p>
         </div>
 
         {/* Step 1: Set Up Your Profile */}
@@ -292,80 +262,16 @@ export default function CreatorOnboard() {
           </Card>
         )}
 
-        {/* Step 2: Add Your Links */}
+        {/* Step 2: Your Profile Link is Ready */}
         {step === 2 && (
           <Card className="bg-white border-gray-200 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-gray-900">
-                <Link2 className="h-6 w-6" />
-                Add Your Links
-              </CardTitle>
-              <CardDescription className="text-gray-500">
-                Links appear as buttons on your bio page. Drag to reorder later in Profile.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {links.map((link, i) => (
-                <div key={i} className="flex gap-2">
-                  <Input
-                    placeholder="Label"
-                    value={link.label}
-                    className="bg-white border-gray-300 text-gray-900"
-                    onChange={(e) =>
-                      setLinks((prev) => {
-                        const next = [...prev];
-                        next[i] = { ...next[i], label: e.target.value };
-                        return next;
-                      })
-                    }
-                  />
-                  <Input
-                    placeholder="https://..."
-                    value={link.url}
-                    className="bg-white border-gray-300 text-gray-900"
-                    onChange={(e) =>
-                      setLinks((prev) => {
-                        const next = [...prev];
-                        next[i] = { ...next[i], url: e.target.value };
-                        return next;
-                      })
-                    }
-                  />
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                onClick={() => setLinks((prev) => [...prev, { label: "", url: "" }])}
-              >
-                + Add Link
-              </Button>
-              <div className="flex gap-3 pt-4">
-                <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50" onClick={() => setStep(1)}>
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
-                </Button>
-                <Button onClick={saveStep3} disabled={saving}>
-                  {saving ? "Saving..." : "Continue"}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Step 3: Bio Page is Live */}
-        {step === 3 && (
-          <Card className="bg-white border-gray-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-gray-900">
                 <Sparkles className="h-6 w-6" />
-                Your Bio Page is Live!
+                Your Profile Link is Ready!
               </CardTitle>
               <CardDescription className="text-gray-500">
-                Share your link in your Instagram or TikTok bio.
+                Share this link once you've finished setting up your profile.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -384,26 +290,18 @@ export default function CreatorOnboard() {
                   </Button>
                 </div>
               )}
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:bg-gray-50" asChild>
-                  <a href={`https://www.instagram.com/`} target="_blank" rel="noopener noreferrer">
-                    Share on Instagram
-                  </a>
-                </Button>
-                <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:bg-gray-50" asChild>
-                  <a href={`https://www.tiktok.com/`} target="_blank" rel="noopener noreferrer">
-                    Share on TikTok
-                  </a>
-                </Button>
-              </div>
               <div className="flex gap-3 pt-4">
+                <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50" onClick={() => setStep(1)}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
                 <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50" asChild>
                   <a href={bioPageUrl} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Preview bio page
                   </a>
                 </Button>
-                <Button onClick={() => setStep(4)}>
+                <Button onClick={() => setStep(3)}>
                   Continue
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -412,8 +310,8 @@ export default function CreatorOnboard() {
           </Card>
         )}
 
-        {/* Step 4: Connect Social Media (last step) */}
-        {step === 4 && (
+        {/* Step 3: Connect Social Media (last step) */}
+        {step === 3 && (
           <Card className="bg-white border-gray-200 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-gray-900">
@@ -432,7 +330,10 @@ export default function CreatorOnboard() {
                     key={p.id}
                     className="flex items-center justify-between p-4 rounded-xl border border-gray-200 bg-white"
                   >
-                    <span className="font-medium text-gray-900">{p.name}</span>
+                    <span className="flex items-center gap-3 font-medium text-gray-900">
+                      <PlatformIcon platform={p.id} size={24} />
+                      {p.name}
+                    </span>
                     {connectedAccount ? (
                       <span className="flex items-center gap-2 text-sm text-green-600">
                         <Check className="h-4 w-4" />
@@ -458,7 +359,7 @@ export default function CreatorOnboard() {
                 Refresh connected accounts
               </Button>
               <div className="flex gap-3 pt-4">
-                <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50" onClick={() => setStep(3)}>
+                <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50" onClick={() => setStep(2)}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
                 </Button>
