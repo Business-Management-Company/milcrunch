@@ -59,6 +59,7 @@
     { "src": "/api/resolve-handle", "dest": "/api/resolve-handle" },
     { "src": "/api/generate-caption", "dest": "/api/generate-caption" },
     { "src": "/api/(.*)", "dest": "/api/$1", "methods": ["GET", "POST", "OPTIONS", "PUT", "DELETE", "PATCH"] },
+    { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
