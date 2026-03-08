@@ -476,41 +476,46 @@ export default function CreatePost({ noLayout, postType }: { noLayout?: boolean;
                   </Button>
                 </div>
               ) : (
-                <div className="flex flex-wrap gap-3">
+                <div className="grid grid-cols-5 sm:grid-cols-6 gap-x-3 gap-y-4">
                   {ALL_PLATFORMS.map((platform) => {
                     const connected = connectedPlatforms.has(platform);
                     const isSelected = selected.has(platform);
+                    const label = PLATFORM_NAMES[platform] ?? platform;
                     return (
                       <button
                         key={platform}
                         onClick={() => connected ? toggle(platform) : navigate("/creator/socials")}
-                        className="relative group"
-                        title={connected ? platform : `Connect ${platform}`}
+                        className="group flex flex-col items-center gap-1.5"
+                        title={connected ? (isSelected ? `Deselect ${label}` : `Select ${label}`) : `Connect ${label}`}
                       >
-                        <div
-                          className={`h-12 w-12 rounded-full flex items-center justify-center transition-all ${
-                            connected
-                              ? isSelected
-                                ? "ring-2 ring-offset-2 ring-green-500"
-                                : "opacity-80 hover:opacity-100"
-                              : "opacity-30 hover:opacity-50"
-                          }`}
-                        >
-                          <PlatformIcon platform={platform} size={28} />
-                        </div>
-                        <div className={`absolute -top-0.5 -right-0.5 rounded-full flex items-center justify-center text-white ${
-                          connected
-                            ? isSelected ? "bg-green-500" : "bg-gray-400"
-                            : "bg-gray-300"
-                        }`} style={{ width: 18, height: 18 }}>
+                        <div className="relative">
+                          <div
+                            className={cn(
+                              "h-[52px] w-[52px] rounded-full flex items-center justify-center transition-all",
+                              connected
+                                ? isSelected
+                                  ? "ring-2 ring-offset-2 ring-[#1B3A6B] dark:ring-blue-400"
+                                  : "hover:ring-2 hover:ring-offset-2 hover:ring-gray-200 dark:hover:ring-gray-600"
+                                : "grayscale opacity-40 hover:opacity-60"
+                            )}
+                          >
+                            <PlatformIcon platform={platform} size={28} />
+                          </div>
+                          {/* Badge — bottom right */}
                           {connected ? (
-                            isSelected
-                              ? <Check className="h-2.5 w-2.5" />
-                              : <X className="h-2.5 w-2.5" />
+                            <span className="absolute -bottom-0.5 -right-0.5 h-[16px] w-[16px] rounded-full bg-green-500 border-2 border-white dark:border-card flex items-center justify-center group-hover:bg-red-500 transition-colors">
+                              <Check className="h-2 w-2 text-white group-hover:hidden" />
+                              <X className="h-2 w-2 text-white hidden group-hover:block" />
+                            </span>
                           ) : (
-                            <Plus className="h-2.5 w-2.5" />
+                            <span className="absolute -bottom-0.5 -right-0.5 h-[16px] w-[16px] rounded-full bg-gray-300 dark:bg-gray-600 border-2 border-white dark:border-card flex items-center justify-center">
+                              <Plus className="h-2 w-2 text-white" />
+                            </span>
                           )}
                         </div>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500 leading-none truncate max-w-[60px]">
+                          {label}
+                        </span>
                       </button>
                     );
                   })}

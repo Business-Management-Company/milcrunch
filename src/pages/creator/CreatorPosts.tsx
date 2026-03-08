@@ -18,6 +18,7 @@ import {
   Send,
   Pencil,
   LayoutGrid,
+  CalendarRange,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createUploadPost, type UploadPostPlatform } from "@/services/upload-post";
@@ -27,8 +28,8 @@ type PostType = "single" | "cadence";
 type StatusTab = "create" | "drafts" | "scheduled" | "published" | "failed";
 
 const POST_TYPE_TABS: { value: PostType; label: string; icon: typeof FileText }[] = [
-  { value: "single", label: "Single Post", icon: FileText },
-  { value: "cadence", label: "Cadence Campaign", icon: LayoutGrid },
+  { value: "single", label: "Single Post", icon: Pencil },
+  { value: "cadence", label: "Cadence Campaign", icon: CalendarRange },
 ];
 
 const STATUS_TABS: { value: StatusTab; label: string; icon: typeof PenSquare }[] = [
@@ -191,69 +192,77 @@ export default function CreatorPosts() {
       minute: "2-digit",
     });
 
-  const getTabLabel = (tab: StatusTab): React.ReactNode => {
-    const count =
-      tab === "drafts" ? counts.drafts
-      : tab === "scheduled" ? counts.scheduled
-      : tab === "published" ? counts.published
-      : tab === "failed" ? counts.failed
-      : 0;
-
-    if (count === 0 || tab === "create") return tab === "create" ? "Create" : STATUS_TABS.find((t) => t.value === tab)!.label;
-
-    const label = STATUS_TABS.find((t) => t.value === tab)!.label;
-    return (
-      <>
-        {label}{" "}
-        <span className={cn("font-semibold", tab === "failed" && "text-red-500")}>
-          ({count})
-        </span>
-      </>
-    );
-  };
+  const getCount = (tab: StatusTab) =>
+    tab === "drafts" ? counts.drafts
+    : tab === "scheduled" ? counts.scheduled
+    : tab === "published" ? counts.published
+    : tab === "failed" ? counts.failed
+    : 0;
 
   return (
     <CreatorLayout>
       <div className="flex flex-col h-[calc(100vh-2rem)] -mt-2">
-        {/* ── ROW 1: Post Type Tabs ── */}
-        <div className="shrink-0 border-b border-border bg-card">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 flex overflow-x-auto">
-            {POST_TYPE_TABS.map((tab) => (
-              <button
-                key={tab.value}
-                onClick={() => switchPostType(tab.value)}
-                className={cn(
-                  "px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap",
-                  postType === tab.value
-                    ? "border-[#1B3A6B] text-[#1B3A6B] dark:text-blue-400 dark:border-blue-400"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <tab.icon className="h-3.5 w-3.5" />
-                {tab.label}
-              </button>
-            ))}
+        {/* ── ROW 1: Post Type — pill toggle ── */}
+        <div className="shrink-0 bg-card px-4 sm:px-6 pt-4 pb-2">
+          <div className="max-w-6xl mx-auto flex gap-2">
+            {POST_TYPE_TABS.map((tab) => {
+              const isActive = postType === tab.value;
+              return (
+                <button
+                  key={tab.value}
+                  onClick={() => switchPostType(tab.value)}
+                  className={cn(
+                    "inline-flex items-center gap-2 px-5 py-2 rounded-full text-[13px] font-semibold transition-all whitespace-nowrap",
+                    isActive
+                      ? "bg-[#1B3A6B] text-white shadow-sm"
+                      : "bg-white dark:bg-card text-gray-500 border border-gray-200 dark:border-gray-700 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-300"
+                  )}
+                >
+                  <tab.icon className="h-4 w-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* ── ROW 2: Status Tabs ── */}
-        <div className="shrink-0 border-b border-border bg-card/80">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 flex overflow-x-auto">
-            {STATUS_TABS.map((tab) => (
-              <button
-                key={tab.value}
-                onClick={() => switchTab(tab.value)}
-                className={cn(
-                  "px-4 py-2 text-[13px] font-medium border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap",
-                  activeTab === tab.value
-                    ? "border-[#1B3A6B] text-[#1B3A6B] dark:text-blue-400 dark:border-blue-400"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <tab.icon className="h-3.5 w-3.5" />
-                {getTabLabel(tab.value)}
-              </button>
-            ))}
+        {/* ── ROW 2: Status — small pill tabs ── */}
+        <div className="shrink-0 bg-card px-4 sm:px-6 pb-3">
+          <div className="max-w-6xl mx-auto flex gap-1.5 overflow-x-auto">
+            {STATUS_TABS.map((tab) => {
+              const isActive = activeTab === tab.value;
+              const count = getCount(tab.value);
+              const isFailed = tab.value === "failed";
+              const showCount = count > 0 && tab.value !== "create";
+              return (
+                <button
+                  key={tab.value}
+                  onClick={() => switchTab(tab.value)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-semibold transition-all whitespace-nowrap",
+                    isActive
+                      ? isFailed && count > 0
+                        ? "bg-red-500 text-white"
+                        : "bg-[#C8A84B] text-white"
+                      : "bg-[#F3F4F6] dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-300"
+                  )}
+                >
+                  {tab.label}
+                  {showCount && (
+                    <span className={cn(
+                      "inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold leading-none",
+                      isActive
+                        ? "bg-white/25 text-white"
+                        : isFailed
+                          ? "bg-red-500 text-white"
+                          : "bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300"
+                    )}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
