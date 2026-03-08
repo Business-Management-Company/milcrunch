@@ -55,6 +55,7 @@ import EventsCalendar from "./pages/EventsCalendar";
 import PublicEvents from "./pages/PublicEvents";
 import LoginPage from "./pages/creator/LoginPage";
 import SignupPage from "./pages/creator/SignupPage";
+import SignupPrivate from "./pages/SignupPrivate";
 import { CreatorRoute, BrandRoute, SuperAdminRoute } from "./components/auth/ProtectedRoute";
 import CreatorDashboard from "./pages/creator/CreatorDashboard";
 import CreatorProfile from "./pages/creator/CreatorProfile";
@@ -209,6 +210,7 @@ const App = () => (
               <Route path="/login" element={<LoginPage />} />
               <Route path="/sign-in" element={<Navigate to="/login" replace />} />
               <Route path="/signup" element={<SignupPage />} />
+              <Route path="/signup-private" element={<SignupPrivate />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/plans" element={<PlansPage />} />
               <Route path="/resources" element={<Resources />} />
