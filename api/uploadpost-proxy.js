@@ -69,21 +69,65 @@ export default async function handler(req, res) {
   const url = `https://api.upload-post.com${endpoint}`;
   const httpMethod = (method || "GET").toUpperCase();
 
-  console.log(`[uploadpost-proxy] ${httpMethod} ${url}`);
+  // Upload endpoints require multipart/form-data, not JSON
+  const UPLOAD_ENDPOINTS = ["/api/upload_text", "/api/upload_photos", "/api/upload_videos"];
+  const isUploadEndpoint = UPLOAD_ENDPOINTS.some((ep) => endpoint.startsWith(ep));
+
+  console.log(`[uploadpost-proxy] ${httpMethod} ${url} (formData: ${isUploadEndpoint})`);
   if (resolvedBody) console.log("[uploadpost-proxy] body:", JSON.stringify(resolvedBody).slice(0, 2000));
 
   try {
     const fetchOptions = {
       method: httpMethod,
       headers: {
-        "Content-Type": "application/json",
         apikey: apiKey,
         Authorization: `Apikey ${apiKey}`,
       },
     };
 
     if (resolvedBody && httpMethod !== "GET" && httpMethod !== "HEAD") {
-      fetchOptions.body = JSON.stringify(resolvedBody);
+      if (isUploadEndpoint) {
+        // Build multipart/form-data for upload endpoints
+        const form = new FormData();
+        for (const [key, value] of Object.entries(resolvedBody)) {
+          if (value == null) continue;
+          if (key === "platform" && Array.isArray(value)) {
+            // UploadPost requires platform[] array bracket syntax
+            for (const p of value) {
+              form.append("platform[]", String(p));
+            }
+          } else if (key === "photos" && Array.isArray(value)) {
+            for (const p of value) {
+              form.append("photos[]", String(p));
+            }
+          } else if (Array.isArray(value)) {
+            for (const v of value) {
+              form.append(`${key}[]`, String(v));
+            }
+          } else {
+            form.append(key, String(value));
+          }
+        }
+        // Log form fields for debugging
+        const formFields = {};
+        for (const [k, v] of form.entries()) {
+          if (formFields[k]) {
+            if (!Array.isArray(formFields[k])) formFields[k] = [formFields[k]];
+            formFields[k].push(v);
+          } else {
+            formFields[k] = v;
+          }
+        }
+        console.log("[uploadpost-proxy] FormData fields:", JSON.stringify(formFields));
+        fetchOptions.body = form;
+        // Do NOT set Content-Type — fetch sets the multipart boundary automatically
+      } else {
+        // JSON for all other endpoints (user management, JWT, etc.)
+        fetchOptions.headers["Content-Type"] = "application/json";
+        fetchOptions.body = JSON.stringify(resolvedBody);
+      }
+    } else if (!isUploadEndpoint) {
+      fetchOptions.headers["Content-Type"] = "application/json";
     }
 
     const response = await fetch(url, fetchOptions);
