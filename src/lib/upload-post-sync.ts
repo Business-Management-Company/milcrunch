@@ -246,94 +246,135 @@ function looksLikeUuid(s: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(s);
 }
 
+/** Persist the resolved UploadPost slug to creator_profiles for cross-device consistency. */
+async function persistSlugToProfile(userId: string, slug: string): Promise<void> {
+  try {
+    await supabase
+      .from("creator_profiles")
+      .update({ upload_post_slug: slug })
+      .eq("user_id", userId);
+  } catch (e) {
+    // Column may not exist yet — ignore silently
+    console.warn("[UploadPost] Could not persist slug to creator_profiles:", e);
+  }
+}
+
+/** Read the persisted UploadPost slug from creator_profiles. */
+async function readSlugFromProfile(userId: string): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from("creator_profiles")
+      .select("upload_post_slug")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const slug = (data as any)?.upload_post_slug;
+    if (slug && typeof slug === "string" && slug.length > 0 && !looksLikeUuid(slug)) {
+      return slug;
+    }
+  } catch {
+    // Column may not exist yet
+  }
+  return null;
+}
+
 /**
  * Resolve the UploadPost profile username/slug for a Supabase user.
- * UploadPost profiles may have been created with a custom slug (e.g. "johnny-rocket")
- * rather than the Supabase UUID. This function finds the correct slug and caches it.
+ *
+ * SECURITY FIX: Previously this picked the first non-UUID profile from the
+ * global UploadPost user list, which meant ALL users resolved to the same
+ * profile (e.g. "johnny-rocket"). Now the resolution is strictly per-user:
+ *
+ *  1. Check DB (creator_profiles.upload_post_slug) — authoritative per-user
+ *  2. Check localStorage cache (per-browser hint, verified against DB)
+ *  3. Check UploadPost for a profile whose username matches this user's UUID
+ *  4. Create a new profile with UUID as username
+ *
+ * A user NEVER inherits another user's UploadPost profile.
  */
 export async function resolveUploadPostUsername(supabaseUserId: string): Promise<string> {
-  // 1. Check localStorage cache — reject if cached value looks like a UUID
   const cacheKey = `up_slug_${supabaseUserId}`;
+
+  // 1. Check DB for persisted slug (authoritative, cross-device)
+  const dbSlug = await readSlugFromProfile(supabaseUserId);
+  if (dbSlug) {
+    console.log("[UploadPost] Resolved slug from DB:", dbSlug);
+    localStorage.setItem(cacheKey, dbSlug);
+    return dbSlug;
+  }
+
+  // 2. Check localStorage cache (per-browser hint)
   const cached = localStorage.getItem(cacheKey);
   if (cached && !looksLikeUuid(cached)) {
     console.log("[UploadPost] Resolved slug from cache:", cached);
+    // Persist to DB for cross-device consistency
+    persistSlugToProfile(supabaseUserId, cached);
     return cached;
   }
-  // Clear stale UUID-as-slug cache entries
   if (cached && looksLikeUuid(cached)) {
     console.log("[UploadPost] Clearing stale UUID cache entry:", cached);
     localStorage.removeItem(cacheKey);
   }
 
-  // 2. List all UploadPost profiles
+  // 3. Check UploadPost for a profile matching this user's UUID
+  //    SECURITY: Only use profiles whose username matches THIS user's UUID.
+  //    Never pick another user's non-UUID profile.
   const users = await listUploadPostUsers();
-  console.log("[UploadPost] Listed profiles:", users.length, "full list:", JSON.stringify(users.map((u) => ({ username: u.username, keys: Object.keys(u) }))));
+  console.log("[UploadPost] Listed profiles:", users.length);
 
-  // 3. Filter out ghost UUID profiles — always prefer non-UUID slugs
-  const nonUuidUsers = users.filter((u) => !looksLikeUuid(u.username));
-  console.log("[UploadPost] Non-UUID profiles:", nonUuidUsers.length, nonUuidUsers.map((u) => u.username));
-
-  // 4. Use the first non-UUID profile if one exists (e.g. "johnny-rocket")
-  if (nonUuidUsers.length > 0) {
-    const slug = nonUuidUsers[0].username;
-    console.log("[UploadPost] Using non-UUID profile:", slug);
-    localStorage.setItem(cacheKey, slug);
-    return slug;
-  }
-
-  // 5. Only UUID profiles exist — use UUID match as fallback
   const byUuid = users.find((u) => u.username === supabaseUserId);
   if (byUuid) {
-    console.log("[UploadPost] Only UUID profiles found, using UUID match:", byUuid.username);
-    // Don't cache UUID slugs — they should be replaced
+    console.log("[UploadPost] Found UUID-matched profile:", byUuid.username);
+    // Don't cache UUID slugs — they should eventually be replaced with custom slugs
     return byUuid.username;
   }
 
-  // 6. No profiles at all — create one with the UUID
-  console.log("[UploadPost] No profiles found. Creating profile with UUID:", supabaseUserId);
+  // 4. No profile exists for this user — create one with UUID as username
+  console.log("[UploadPost] No profile found for user. Creating with UUID:", supabaseUserId);
   const createResult = await createUploadPostProfile(supabaseUserId);
   if (!createResult.error) {
     console.log("[UploadPost] Created new profile:", supabaseUserId);
-    // Don't cache UUID slugs
     return supabaseUserId;
   }
 
-  // 7. Creation also failed — return UUID as last resort
-  console.warn("[UploadPost] No profiles found and creation failed. Using UUID:", supabaseUserId);
+  // 5. Creation failed — return UUID as last resort
+  console.warn("[UploadPost] Profile creation failed. Using UUID:", supabaseUserId);
   return supabaseUserId;
 }
 
 /** Ensure Upload-Post profile exists for this user; create if not.
- *  NEVER creates a new profile if any non-UUID profile already exists.
+ *  SECURITY: Only uses profiles that belong to THIS user (UUID match or
+ *  persisted slug). Never assigns another user's profile.
  *  Returns the resolved UploadPost username/slug. */
 export async function ensureUploadPostProfile(userId: string): Promise<{ ok: boolean; username: string; error?: string }> {
   try {
-    // 1. List all existing profiles
+    // 1. Check DB for persisted slug (authoritative)
+    const dbSlug = await readSlugFromProfile(userId);
+    if (dbSlug) {
+      console.log("[ensureUploadPostProfile] Using persisted slug from DB:", dbSlug);
+      return { ok: true, username: dbSlug };
+    }
+
+    // 2. Check localStorage cache
+    const cacheKey = `up_slug_${userId}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached && !looksLikeUuid(cached)) {
+      console.log("[ensureUploadPostProfile] Using cached slug:", cached);
+      persistSlugToProfile(userId, cached);
+      return { ok: true, username: cached };
+    }
+
+    // 3. List all profiles — only match by THIS user's UUID
     const users = await listUploadPostUsers();
-    console.log("[ensureUploadPostProfile] Found", users.length, "profiles:", users.map((u) => u.username));
+    console.log("[ensureUploadPostProfile] Found", users.length, "profiles");
 
-    // 2. Filter out ghost UUID profiles
-    const nonUuidUsers = users.filter((u) => !looksLikeUuid(u.username));
-
-    // 3. Use first non-UUID profile if one exists (e.g. "johnny-rocket")
-    if (nonUuidUsers.length > 0) {
-      const slug = nonUuidUsers[0].username;
-      console.log("[ensureUploadPostProfile] Using existing non-UUID profile:", slug);
-      // Cache for resolveUploadPostUsername
-      const cacheKey = `up_slug_${userId}`;
-      localStorage.setItem(cacheKey, slug);
-      return { ok: true, username: slug };
+    const byUuid = users.find((u) => u.username === userId);
+    if (byUuid) {
+      console.log("[ensureUploadPostProfile] Found UUID-matched profile:", byUuid.username);
+      return { ok: true, username: byUuid.username };
     }
 
-    // 4. Only UUID profiles exist — use the matching one but DON'T create another
-    if (users.length > 0) {
-      const match = users.find((u) => u.username === userId) ?? users[0];
-      console.log("[ensureUploadPostProfile] Only UUID profiles exist, using:", match.username);
-      return { ok: true, username: match.username };
-    }
-
-    // 5. ZERO profiles — only now create one
-    console.log("[ensureUploadPostProfile] No profiles at all. Creating with UUID:", userId);
+    // 4. No matching profile — create one with UUID
+    console.log("[ensureUploadPostProfile] No profile for this user. Creating:", userId);
     const createResult = await createUploadPostProfile(userId);
     if (createResult.error) {
       console.error("[ensureUploadPostProfile] Create failed:", createResult.error);
@@ -342,11 +383,13 @@ export async function ensureUploadPostProfile(userId: string): Promise<{ ok: boo
     return { ok: true, username: userId };
   } catch (err) {
     console.error("[ensureUploadPostProfile] failed:", err);
-    // NEVER fall back to raw UUID without checking — try cache first
+    // Try DB slug on error
+    const dbSlug = await readSlugFromProfile(userId).catch(() => null);
+    if (dbSlug) return { ok: true, username: dbSlug };
+    // Try cache as last resort
     const cacheKey = `up_slug_${userId}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached && !looksLikeUuid(cached)) {
-      console.log("[ensureUploadPostProfile] Error recovery: using cached slug:", cached);
       return { ok: true, username: cached };
     }
     return { ok: false, username: userId, error: (err as Error).message };
