@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import CreatorLayout from "@/components/layout/CreatorLayout";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import {
   Loader2, Check, X, Link2, Plus, Sparkles,
   Upload, Image, Video, FileText, Download, Camera, Palette,
   Hash, Smile, Braces, Calendar, Tag, Copy,
-  ChevronDown, LayoutGrid, AlertTriangle, CheckCircle2,
+  LayoutGrid, AlertTriangle, CheckCircle2,
   Heart, MessageCircle, Bookmark, MoreHorizontal, ThumbsUp, Repeat2, Send,
 } from "lucide-react";
 import { PlatformIcon, PLATFORM_NAMES } from "@/lib/platform-icons";
@@ -93,6 +93,32 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [previewPlatform, setPreviewPlatform] = useState("instagram");
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSaveDraftIdRef = useRef<string | null>(null);
+
+  /* Auto-save draft (status='autosave') on caption change with 500ms debounce */
+  const runAutoSave = useCallback(async (text: string) => {
+    if (!user?.id || !text.trim()) return;
+    setAutoSaveStatus("saving");
+    const payload = {
+      caption: text.trim(),
+      media_url: mediaUrl || null,
+      platforms: Array.from(selected),
+      status: "autosave" as const,
+    };
+    let err;
+    if (autoSaveDraftIdRef.current) {
+      ({ error: err } = await supabase.from("post_drafts").update(payload).eq("id", autoSaveDraftIdRef.current));
+    } else {
+      const res = await supabase.from("post_drafts").insert({ ...payload, user_id: user.id }).select("id").single();
+      err = res.error;
+      if (res.data) autoSaveDraftIdRef.current = res.data.id;
+    }
+    if (err) console.error("[AutoSave] error:", err);
+    setAutoSaveStatus("saved");
+    setTimeout(() => setAutoSaveStatus((s) => s === "saved" ? "idle" : s), 2500);
+  }, [user?.id, mediaUrl, selected]);
 
   /* Populate form when editing a draft */
   useEffect(() => {
@@ -237,6 +263,54 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
 
   const handlePost = () => executePost(false);
   const handlePostNow = () => executePost(true);
+
+  /* ── Save draft (explicit, status='draft') ── */
+  const handleSaveDraft = async () => {
+    if (!user?.id) return;
+    if (!caption.trim() && selected.size === 0) {
+      toast.error("Add a caption or select platforms first");
+      return;
+    }
+
+    let savedMediaUrl = mediaUrl || null;
+    if (mediaFiles.length > 0) {
+      const file = mediaFiles[0];
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("post-media")
+        .upload(path, file, { contentType: file.type });
+      if (upErr) { toast.error(`Media upload failed: ${upErr.message}`); return; }
+      const { data: urlData } = supabase.storage.from("post-media").getPublicUrl(path);
+      savedMediaUrl = urlData.publicUrl;
+
+      supabase.from("creator_media").insert({
+        user_id: user.id, filename: file.name, file_url: savedMediaUrl,
+        file_type: file.type.startsWith("video/") ? "video" : "image", file_size: file.size,
+      }).then(({ error: mlErr }) => { if (mlErr) console.error("[MediaLibrary] insert error:", mlErr); });
+    }
+
+    const draftPayload = {
+      caption: caption.trim(), media_url: savedMediaUrl,
+      platforms: Array.from(selected), status: "draft" as const,
+    };
+
+    let error;
+    const effectiveId = draftId || autoSaveDraftIdRef.current;
+    if (effectiveId) {
+      ({ error } = await supabase.from("post_drafts").update(draftPayload).eq("id", effectiveId));
+    } else {
+      ({ error } = await supabase.from("post_drafts").insert({ ...draftPayload, user_id: user.id }));
+    }
+
+    if (error) { console.error("Draft save error:", error); toast.error("Failed to save draft"); }
+    else {
+      toast.success(draftId ? "Draft updated!" : "Saved as draft!");
+      setCaption(""); setMediaUrl(""); setScheduledDate("");
+      setPostName(""); setPostLabel(""); setMediaFiles([]); setDraftId(null);
+      autoSaveDraftIdRef.current = null;
+    }
+  };
 
   const handleAiGenerate = async () => {
     console.log("[AI Caption] handler called, aiPrompt:", JSON.stringify(aiPrompt));
@@ -526,9 +600,53 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
 
         {/* ── SINGLE POST TAB ── */}
         {activeTab === "single" && <>
+        {/* ── TOP ACTION BAR ── */}
+        <div className="shrink-0 bg-card border-b border-border px-4 sm:px-6 py-2.5">
+          <div className="max-w-6xl mx-auto flex items-center justify-end gap-2">
+            {/* Auto-save indicator */}
+            {autoSaveStatus !== "idle" && (
+              <span className="text-[11px] text-gray-400 mr-1 flex items-center gap-1">
+                {autoSaveStatus === "saving" && <Loader2 className="h-3 w-3 animate-spin" />}
+                {autoSaveStatus === "saved" && <Check className="h-3 w-3" />}
+                {autoSaveStatus === "saving" ? "Saving..." : "Draft saved"}
+              </span>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs border-[#1B3A6B]/30 text-[#1B3A6B] hover:bg-[#1B3A6B]/5"
+              onClick={handleSaveDraft}
+            >
+              <FileText className="h-3.5 w-3.5 mr-1.5" />
+              Save draft
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs border-[#1B3A6B]/30 text-[#1B3A6B] hover:bg-[#1B3A6B]/5"
+              onClick={() => handlePost()}
+              disabled={posting || noAccounts || hasErrors}
+            >
+              {posting && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
+              <Calendar className="h-3.5 w-3.5 mr-1.5" />
+              Schedule
+            </Button>
+            <Button
+              size="sm"
+              className="h-9 text-xs bg-[#1B3A6B] hover:bg-[#152d54] text-white font-semibold px-5"
+              onClick={() => handlePostNow()}
+              disabled={posting || noAccounts || hasErrors}
+            >
+              {posting && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
+              <Send className="h-3.5 w-3.5 mr-1.5" />
+              Post Now
+            </Button>
+          </div>
+        </div>
+
         {/* ── SCROLLABLE CONTENT ── */}
         <div className="flex-1 overflow-y-auto" style={{ backgroundColor: "#F5F7FA" }}>
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-36">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-6">
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
               {/* ═══ LEFT COLUMN — FORM ═══ */}
@@ -618,12 +736,16 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
                 <Textarea
                   value={caption}
                   onChange={(e) => {
-                    setCaption(e.target.value);
+                    const val = e.target.value;
+                    setCaption(val);
                     // If user edits while shortened, the stored original is stale
                     if (captionBeforeShorten !== null) {
                       setCaptionBeforeShorten(null);
                       setShortenUrls(false);
                     }
+                    // Debounced auto-save
+                    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+                    autoSaveTimerRef.current = setTimeout(() => runAutoSave(val), 500);
                   }}
                   placeholder="What do you want to talk about?"
                   className="border-0 focus-visible:ring-0 resize-none min-h-[120px] text-sm rounded-none"
@@ -1027,110 +1149,6 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
           </div>
         </div>
 
-        {/* ── FIXED BOTTOM ACTION BAR ── */}
-        <div className="fixed bottom-0 right-0 md:left-60 left-0 z-50 bg-[#1B3A6B] px-4 sm:px-6 py-3" style={{ boxShadow: "0 -4px 20px rgba(0,0,0,0.15)" }}>
-          <div className="max-w-6xl mx-auto flex items-center justify-between">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 text-xs border-white/40 text-white hover:bg-white/10 hover:text-white"
-              onClick={() => toast.info("Progress saved!")}
-            >
-              Save progress
-            </Button>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 text-xs gap-1 pr-7 border-white/40 text-white hover:bg-white/10 hover:text-white"
-                  onClick={async () => {
-                    if (!user?.id) return;
-                    if (!caption.trim() && selected.size === 0) {
-                      toast.error("Add a caption or select platforms first");
-                      return;
-                    }
-
-                    // Upload media files to Supabase Storage if any
-                    let savedMediaUrl = mediaUrl || null;
-                    if (mediaFiles.length > 0) {
-                      const file = mediaFiles[0];
-                      const ext = file.name.split(".").pop() ?? "jpg";
-                      const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-                      const { error: upErr } = await supabase.storage
-                        .from("post-media")
-                        .upload(path, file, { contentType: file.type });
-                      if (upErr) {
-                        toast.error(`Media upload failed: ${upErr.message}`);
-                        return;
-                      }
-                      const { data: urlData } = supabase.storage.from("post-media").getPublicUrl(path);
-                      savedMediaUrl = urlData.publicUrl;
-
-                      // Save to Media Library (fire-and-forget)
-                      supabase.from("creator_media").insert({
-                        user_id: user.id,
-                        filename: file.name,
-                        file_url: savedMediaUrl,
-                        file_type: file.type.startsWith("video/") ? "video" : "image",
-                        file_size: file.size,
-                      }).then(({ error: mlErr }) => {
-                        if (mlErr) console.error("[MediaLibrary] insert error:", mlErr);
-                      });
-                    }
-
-                    const draftPayload = {
-                      caption: caption.trim(),
-                      media_url: savedMediaUrl,
-                      platforms: Array.from(selected),
-                      status: "draft" as const,
-                    };
-
-                    let error;
-                    if (draftId) {
-                      ({ error } = await supabase.from("post_drafts").update(draftPayload).eq("id", draftId));
-                    } else {
-                      ({ error } = await supabase.from("post_drafts").insert({ ...draftPayload, user_id: user.id }));
-                    }
-
-                    if (error) {
-                      console.error("Draft save error:", error);
-                      toast.error("Failed to save draft");
-                    } else {
-                      toast.success(draftId ? "Draft updated!" : "Saved as draft!");
-                      setCaption(""); setMediaUrl(""); setScheduledDate("");
-                      setPostName(""); setPostLabel(""); setMediaFiles([]); setDraftId(null);
-                    }
-                  }}
-                >
-                  Save as draft
-                </Button>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-white/60 pointer-events-none" />
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 text-xs border-white/40 text-white hover:bg-white/10 hover:text-white"
-                onClick={() => handlePost()}
-                disabled={posting || noAccounts || hasErrors}
-              >
-                {posting && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
-                <Calendar className="h-3.5 w-3.5 mr-1.5" />
-                Schedule
-              </Button>
-              <Button
-                size="sm"
-                className="h-9 text-xs bg-white hover:bg-gray-100 text-[#1B3A6B] font-semibold shadow-sm"
-                onClick={() => handlePostNow()}
-                disabled={posting || noAccounts || hasErrors}
-              >
-                {posting && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
-                <Send className="h-3.5 w-3.5 mr-1.5" />
-                Post Now
-              </Button>
-            </div>
-          </div>
-        </div>
         </>}
       </div>
     </Wrapper>
