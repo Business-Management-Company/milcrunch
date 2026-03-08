@@ -21,6 +21,9 @@ module.exports = async function handler(req, res) {
     return res.status(204).end();
   }
 
+  // Debug: log every request
+  console.log('[proxy] method:', req.method, 'action:', req.body?.action, 'endpoint:', req.body?.endpoint);
+
   // Health check — visit /api/uploadpost-proxy in browser to verify function is live
   if (req.method === "GET") {
     const hasKey = !!(process.env.UPLOAD_POST_API_KEY || process.env.VITE_UPLOAD_POST_API_KEY);
@@ -33,6 +36,7 @@ module.exports = async function handler(req, res) {
   }
 
   if (req.method !== "POST") {
+    console.log('[proxy] returning 405 for method:', req.method);
     return res.status(405).json({ error: "Method not allowed. Use GET for health check or POST with { endpoint, method, body }." });
   }
 
@@ -199,6 +203,7 @@ module.exports = async function handler(req, res) {
 
   // ── Legacy endpoint-based proxy (non-action requests) ──
   if (!endpoint) {
+    console.log('[proxy] no matching action, falling through. body:', JSON.stringify(req.body));
     return res.status(400).json({ error: "Missing 'endpoint' or 'action' field in request body." });
   }
 
