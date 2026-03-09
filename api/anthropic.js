@@ -6,8 +6,8 @@ module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   // Health check for UptimeRobot
-  if (req.method === "GET") {
-    return res.status(200).json({ status: "ok", service: "anthropic", timestamp: new Date().toISOString() });
+  if (req.method === "GET" || req.method === "HEAD") {
+    return res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
   }
 
   if (req.method !== "POST") {
