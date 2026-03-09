@@ -18,8 +18,9 @@ const handler = async function handler(req, res) {
     return res.status(200).end();
   }
 
+  // Health check for UptimeRobot
   if (req.method === "GET") {
-    return res.status(200).json({ status: "upload-photos alive", timestamp: new Date().toISOString() });
+    return res.status(200).json({ status: "ok", service: "upload-photos", timestamp: new Date().toISOString() });
   }
 
   if (req.method !== "POST") {

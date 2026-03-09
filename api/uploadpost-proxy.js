@@ -24,15 +24,9 @@ module.exports = async function handler(req, res) {
   // Debug: log every request
   console.log('[proxy] method:', req.method, 'action:', req.body?.action, 'endpoint:', req.body?.endpoint);
 
-  // Health check — visit /api/uploadpost-proxy in browser to verify function is live
+  // Health check for UptimeRobot
   if (req.method === "GET") {
-    const hasKey = !!(process.env.UPLOAD_POST_API_KEY || process.env.VITE_UPLOAD_POST_API_KEY);
-    return res.status(200).json({
-      status: "proxy alive",
-      hasKey,
-      keySource: process.env.UPLOAD_POST_API_KEY ? "UPLOAD_POST_API_KEY" : process.env.VITE_UPLOAD_POST_API_KEY ? "VITE_UPLOAD_POST_API_KEY" : "none",
-      timestamp: new Date().toISOString(),
-    });
+    return res.status(200).json({ status: "ok", service: "uploadpost-proxy", timestamp: new Date().toISOString() });
   }
 
   if (req.method !== "POST") {
