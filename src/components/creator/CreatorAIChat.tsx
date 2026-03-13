@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Send, X, Plus, Loader2 } from "lucide-react";
+import { Sparkles, Send, X, Plus, Loader2, Instagram, Youtube, Linkedin, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MarkdownRenderer from "@/components/ui/markdown-renderer";
 
@@ -16,13 +16,15 @@ function makeId() {
   return `cmsg-${++idCounter}-${Date.now()}`;
 }
 
+const GREETING = "Hey! \ud83d\udc4b I'm your MilCrunch AI assistant. I can help with captions, brand pitches, content strategy, and more. What are you working on? \ud83d\ude80";
+
 const CREATOR_CHIPS = [
-  "Write a caption for my next post",
-  "Find brands to pitch",
-  "Plan my content this week",
-  "Grow my Instagram following",
-  "Draft a sponsorship email",
-  "Analyze my best posts",
+  "\u270d\ufe0f Write a caption",
+  "\ud83c\udfaf Find brands to pitch",
+  "\ud83d\udcc5 Plan my content this week",
+  "\ud83d\udcc8 Grow my following",
+  "\ud83d\udc8c Draft a sponsorship email",
+  "\ud83d\udd25 Analyze my best posts",
 ];
 
 const CREATOR_SYSTEM_PROMPT = `You are the MilCrunch AI Assistant for military creators. You help veteran and military-affiliated content creators grow their brand, create content, and monetize their platform.
@@ -37,7 +39,58 @@ You can help with:
 - Optimizing bio pages and link-in-bio strategies
 - Understanding military creator market rates and pricing
 
-Keep responses concise, actionable, and encouraging. Use bullet points and bold for key takeaways. Always end with a clear next step or actionable suggestion. Never ask more than one question per response.`;
+Keep responses concise, actionable, and encouraging. Use bullet points and bold for key takeaways. Always end with a clear next step or actionable suggestion. Never ask more than one question per response.
+
+IMPORTANT: When you need to ask the user which social media platform they want to focus on, include the exact phrase "which platform" in your response. This triggers a platform selector UI for the user.`;
+
+/* ── Platform SVG icons ── */
+function TikTokIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.75a8.18 8.18 0 0 0 3.76.92V6.69Z" />
+    </svg>
+  );
+}
+
+const PLATFORM_CHIPS = [
+  {
+    label: "Instagram",
+    icon: (cls: string) => <Instagram className={cls} />,
+    bg: "bg-gradient-to-br from-purple-500 to-pink-500",
+    ring: "ring-purple-300 dark:ring-purple-700",
+  },
+  {
+    label: "TikTok",
+    icon: (cls: string) => <TikTokIcon className={cls} />,
+    bg: "bg-black dark:bg-white/90",
+    ring: "ring-gray-400 dark:ring-gray-500",
+    textOverride: "text-white dark:text-black",
+  },
+  {
+    label: "YouTube",
+    icon: (cls: string) => <Youtube className={cls} />,
+    bg: "bg-red-600",
+    ring: "ring-red-300 dark:ring-red-700",
+  },
+  {
+    label: "LinkedIn",
+    icon: (cls: string) => <Linkedin className={cls} />,
+    bg: "bg-[#0A66C2]",
+    ring: "ring-blue-300 dark:ring-blue-700",
+  },
+  {
+    label: "All Platforms",
+    icon: (cls: string) => <Globe className={cls} />,
+    bg: "bg-gray-600 dark:bg-gray-500",
+    ring: "ring-gray-300 dark:ring-gray-600",
+  },
+];
+
+/* Does the assistant message look like it's asking the user to pick a platform? */
+function asksPlatform(text: string): boolean {
+  const lower = text.toLowerCase();
+  return /which platform/i.test(lower) || /what platform/i.test(lower) || /choose a platform/i.test(lower) || /select a platform/i.test(lower) || /specific platform/i.test(lower);
+}
 
 export interface CreatorAIChatRef {
   open: () => void;
@@ -47,7 +100,7 @@ export interface CreatorAIChatRef {
 const CreatorAIChat = forwardRef<CreatorAIChatRef>(function CreatorAIChat(_, ref) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: makeId(), role: "assistant", text: "Hey! I'm your MilCrunch AI assistant. I can help with captions, brand pitches, content strategy, and more. What are you working on?" },
+    { id: makeId(), role: "assistant", text: GREETING },
   ]);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -66,7 +119,6 @@ const CreatorAIChat = forwardRef<CreatorAIChatRef>(function CreatorAIChat(_, ref
     open: () => setOpen(true),
     openWithMessage: (msg: string) => {
       setOpen(true);
-      // Small delay so the panel renders before sending
       setTimeout(() => sendMessage(msg), 50);
     },
   }));
@@ -82,7 +134,6 @@ const CreatorAIChat = forwardRef<CreatorAIChatRef>(function CreatorAIChat(_, ref
     setLoading(true);
 
     try {
-      // Build conversation history (last 10 turns)
       const snapshot = await new Promise<ChatMessage[]>((resolve) =>
         setMessages((m) => { resolve(m); return m; })
       );
@@ -142,10 +193,14 @@ const CreatorAIChat = forwardRef<CreatorAIChatRef>(function CreatorAIChat(_, ref
 
   const resetChat = () => {
     setMessages([
-      { id: makeId(), role: "assistant", text: "Hey! I'm your MilCrunch AI assistant. I can help with captions, brand pitches, content strategy, and more. What are you working on?" },
+      { id: makeId(), role: "assistant", text: GREETING },
     ]);
     if (inputRef.current) inputRef.current.value = "";
   };
+
+  /* Check if the last assistant message asks about platforms */
+  const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant" && !m.loading);
+  const showPlatformChips = lastAssistant && asksPlatform(lastAssistant.text) && !loading;
 
   return (
     <>
@@ -254,6 +309,31 @@ const CreatorAIChat = forwardRef<CreatorAIChatRef>(function CreatorAIChat(_, ref
                   )}
                 </div>
               ))}
+
+              {/* Smart platform chips — rendered after the last assistant message when it asks about platforms */}
+              {showPlatformChips && (
+                <div className="flex flex-wrap gap-2 ml-1 mt-1">
+                  {PLATFORM_CHIPS.map((p) => (
+                    <button
+                      key={p.label}
+                      onClick={() => sendMessage(p.label)}
+                      className={cn(
+                        "inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-white ring-1 transition-all",
+                        "hover:scale-105 hover:shadow-md active:scale-100",
+                        p.bg,
+                        p.ring,
+                        (p as any).textOverride,
+                      )}
+                    >
+                      <span className="flex items-center justify-center h-5 w-5">
+                        {p.icon("h-4 w-4")}
+                      </span>
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div ref={bottomRef} />
             </div>
 

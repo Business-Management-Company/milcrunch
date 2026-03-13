@@ -243,12 +243,12 @@ export default function CreatorDashboard() {
   const timeLabel = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
   const AI_CHIPS = [
-    { label: "Write a caption for my next post", bg: "bg-blue-50 dark:bg-blue-900/20", border: "border-l-blue-500", text: "text-blue-700 dark:text-blue-300" },
-    { label: "Find brands to pitch", bg: "bg-purple-50 dark:bg-purple-900/20", border: "border-l-purple-500", text: "text-purple-700 dark:text-purple-300" },
-    { label: "Plan my content this week", bg: "bg-emerald-50 dark:bg-emerald-900/20", border: "border-l-emerald-500", text: "text-emerald-700 dark:text-emerald-300" },
-    { label: "Grow my Instagram following", bg: "bg-pink-50 dark:bg-pink-900/20", border: "border-l-pink-500", text: "text-pink-700 dark:text-pink-300" },
-    { label: "Draft a sponsorship email", bg: "bg-amber-50 dark:bg-amber-900/20", border: "border-l-amber-500", text: "text-amber-700 dark:text-amber-300" },
-    { label: "Analyze my best posts", bg: "bg-teal-50 dark:bg-teal-900/20", border: "border-l-teal-500", text: "text-teal-700 dark:text-teal-300" },
+    { label: "\u270d\ufe0f Write a caption", bg: "bg-blue-50 dark:bg-blue-900/20", border: "border-l-blue-500", text: "text-blue-700 dark:text-blue-300" },
+    { label: "\ud83c\udfaf Find brands to pitch", bg: "bg-purple-50 dark:bg-purple-900/20", border: "border-l-purple-500", text: "text-purple-700 dark:text-purple-300" },
+    { label: "\ud83d\udcc5 Plan my content this week", bg: "bg-emerald-50 dark:bg-emerald-900/20", border: "border-l-emerald-500", text: "text-emerald-700 dark:text-emerald-300" },
+    { label: "\ud83d\udcc8 Grow my following", bg: "bg-pink-50 dark:bg-pink-900/20", border: "border-l-pink-500", text: "text-pink-700 dark:text-pink-300" },
+    { label: "\ud83d\udc8c Draft a sponsorship email", bg: "bg-amber-50 dark:bg-amber-900/20", border: "border-l-amber-500", text: "text-amber-700 dark:text-amber-300" },
+    { label: "\ud83d\udd25 Analyze my best posts", bg: "bg-teal-50 dark:bg-teal-900/20", border: "border-l-teal-500", text: "text-teal-700 dark:text-teal-300" },
   ];
 
   /* Stat card config with trend data */
