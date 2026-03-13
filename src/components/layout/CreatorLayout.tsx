@@ -19,6 +19,7 @@ import {
   Settings,
   Plug,
   HelpCircle,
+  ShieldCheck,
   LogOut,
   Menu,
   ExternalLink,
@@ -78,6 +79,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { icon: Settings, label: "Settings", href: "/creator/settings" },
       { icon: Plug, label: "Integrations", href: "/creator/integrations" },
+      { icon: ShieldCheck, label: "Tech & Security", href: "/creator/tech-security" },
       { icon: HelpCircle, label: "Help", href: "/creator/help" },
     ],
   },

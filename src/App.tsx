@@ -73,6 +73,7 @@ import CreatorLists from "./pages/creator/CreatorLists";
 import CreatorSettings from "./pages/creator/CreatorSettings";
 import CreatorCustomize from "./pages/creator/CreatorCustomize";
 import CreatorHelp from "./pages/creator/CreatorHelp";
+import CreatorTechSecurity from "./pages/creator/CreatorTechSecurity";
 import SimilarCreators from "./pages/creator/SimilarCreators";
 import Leaderboard from "./pages/creator/Leaderboard";
 import CreatorOpportunities from "./pages/creator/CreatorOpportunities";
@@ -373,6 +374,7 @@ const App = () => (
               <Route path="/creator/lists" element={<CreatorRoute><CreatorLists /></CreatorRoute>} />
               <Route path="/creator/settings" element={<CreatorRoute><CreatorSettings /></CreatorRoute>} />
               <Route path="/creator/customize" element={<CreatorRoute><CreatorCustomize /></CreatorRoute>} />
+              <Route path="/creator/tech-security" element={<CreatorRoute><CreatorTechSecurity /></CreatorRoute>} />
               <Route path="/creator/help" element={<CreatorRoute><CreatorHelp /></CreatorRoute>} />
               <Route path="/creator/similar" element={<CreatorRoute><SimilarCreators /></CreatorRoute>} />
               <Route path="/creator/leaderboard" element={<CreatorRoute><Leaderboard /></CreatorRoute>} />
