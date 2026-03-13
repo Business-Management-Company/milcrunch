@@ -13,6 +13,11 @@ import {
   UserCheck,
   Server,
   CheckCircle2,
+  XCircle,
+  Linkedin,
+  ClipboardCheck,
+  UserRoundCheck,
+  BadgeCheck,
 } from "lucide-react";
 
 /* ── Tech Stack Cards ── */
@@ -162,7 +167,144 @@ export default function CreatorTechSecurity() {
           </div>
         </section>
 
-        {/* ══════════════ SECTION 2 — SECURITY OVERVIEW ══════════════ */}
+        {/* ══════════════ SECTION 2 — LINKEDIN VERIFICATION ══════════════ */}
+        <section>
+          {/* Header card */}
+          <div className="relative rounded-2xl overflow-hidden mb-5">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#0A66C2] via-[#0077B5] to-[#0A66C2]" />
+            {/* LinkedIn watermark */}
+            <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-[0.06]">
+              <Linkedin className="h-36 w-36 text-white" />
+            </div>
+            <div className="relative px-8 py-7 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                  <Linkedin className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Verified on LinkedIn</h2>
+                  <p className="text-sm text-white/70 mt-0.5">Identity and workplace verification for military creator trust</p>
+                </div>
+              </div>
+              <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/20 text-sm px-4 py-1.5 w-fit font-semibold">
+                Lite Tier &mdash; Production Ready
+              </Badge>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+            {/* How We Use It */}
+            <Card className="rounded-xl border border-gray-100 dark:border-border bg-white dark:bg-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-3 text-base font-semibold">
+                  <div className="h-9 w-9 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <span className="text-[#1B3A6B] dark:text-white">How We Use It</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-3">
+                  {[
+                    "Creator identity verification for trust & safety",
+                    "Professional community verification",
+                    "Military affiliation confirmation via workplace verification",
+                    "Displaying \"Verified on LinkedIn\" badges on creator profiles",
+                  ].map((item) => (
+                    <div key={item} className="flex items-start gap-2.5">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                      <span className="text-sm text-muted-foreground">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Privacy Guardrails */}
+            <Card className="rounded-xl border border-gray-100 dark:border-border bg-white dark:bg-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-3 text-base font-semibold">
+                  <div className="h-9 w-9 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
+                    <Shield className="h-5 w-5 text-red-600" />
+                  </div>
+                  <span className="text-[#1B3A6B] dark:text-white">Privacy Guardrails</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-3">
+                  {[
+                    "Hiring or employment decisions",
+                    "Background checks or risk scoring",
+                    "Credit, financial, or insurance eligibility",
+                    "Housing or rental determinations",
+                    "Government identity checks or KYC/AML compliance",
+                  ].map((item) => (
+                    <div key={item} className="flex items-start gap-2.5">
+                      <XCircle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
+                      <span className="text-sm text-muted-foreground">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* How It Works — 3-step flow */}
+          <Card className="rounded-xl border border-gray-100 dark:border-border bg-white dark:bg-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold text-[#1B3A6B] dark:text-white">How It Works</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {[
+                  {
+                    step: "1",
+                    icon: UserRoundCheck,
+                    title: "Creator Authorizes",
+                    desc: "Creator grants permission via OAuth 2.0",
+                    color: "text-[#0A66C2]",
+                    bg: "bg-[#0A66C2]/10",
+                  },
+                  {
+                    step: "2",
+                    icon: ClipboardCheck,
+                    title: "Fetch Verification",
+                    desc: "We retrieve verification status only",
+                    color: "text-[#0A66C2]",
+                    bg: "bg-[#0A66C2]/10",
+                  },
+                  {
+                    step: "3",
+                    icon: BadgeCheck,
+                    title: "Display Badge",
+                    desc: "\"Verified on LinkedIn\" badge shown on creator profile",
+                    color: "text-emerald-600",
+                    bg: "bg-emerald-500/10",
+                  },
+                ].map((s, i) => (
+                  <div key={s.step} className="relative flex flex-col items-center text-center p-4 rounded-xl bg-gray-50 dark:bg-white/5">
+                    {/* Connector line (hidden on last) */}
+                    {i < 2 && (
+                      <div className="hidden sm:block absolute top-1/2 -right-2 w-4 h-0.5 bg-[#0A66C2]/20" />
+                    )}
+                    <div className={`h-11 w-11 rounded-xl ${s.bg} flex items-center justify-center mb-3`}>
+                      <s.icon className={`h-5 w-5 ${s.color}`} />
+                    </div>
+                    <p className="text-sm font-semibold text-[#1B3A6B] dark:text-white">{s.title}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{s.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Footer disclaimer */}
+          <p className="text-[11px] text-muted-foreground text-center mt-4 max-w-2xl mx-auto leading-relaxed">
+            MilCrunch uses LinkedIn Verification for trust enhancement only, not regulatory compliance or eligibility decisions. Subject to LinkedIn Developer Terms and Verification Policies.
+          </p>
+        </section>
+
+        {/* ══════════════ SECTION 3 — SECURITY OVERVIEW ══════════════ */}
         <section>
           {/* Hero card */}
           <div className="relative rounded-2xl overflow-hidden mb-4">
