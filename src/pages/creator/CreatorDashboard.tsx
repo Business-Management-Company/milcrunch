@@ -167,7 +167,11 @@ export default function CreatorDashboard() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (!user?.id || isDemo) return;
+    if (!user?.id) return;
+    // Skip fetching real accounts for the demo user — first effect already seeded DEMO_ACCOUNTS
+    const email = user.email ?? "";
+    const h = (user.user_metadata?.handle as string) ?? null;
+    if (email === "andrew@podlogix.co" || h === "johnny-rocket") return;
     (async () => {
       const { data: csc } = await supabase
         .from("creator_social_connections")
