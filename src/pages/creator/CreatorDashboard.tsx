@@ -201,7 +201,7 @@ export default function CreatorDashboard() {
 
   const totalFollowers = accounts.reduce((s, a) => s + (a.followers_count ?? 0), 0);
   const engagementRate = isDemo ? 6.8 : 0;
-  const displayName = creatorProfile?.display_name ?? user?.user_metadata?.full_name ?? "";
+  const displayName = isDemo ? "Johnny Rocket" : (creatorProfile?.display_name ?? user?.user_metadata?.full_name ?? "");
   const firstName = getFirstName(displayName);
   const bioUrl = handle ? `${typeof window !== "undefined" ? window.location.origin : ""}/c/${handle}` : "";
 
@@ -310,7 +310,7 @@ export default function CreatorDashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 max-w-full">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-[#1B3A6B] dark:text-white">
-              {getGreeting()}, {firstName}
+              {getGreeting()}, {firstName} {"\ud83d\udc4b"}
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">{dateLabel} &middot; {timeLabel}</p>
           </div>

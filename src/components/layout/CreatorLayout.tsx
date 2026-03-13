@@ -175,7 +175,9 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
 
   const pres = usePresentationMode();
   const handle = creatorProfile?.handle ?? "";
-  const displayName = pres.active ? pres.displayName : (creatorProfile?.display_name ?? user?.user_metadata?.full_name ?? "Creator");
+  const email = user?.email ?? "";
+  const isDemoUser = email === "andrew@podlogix.co" || handle === "johnny-rocket";
+  const displayName = pres.active ? pres.displayName : isDemoUser ? "Johnny Rocket" : (creatorProfile?.display_name ?? user?.user_metadata?.full_name ?? "Creator");
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const bioUrl = handle ? `${origin}/c/${handle}` : "";
 
