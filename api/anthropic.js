@@ -1,3 +1,5 @@
+const { logCost } = require("./_lib/cost-tracker");
+
 module.exports = async function handler(req, res) {
   // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -38,6 +40,49 @@ module.exports = async function handler(req, res) {
 
     if (resp.status === 401) {
       console.error("[anthropic] 401 from Anthropic API. Key length:", key.length, "Key prefix:", key.slice(0, 8) + "...");
+    }
+
+    // Log cost if successful
+    if (resp.status === 200) {
+      try {
+        const parsed = JSON.parse(data);
+        if (parsed.usage && parsed.usage.input_tokens && parsed.usage.output_tokens) {
+          const model = req.body.model || "claude-sonnet-4-5";
+          
+          // Extract operation from system prompt or use generic
+          let operation = "AI Chat";
+          if (req.body.system && typeof req.body.system === "string") {
+            if (req.body.system.includes("MilCrunch AI Assistant")) {
+              operation = "Creator AI Chat";
+            } else if (req.body.system.includes("sponsorship")) {
+              operation = "Sponsorship Generation";
+            } else if (req.body.system.includes("caption")) {
+              operation = "Caption Generation";
+            } else if (req.body.system.includes("brand")) {
+              operation = "Brand Matching";
+            }
+          }
+          
+          // Log asynchronously (don't wait for response)
+          logCost({
+            customer: "BMC",
+            project: "MilCrunch",
+            service: "Anthropic",
+            operation,
+            model,
+            tokensIn: parsed.usage.input_tokens,
+            tokensOut: parsed.usage.output_tokens,
+            metadata: {
+              model: model,
+              endpoint: req.url || "/api/anthropic"
+            }
+          }).catch(err => {
+            console.error("[anthropic] Cost tracking error:", err.message);
+          });
+        }
+      } catch (parseError) {
+        console.error("[anthropic] Failed to parse response for cost tracking:", parseError.message);
+      }
     }
 
     res
