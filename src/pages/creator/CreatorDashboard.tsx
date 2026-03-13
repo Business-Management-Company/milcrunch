@@ -22,9 +22,76 @@ import {
   MapPin,
   FileText,
   ArrowRight,
+  ArrowUpRight,
+  Heart,
+  MessageCircle,
+  Share2,
+  Instagram,
+  Youtube,
+  Clock,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+
+/* ── TikTok icon (not in lucide) ── */
+function TikTokIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.75a8.18 8.18 0 0 0 3.76.92V6.69Z" />
+    </svg>
+  );
+}
+
+/* ── Demo data for @johnny-rocket ── */
+const DEMO_ACCOUNTS = [
+  { platform: "instagram", platform_username: "johnny.rocket", followers_count: 342_800 },
+  { platform: "tiktok", platform_username: "johnny_rocket", followers_count: 389_493 },
+  { platform: "youtube", platform_username: "JohnnyRocketVet", followers_count: 115_000 },
+];
+
+const DEMO_POSTS = [
+  {
+    title: "From the Frontlines to the Feed — My Story",
+    platform: "instagram",
+    date: "Mar 11, 2026",
+    likes: 12_430,
+    comments: 847,
+    shares: 1_203,
+  },
+  {
+    title: "Day in My Life: Veteran Entrepreneur Edition",
+    platform: "tiktok",
+    date: "Mar 8, 2026",
+    likes: 38_920,
+    comments: 2_104,
+    shares: 5_612,
+  },
+  {
+    title: "Why I Started MilCrunch — Full Breakdown",
+    platform: "youtube",
+    date: "Mar 3, 2026",
+    likes: 4_210,
+    comments: 631,
+    shares: 892,
+  },
+];
+
+const DEMO_EVENTS = [
+  {
+    name: "MilSpouseFest San Diego",
+    date: "Apr 12, 2026",
+    location: "San Diego Convention Center",
+    role: "Featured Speaker",
+  },
+  {
+    name: "Vet Creators Summit 2026",
+    date: "May 3, 2026",
+    location: "Fort Liberty, NC",
+    role: "Panelist",
+  },
+];
+
+const DEMO_WORTH = { tier: "Mid-Tier", minRate: 4_200, maxRate: 8_500 };
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -38,6 +105,24 @@ function getFirstName(displayName: string | null): string {
   return displayName.trim().split(/\s+/)[0] || "there";
 }
 
+function platformIcon(platform: string, className: string = "h-3.5 w-3.5") {
+  switch (platform) {
+    case "instagram": return <Instagram className={className} />;
+    case "tiktok": return <TikTokIcon className={className} />;
+    case "youtube": return <Youtube className={className} />;
+    default: return null;
+  }
+}
+
+function platformColor(platform: string) {
+  switch (platform) {
+    case "instagram": return "bg-gradient-to-br from-purple-500 to-pink-500";
+    case "tiktok": return "bg-black dark:bg-white/10";
+    case "youtube": return "bg-red-600";
+    default: return "bg-gray-500";
+  }
+}
+
 export default function CreatorDashboard() {
   const { user, creatorProfile } = useAuth();
   const chatRef = useRef<CreatorAIChatRef>(null);
@@ -47,12 +132,28 @@ export default function CreatorDashboard() {
   const [linkClicks, setLinkClicks] = useState(0);
   const [showWorth, setShowWorth] = useState(false);
   const [worthEstimate, setWorthEstimate] = useState({ tier: "", minRate: 0, maxRate: 0 });
+  const [isDemo, setIsDemo] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
     (async () => {
       const h = (user.user_metadata?.handle as string) ?? null;
       setHandle(h);
+
+      // Check if this is the demo user
+      const email = user.email ?? "";
+      const isDemoUser = email === "andrew@podlogix.co" || h === "johnny-rocket";
+
+      if (isDemoUser) {
+        setIsDemo(true);
+        setAccounts(DEMO_ACCOUNTS);
+        setPageViews(12_450);
+        setLinkClicks(3_821);
+        setWorthEstimate(DEMO_WORTH);
+        setShowWorth(true);
+        return;
+      }
+
       if (!h) return;
       const { data: ev } = await supabase
         .from("pixel_events")
@@ -66,9 +167,8 @@ export default function CreatorDashboard() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || isDemo) return;
     (async () => {
-      // Try creator_social_connections first (persisted on connect)
       const { data: csc } = await supabase
         .from("creator_social_connections")
         .select("*")
@@ -84,7 +184,6 @@ export default function CreatorDashboard() {
         );
         return;
       }
-      // Fallback to connected_accounts table
       const list = await getConnectedAccounts(user.id);
       setAccounts(
         list.map((a) => ({
@@ -94,9 +193,10 @@ export default function CreatorDashboard() {
         }))
       );
     })();
-  }, [user?.id]);
+  }, [user?.id, isDemo]);
 
   const totalFollowers = accounts.reduce((s, a) => s + (a.followers_count ?? 0), 0);
+  const engagementRate = isDemo ? 6.8 : 0;
   const displayName = creatorProfile?.display_name ?? user?.user_metadata?.full_name ?? "";
   const firstName = getFirstName(displayName);
   const bioUrl = handle ? `${typeof window !== "undefined" ? window.location.origin : ""}/c/${handle}` : "";
@@ -128,7 +228,7 @@ export default function CreatorDashboard() {
     setShowWorth(true);
   };
 
-  const fmtFollowers = (n: number) => {
+  const fmtNum = (n: number) => {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
     if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
     return String(n);
@@ -142,6 +242,57 @@ export default function CreatorDashboard() {
     ["Write a caption for my next post", "Find brands to pitch", "Plan my content this week"],
     ["Grow my Instagram following", "Draft a sponsorship email", "Analyze my best posts"],
   ];
+
+  /* Stat card config with trend data */
+  const statCards = [
+    {
+      label: "Total Followers",
+      value: fmtNum(totalFollowers),
+      icon: Users,
+      trend: isDemo ? "+12.4%" : null,
+      trendUp: true,
+      subtitle: isDemo ? `${accounts.length} platforms connected` : accounts.length > 0 ? `${accounts.length} connected` : "No accounts",
+      gradient: "from-blue-600 to-indigo-700",
+      iconBg: "bg-blue-500/10",
+      iconColor: "text-blue-600",
+    },
+    {
+      label: "Engagement Rate",
+      value: engagementRate > 0 ? `${engagementRate}%` : "—",
+      icon: TrendingUp,
+      trend: isDemo ? "+1.2%" : null,
+      trendUp: true,
+      subtitle: isDemo ? "Above avg for your tier" : "Connect accounts to track",
+      gradient: "from-emerald-600 to-teal-700",
+      iconBg: "bg-emerald-500/10",
+      iconColor: "text-emerald-600",
+    },
+    {
+      label: "Bio Page Views",
+      value: fmtNum(pageViews),
+      icon: Eye,
+      trend: isDemo ? "+23.1%" : null,
+      trendUp: true,
+      subtitle: "This month",
+      gradient: "from-violet-600 to-purple-700",
+      iconBg: "bg-violet-500/10",
+      iconColor: "text-violet-600",
+    },
+    {
+      label: "Link Clicks",
+      value: fmtNum(linkClicks),
+      icon: MousePointer,
+      trend: isDemo ? "+8.7%" : null,
+      trendUp: true,
+      subtitle: "This month",
+      gradient: "from-amber-500 to-orange-600",
+      iconBg: "bg-amber-500/10",
+      iconColor: "text-amber-600",
+    },
+  ];
+
+  const recentPosts = isDemo ? DEMO_POSTS : [];
+  const upcomingEvents = isDemo ? DEMO_EVENTS : [];
 
   return (
     <CreatorLayout>
@@ -208,21 +359,27 @@ export default function CreatorDashboard() {
 
         {/* ── 3. STATS ROW ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { label: "Total Followers", value: totalFollowers >= 1000 ? `${(totalFollowers / 1000).toFixed(1)}K` : String(totalFollowers), icon: Users },
-            { label: "Engagement Rate", value: "—", icon: TrendingUp },
-            { label: "Bio Page Views", value: String(pageViews), icon: Eye },
-            { label: "Link Clicks", value: String(linkClicks), icon: MousePointer },
-          ].map((stat) => (
-            <Card key={stat.label} className="rounded-xl bg-white dark:bg-card">
+          {statCards.map((stat) => (
+            <Card key={stat.label} className="rounded-xl bg-white dark:bg-card border border-gray-100 dark:border-border overflow-hidden relative group hover:shadow-md transition-shadow">
+              {/* Top accent bar */}
+              <div className={`h-1 w-full bg-gradient-to-r ${stat.gradient}`} />
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
-                    <p className="text-2xl font-bold text-[#1B3A6B] dark:text-white mt-1">{stat.value}</p>
+                  <div className="space-y-1 min-w-0">
+                    <p className="text-xs text-muted-foreground font-medium tracking-wide uppercase">{stat.label}</p>
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-2xl font-bold text-[#1B3A6B] dark:text-white">{stat.value}</p>
+                      {stat.trend && (
+                        <span className={`inline-flex items-center text-xs font-semibold ${stat.trendUp ? "text-emerald-600" : "text-red-500"}`}>
+                          <ArrowUpRight className={`h-3 w-3 mr-0.5 ${stat.trendUp ? "" : "rotate-90"}`} />
+                          {stat.trend}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">{stat.subtitle}</p>
                   </div>
-                  <div className="h-8 w-8 rounded-lg bg-[#1B3A6B]/5 dark:bg-white/5 flex items-center justify-center shrink-0">
-                    <stat.icon className="h-4 w-4 text-[#1B3A6B]/60 dark:text-white/40" />
+                  <div className={`h-10 w-10 rounded-xl ${stat.iconBg} flex items-center justify-center shrink-0`}>
+                    <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
                   </div>
                 </div>
               </CardContent>
@@ -230,7 +387,29 @@ export default function CreatorDashboard() {
           ))}
         </div>
 
-        {/* ── 4. BOTTOM ROW ── */}
+        {/* ── 4. PLATFORM BREAKDOWN (demo only) ── */}
+        {isDemo && (
+          <Card className="rounded-xl bg-white dark:bg-card border border-gray-100 dark:border-border">
+            <CardContent className="p-5">
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-4">Platform Breakdown</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {DEMO_ACCOUNTS.map((acc) => (
+                  <div key={acc.platform} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-white/5">
+                    <div className={`h-9 w-9 rounded-lg ${platformColor(acc.platform)} flex items-center justify-center text-white`}>
+                      {platformIcon(acc.platform, "h-4 w-4")}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-[#1B3A6B] dark:text-white">{fmtNum(acc.followers_count!)}</p>
+                      <p className="text-[11px] text-muted-foreground capitalize">@{acc.platform_username}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ── 5. BOTTOM ROW ── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
           {/* Recent Posts */}
@@ -247,13 +426,34 @@ export default function CreatorDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <PenSquare className="h-8 w-8 mx-auto text-muted-foreground/30 mb-3" />
-                <p className="text-sm text-muted-foreground mb-3">No posts yet.</p>
-                <Button size="sm" variant="outline" asChild>
-                  <Link to="/creator/post">Create a Post</Link>
-                </Button>
-              </div>
+              {recentPosts.length === 0 ? (
+                <div className="text-center py-8">
+                  <PenSquare className="h-8 w-8 mx-auto text-muted-foreground/30 mb-3" />
+                  <p className="text-sm text-muted-foreground mb-3">No posts yet.</p>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link to="/creator/post">Create a Post</Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recentPosts.map((post, i) => (
+                    <div key={i} className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                      <div className={`h-8 w-8 rounded-lg ${platformColor(post.platform)} flex items-center justify-center text-white shrink-0 mt-0.5`}>
+                        {platformIcon(post.platform, "h-3.5 w-3.5")}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-[#1B3A6B] dark:text-white leading-tight line-clamp-1">{post.title}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{post.date}</p>
+                        <div className="flex items-center gap-3 mt-1.5 text-[11px] text-muted-foreground">
+                          <span className="inline-flex items-center gap-0.5"><Heart className="h-3 w-3" />{fmtNum(post.likes)}</span>
+                          <span className="inline-flex items-center gap-0.5"><MessageCircle className="h-3 w-3" />{fmtNum(post.comments)}</span>
+                          <span className="inline-flex items-center gap-0.5"><Share2 className="h-3 w-3" />{fmtNum(post.shares)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -271,13 +471,38 @@ export default function CreatorDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <MapPin className="h-8 w-8 mx-auto text-muted-foreground/30 mb-3" />
-                <p className="text-sm text-muted-foreground mb-3">No upcoming events.</p>
-                <Button size="sm" variant="outline" asChild>
-                  <Link to="/creator/events">Browse Events</Link>
-                </Button>
-              </div>
+              {upcomingEvents.length === 0 ? (
+                <div className="text-center py-8">
+                  <MapPin className="h-8 w-8 mx-auto text-muted-foreground/30 mb-3" />
+                  <p className="text-sm text-muted-foreground mb-3">No upcoming events.</p>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link to="/creator/events">Browse Events</Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {upcomingEvents.map((ev, i) => (
+                    <div key={i} className="p-3 rounded-lg border border-gray-100 dark:border-border hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-[#1B3A6B] dark:text-white leading-tight">{ev.name}</p>
+                          <div className="flex items-center gap-1.5 mt-1 text-[11px] text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {ev.date}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-muted-foreground">
+                            <MapPin className="h-3 w-3" />
+                            {ev.location}
+                          </div>
+                        </div>
+                        <Badge variant="secondary" className="text-[10px] shrink-0 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                          {ev.role}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -307,15 +532,28 @@ export default function CreatorDashboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="text-center">
+                  <div className="text-center py-1">
                     <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Per Sponsored Post</p>
-                    <p className="text-2xl font-bold text-[#1B3A6B] dark:text-white">${worthEstimate.minRate.toLocaleString()} – ${worthEstimate.maxRate.toLocaleString()}</p>
-                    <Badge variant="secondary" className="mt-1.5 text-[10px]">{worthEstimate.tier} Creator</Badge>
+                    <p className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                      ${worthEstimate.minRate.toLocaleString()} – ${worthEstimate.maxRate.toLocaleString()}
+                    </p>
+                    <Badge variant="secondary" className="mt-1.5 text-[10px] bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                      {worthEstimate.tier} Creator
+                    </Badge>
                   </div>
-                  <div className="space-y-1 text-xs text-muted-foreground">
-                    <div className="flex justify-between"><span>Story / Reel</span><span className="font-medium text-foreground">${Math.round(worthEstimate.minRate * 0.6).toLocaleString()} – ${Math.round(worthEstimate.maxRate * 0.6).toLocaleString()}</span></div>
-                    <div className="flex justify-between"><span>Feed Post</span><span className="font-medium text-foreground">${worthEstimate.minRate.toLocaleString()} – ${worthEstimate.maxRate.toLocaleString()}</span></div>
-                    <div className="flex justify-between"><span>Video / YouTube</span><span className="font-medium text-foreground">${Math.round(worthEstimate.minRate * 2).toLocaleString()} – ${Math.round(worthEstimate.maxRate * 2).toLocaleString()}</span></div>
+                  <div className="space-y-1.5 text-xs text-muted-foreground">
+                    <div className="flex justify-between items-center p-1.5 rounded bg-gray-50 dark:bg-white/5">
+                      <span>Story / Reel</span>
+                      <span className="font-medium text-foreground">${Math.round(worthEstimate.minRate * 0.6).toLocaleString()} – ${Math.round(worthEstimate.maxRate * 0.6).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-1.5 rounded bg-gray-50 dark:bg-white/5">
+                      <span>Feed Post</span>
+                      <span className="font-medium text-foreground">${worthEstimate.minRate.toLocaleString()} – ${worthEstimate.maxRate.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-1.5 rounded bg-gray-50 dark:bg-white/5">
+                      <span>Video / YouTube</span>
+                      <span className="font-medium text-foreground">${Math.round(worthEstimate.minRate * 2).toLocaleString()} – ${Math.round(worthEstimate.maxRate * 2).toLocaleString()}</span>
+                    </div>
                   </div>
                   <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setShowWorth(false)}>
                     Recalculate
