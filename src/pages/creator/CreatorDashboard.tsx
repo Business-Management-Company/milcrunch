@@ -239,8 +239,12 @@ export default function CreatorDashboard() {
   const timeLabel = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
   const AI_CHIPS = [
-    ["Write a caption for my next post", "Find brands to pitch", "Plan my content this week"],
-    ["Grow my Instagram following", "Draft a sponsorship email", "Analyze my best posts"],
+    { label: "Write a caption for my next post", bg: "bg-blue-50 dark:bg-blue-900/20", border: "border-l-blue-500", text: "text-blue-700 dark:text-blue-300" },
+    { label: "Find brands to pitch", bg: "bg-purple-50 dark:bg-purple-900/20", border: "border-l-purple-500", text: "text-purple-700 dark:text-purple-300" },
+    { label: "Plan my content this week", bg: "bg-emerald-50 dark:bg-emerald-900/20", border: "border-l-emerald-500", text: "text-emerald-700 dark:text-emerald-300" },
+    { label: "Grow my Instagram following", bg: "bg-pink-50 dark:bg-pink-900/20", border: "border-l-pink-500", text: "text-pink-700 dark:text-pink-300" },
+    { label: "Draft a sponsorship email", bg: "bg-amber-50 dark:bg-amber-900/20", border: "border-l-amber-500", text: "text-amber-700 dark:text-amber-300" },
+    { label: "Analyze my best posts", bg: "bg-teal-50 dark:bg-teal-900/20", border: "border-l-teal-500", text: "text-teal-700 dark:text-teal-300" },
   ];
 
   /* Stat card config with trend data */
@@ -326,36 +330,57 @@ export default function CreatorDashboard() {
           </div>
         </div>
 
-        {/* ── 2. AI AGENT CHAT BAR ── */}
-        <Card className="rounded-2xl bg-white dark:bg-card border border-gray-200 dark:border-border shadow-sm" style={{ borderBottom: "2px solid #1B3A6B" }}>
-          <CardContent className="py-6 px-8">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-3 flex-1 rounded-xl bg-[#F3F4F6] dark:bg-white/5 px-4 py-3 cursor-pointer" onClick={() => chatRef.current?.open()}>
-                <Sparkles className="h-5 w-5 text-[#1B3A6B] shrink-0" />
-                <span className="text-sm text-[#6B7280]">What do you need help with today?</span>
+        {/* ── 2. AI AGENT CHAT BAR (Hero) ── */}
+        <div className="relative rounded-2xl overflow-hidden shadow-lg">
+          {/* Gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#000741] via-[#0B1A4D] to-[#122B6E]" />
+          {/* Glow accent border */}
+          <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/10" />
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#4A7BF7]/15 rounded-full blur-3xl" />
+          <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-[#9B51E0]/10 rounded-full blur-3xl" />
+
+          <div className="relative py-7 px-8">
+            {/* Header row */}
+            <div className="flex items-center gap-2.5 mb-5">
+              <div className="relative flex items-center justify-center h-8 w-8">
+                <div className="absolute inset-0 rounded-lg bg-[#4A7BF7]/20 animate-pulse" />
+                <Sparkles className="relative h-5 w-5 text-[#7EB0FF] drop-shadow-[0_0_6px_rgba(126,176,255,0.6)]" />
               </div>
-              <Button size="sm" className="bg-[#1B3A6B] hover:bg-[#152d54] text-white h-11 px-5 shrink-0" onClick={() => chatRef.current?.open()}>
+              <span className="text-[11px] font-semibold uppercase tracking-widest text-[#7EB0FF]">AI Assistant</span>
+            </div>
+
+            {/* Input row */}
+            <div className="flex items-center gap-3">
+              <div
+                className="flex items-center gap-3 flex-1 rounded-xl bg-white/10 backdrop-blur-sm border border-white/10 px-5 py-3.5 cursor-pointer hover:bg-white/[0.14] transition-colors"
+                onClick={() => chatRef.current?.open()}
+              >
+                <span className="text-[15px] font-medium text-white/80">What do you need help with today?</span>
+              </div>
+              <Button
+                size="lg"
+                className="bg-gradient-to-r from-[#4A7BF7] to-[#6C5CE7] hover:from-[#5A88FF] hover:to-[#7D6DF0] text-white font-semibold h-12 px-7 shrink-0 shadow-lg shadow-[#4A7BF7]/25 rounded-xl"
+                onClick={() => chatRef.current?.open()}
+              >
                 Get Started
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
-            <div className="mt-4 space-y-2">
-              {AI_CHIPS.map((row, ri) => (
-                <div key={ri} className="flex flex-wrap gap-2">
-                  {row.map((chip) => (
-                    <button
-                      key={chip}
-                      onClick={() => chatRef.current?.openWithMessage(chip)}
-                      className="px-3 py-1.5 rounded-full bg-[#F3F4F6] dark:bg-white/10 text-xs text-[#374151] dark:text-gray-300 hover:bg-[#E5E7EB] dark:hover:bg-white/20 transition-colors"
-                    >
-                      {chip}
-                    </button>
-                  ))}
-                </div>
+
+            {/* Chips */}
+            <div className="mt-5 flex flex-wrap gap-2">
+              {AI_CHIPS.map((chip) => (
+                <button
+                  key={chip.label}
+                  onClick={() => chatRef.current?.openWithMessage(chip.label)}
+                  className={`px-3.5 py-1.5 rounded-lg border-l-2 text-xs font-medium transition-all hover:scale-[1.03] hover:shadow-md ${chip.bg} ${chip.border} ${chip.text}`}
+                >
+                  {chip.label}
+                </button>
               ))}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* ── 3. STATS ROW ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
