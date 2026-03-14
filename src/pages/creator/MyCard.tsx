@@ -93,8 +93,8 @@ function StatItem({
         visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
       )}
     >
-      <p className="text-[11px] uppercase tracking-wider text-slate-400 font-medium">{label}</p>
-      <p className="text-lg font-bold text-white">{value}</p>
+      <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">{label}</p>
+      <p className="text-lg font-bold text-foreground">{value}</p>
       <p className="text-xs text-emerald-400 font-medium">{trend}</p>
     </div>
   );
@@ -103,7 +103,7 @@ function StatItem({
 /* ── Platform emoji for posts ── */
 function platformEmoji(p: string) {
   if (p === "instagram") return <Instagram className="h-4 w-4 text-pink-400" />;
-  if (p === "tiktok") return <TikTokIcon className="h-4 w-4 text-white" />;
+  if (p === "tiktok") return <TikTokIcon className="h-4 w-4 text-foreground" />;
   if (p === "youtube") return <Youtube className="h-4 w-4 text-red-400" />;
   return <Share2 className="h-4 w-4 text-slate-400" />;
 }
@@ -227,15 +227,15 @@ export default function MyCard() {
   if (!loading && !member && !isDemoUser) {
     return (
       <CreatorLayout>
-        <div className="max-w-5xl mx-auto">
+        <div>
           <div className="mb-6">
             <h1 className="text-2xl font-bold">My Card</h1>
             <p className="text-muted-foreground text-sm">Your creator profile at a glance</p>
           </div>
-          <Card className="bg-[#0f1f3d]/80 border-white/10">
+          <Card>
             <CardContent className="flex flex-col items-center justify-center py-16 gap-4">
-              <Users className="h-12 w-12 text-slate-500" />
-              <p className="text-slate-300 text-center max-w-sm">
+              <Users className="h-12 w-12 text-muted-foreground" />
+              <p className="text-muted-foreground text-center max-w-sm">
                 Connect your social accounts to see your stats
               </p>
               <Button asChild className="bg-teal-500 hover:bg-teal-600 text-white">
@@ -250,7 +250,7 @@ export default function MyCard() {
 
   return (
     <CreatorLayout>
-      <div className="max-w-5xl mx-auto">
+      <div>
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold">My Card</h1>
@@ -261,7 +261,7 @@ export default function MyCard() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* ═══ LEFT COLUMN (3/5) — Profile + Stats ═══ */}
           <div className="lg:col-span-3 space-y-6">
-            <Card className="bg-[#0f1f3d]/80 border-white/10 overflow-hidden">
+            <Card className="overflow-hidden">
               <CardContent className="p-6">
                 {loading ? (
                   <div className="space-y-4">
@@ -301,11 +301,11 @@ export default function MyCard() {
                             {displayName.charAt(0).toUpperCase()}
                           </div>
                         )}
-                        <CheckCircle2 className="absolute -bottom-1 -right-1 h-6 w-6 text-teal-400 fill-[#0f1f3d]" />
+                        <CheckCircle2 className="absolute -bottom-1 -right-1 h-6 w-6 text-teal-400 fill-background" />
                       </div>
 
-                      <h2 className="text-xl font-bold text-white">{displayName}</h2>
-                      <p className="text-sm text-slate-400">@{handle}</p>
+                      <h2 className="text-xl font-bold text-foreground">{displayName}</h2>
+                      <p className="text-sm text-muted-foreground">@{handle}</p>
 
                       {/* Tags */}
                       {tags.length > 0 && (
@@ -314,7 +314,7 @@ export default function MyCard() {
                             <Badge
                               key={tag}
                               variant="outline"
-                              className="text-[11px] border-teal-500/40 text-teal-300 bg-teal-500/10"
+                              className="text-[11px] border-teal-500/40 text-teal-600 bg-teal-500/10"
                             >
                               {tag}
                             </Badge>
@@ -324,7 +324,7 @@ export default function MyCard() {
                     </div>
 
                     {/* Platform tabs */}
-                    <div className="flex gap-1 mb-5 border-b border-white/10 pb-0">
+                    <div className="flex gap-1 mb-5 border-b border-border pb-0">
                       {PLATFORM_TABS.map((tab) => (
                         <button
                           key={tab.key}
@@ -333,8 +333,8 @@ export default function MyCard() {
                           className={cn(
                             "flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors border-b-2 -mb-[1px]",
                             activeTab === tab.key
-                              ? "border-teal-400 text-teal-300"
-                              : "border-transparent text-slate-400 hover:text-slate-200"
+                              ? "border-teal-400 text-teal-600"
+                              : "border-transparent text-muted-foreground hover:text-foreground"
                           )}
                         >
                           {tab.icon}
@@ -354,23 +354,23 @@ export default function MyCard() {
                     </div>
 
                     {/* Know Your Worth */}
-                    <div className="mt-6 pt-5 border-t border-white/10">
+                    <div className="mt-6 pt-5 border-t border-border">
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-semibold text-white">Know your worth</p>
-                        <p className="text-sm font-bold text-teal-300">
+                        <p className="text-sm font-semibold text-foreground">Know your worth</p>
+                        <p className="text-sm font-bold text-teal-600">
                           {fmtDollar(worthLow)} – {fmtDollar(worthHigh)}
-                          <span className="text-[11px] text-slate-400 font-normal ml-1">/ post</span>
+                          <span className="text-[11px] text-muted-foreground font-normal ml-1">/ post</span>
                         </p>
                       </div>
                       {/* Progress bar */}
-                      <div className="h-2 bg-white/10 rounded-full overflow-hidden mb-2">
+                      <div className="h-2 bg-muted rounded-full overflow-hidden mb-2">
                         <div
                           className="h-full rounded-full bg-gradient-to-r from-teal-500 to-emerald-400 transition-all duration-700"
                           style={{ width: `${Math.min(tierProgress, 100)}%` }}
                         />
                       </div>
-                      <p className="text-xs text-slate-400">
-                        <span className="text-teal-300 font-medium">{tierLabel}</span>
+                      <p className="text-xs text-muted-foreground">
+                        <span className="text-teal-600 font-medium">{tierLabel}</span>
                         {niche ? ` \u00B7 ${niche}` : ""}
                       </p>
                     </div>
@@ -383,17 +383,17 @@ export default function MyCard() {
           {/* ═══ RIGHT COLUMN (2/5) — Rate Calculator + Top Posts ═══ */}
           <div className="lg:col-span-2 space-y-6">
             {/* Rate Calculator */}
-            <Card className="bg-[#0f1f3d]/80 border-white/10">
+            <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base text-white">Rate calculator</CardTitle>
-                <p className="text-xs text-slate-400">Estimate your post rate</p>
+                <CardTitle className="text-base text-foreground">Rate calculator</CardTitle>
+                <p className="text-xs text-muted-foreground">Estimate your post rate</p>
               </CardHeader>
               <CardContent className="space-y-5">
                 {/* Followers slider */}
                 <div>
-                  <div className="flex justify-between text-xs text-slate-400 mb-1.5">
+                  <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
                     <span>Followers</span>
-                    <span className="text-white font-medium">{fmtNum(calcFollowers)}</span>
+                    <span className="text-foreground font-medium">{fmtNum(calcFollowers)}</span>
                   </div>
                   <Slider
                     value={[calcFollowers]}
@@ -406,9 +406,9 @@ export default function MyCard() {
                 </div>
                 {/* Engagement slider */}
                 <div>
-                  <div className="flex justify-between text-xs text-slate-400 mb-1.5">
+                  <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
                     <span>Engagement Rate</span>
-                    <span className="text-white font-medium">{calcEngagement.toFixed(1)}%</span>
+                    <span className="text-foreground font-medium">{calcEngagement.toFixed(1)}%</span>
                   </div>
                   <Slider
                     value={[calcEngagement * 10]}
@@ -421,9 +421,9 @@ export default function MyCard() {
                 </div>
                 {/* Niche slider */}
                 <div>
-                  <div className="flex justify-between text-xs text-slate-400 mb-1.5">
+                  <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
                     <span>Niche Premium</span>
-                    <span className="text-white font-medium">{nicheLabels[calcNiche]}</span>
+                    <span className="text-foreground font-medium">{nicheLabels[calcNiche]}</span>
                   </div>
                   <Slider
                     value={[calcNiche]}
@@ -436,17 +436,17 @@ export default function MyCard() {
                 </div>
 
                 {/* Result */}
-                <div className="bg-white/5 rounded-lg p-4 text-center">
-                  <p className="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Estimated Rate</p>
-                  <p className="text-2xl font-bold text-white">{fmtDollar(calcMid)}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                <div className="bg-muted rounded-lg p-4 text-center">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Estimated Rate</p>
+                  <p className="text-2xl font-bold text-foreground">{fmtDollar(calcMid)}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     Range: {fmtDollar(calcLow)} – {fmtDollar(calcHigh)}
                   </p>
                 </div>
 
                 <Button
                   variant="ghost"
-                  className="w-full text-teal-300 hover:text-teal-200 hover:bg-white/5 text-xs justify-center gap-1"
+                  className="w-full text-teal-600 hover:text-teal-700 hover:bg-muted text-xs justify-center gap-1"
                 >
                   How to increase my rate <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
@@ -454,24 +454,24 @@ export default function MyCard() {
             </Card>
 
             {/* Top Posts */}
-            <Card className="bg-[#0f1f3d]/80 border-white/10">
+            <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base text-white">Top Posts</CardTitle>
+                <CardTitle className="text-base text-foreground">Top Posts</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {(isDemoUser ? DEMO_TOP_POSTS : []).map((post, i) => (
                   <div
                     key={i}
-                    className="flex items-start gap-3 p-2.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                    className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                   >
                     <div className="mt-0.5">{platformEmoji(post.platform)}</div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{post.title}</p>
-                      <p className="text-[11px] text-slate-400 capitalize">
+                      <p className="text-sm font-medium text-foreground truncate">{post.title}</p>
+                      <p className="text-[11px] text-muted-foreground capitalize">
                         {post.platform} &middot; {post.date}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1 text-xs text-slate-400 shrink-0">
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
                       <Heart className="h-3 w-3 text-rose-400" />
                       {fmtNum(post.likes)}
                     </div>
@@ -486,7 +486,7 @@ export default function MyCard() {
 
                 <Link
                   to="/creator/post"
-                  className="flex items-center justify-center gap-1 text-xs text-teal-300 hover:text-teal-200 pt-1"
+                  className="flex items-center justify-center gap-1 text-xs text-teal-600 hover:text-teal-700 pt-1"
                 >
                   View all posts <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
