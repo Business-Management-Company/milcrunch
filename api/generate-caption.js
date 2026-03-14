@@ -62,11 +62,8 @@ Tailor the content specifically for the platform selected. Return ONLY the capti
       });
     }
 
-    const caption = result.content?.[0]?.text ?? "";
-    const provider = result._provider || "claude";
-
-    res.setHeader("x-ai-provider", provider);
-    return res.status(200).json({ caption, provider });
+    res.setHeader("X-AI-Provider", result.provider || "Claude");
+    return res.status(200).json({ caption: result.text, provider: result.provider });
   } catch (e) {
     console.error("[generate-caption] TOP LEVEL ERROR:", e.message, e.stack);
     return res.status(500).json({ error: e.message });

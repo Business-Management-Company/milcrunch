@@ -4,34 +4,14 @@
  * Calls the /api/anthropic proxy which handles multi-LLM fallback
  * (Claude → OpenAI → Gemini) server-side.
  *
- * Reads the `x-ai-provider` response header to track which provider
+ * Reads the `X-AI-Provider` response header to track which provider
  * actually served the request.
- *
- * Required Vercel Environment Variables (server-side, set in Vercel dashboard):
- *   ANTHROPIC_API_KEY   — Claude (primary)
- *   OPENAI_API_KEY      — GPT-4o-mini (first fallback)
- *   GEMINI_API_KEY      — Gemini 1.5 Flash (second fallback)
  */
 
-export type AIProvider = "claude" | "openai" | "gemini" | "none";
-
-export const PROVIDER_LABELS: Record<AIProvider, string> = {
-  claude: "Claude",
-  openai: "GPT-4o",
-  gemini: "Gemini",
-  none: "Unavailable",
-};
-
-let lastProvider: AIProvider = "claude";
+let lastProvider = "Claude";
 
 /**
  * Call the MilCrunch AI backend with automatic multi-provider fallback.
- *
- * @param prompt     — The user's message / prompt text
- * @param systemPrompt — System instructions for the AI
- * @param options.maxTokens — Max response tokens (default 1000)
- * @param options.messages  — Full conversation history (overrides prompt if provided)
- * @returns The AI's text response
  */
 export async function callAI(
   prompt: string,
@@ -40,7 +20,7 @@ export async function callAI(
     maxTokens?: number;
     messages?: { role: string; content: string }[];
   }
-): Promise<{ text: string; provider: AIProvider }> {
+): Promise<{ text: string; provider: string }> {
   const messages = options?.messages ?? [{ role: "user", content: prompt }];
 
   const res = await fetch("/api/anthropic", {
@@ -54,23 +34,20 @@ export async function callAI(
     }),
   });
 
-  const provider = (res.headers.get("x-ai-provider") as AIProvider) || "claude";
+  // Read header BEFORE calling .json()
+  const provider = res.headers.get("X-AI-Provider") || "Claude";
   lastProvider = provider;
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(
-      err.error || `AI request failed (${res.status})`
-    );
+    throw new Error(err.error || `AI request failed (${res.status})`);
   }
 
   const data = await res.json();
   const text = data.content?.[0]?.text ?? "";
 
-  if (!text && data._allFailed) {
-    throw new Error(
-      "AI assistant is temporarily unavailable. Please try again in a moment."
-    );
+  if (!text) {
+    throw new Error("AI assistant is temporarily unavailable. Please try again in a moment.");
   }
 
   return { text, provider };
@@ -79,6 +56,6 @@ export async function callAI(
 /**
  * Returns which provider successfully responded last.
  */
-export function getActiveProvider(): AIProvider {
+export function getActiveProvider(): string {
   return lastProvider;
 }

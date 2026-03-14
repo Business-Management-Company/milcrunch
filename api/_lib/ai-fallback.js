@@ -91,11 +91,8 @@ async function tryClaude(body) {
   }
 
   const data = await resp.json();
-  return {
-    ...data,
-    _provider: "claude",
-    _service: "Anthropic",
-  };
+  const text = data.content?.[0]?.text ?? "";
+  return { text, provider: "Claude" };
 }
 
 /* ─── Provider: OpenAI ─────────────────────────────────────── */
@@ -162,16 +159,7 @@ async function tryOpenAI(body) {
 
   const data = await resp.json();
   const text = data.choices?.[0]?.message?.content ?? "";
-  return {
-    content: [{ type: "text", text }],
-    usage: {
-      input_tokens: data.usage?.prompt_tokens ?? 0,
-      output_tokens: data.usage?.completion_tokens ?? 0,
-    },
-    model: "gpt-4o-mini",
-    _provider: "openai",
-    _service: "OpenAI",
-  };
+  return { text, provider: "GPT-4o" };
 }
 
 /* ─── Provider: Gemini ─────────────────────────────────────── */
@@ -233,16 +221,7 @@ async function tryGemini(body) {
 
   const data = await resp.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-  return {
-    content: [{ type: "text", text }],
-    usage: {
-      input_tokens: data.usageMetadata?.promptTokenCount ?? 0,
-      output_tokens: data.usageMetadata?.candidatesTokenCount ?? 0,
-    },
-    model: "gemini-1.5-flash",
-    _provider: "gemini",
-    _service: "Google",
-  };
+  return { text, provider: "Gemini" };
 }
 
 /* ─── Main Fallback Orchestrator ───────────────────────────── */
@@ -293,19 +272,7 @@ async function callWithFallback(body) {
 
   // All providers failed
   console.error("[ai-fallback] ALL PROVIDERS FAILED:", JSON.stringify(errors, null, 2));
-  return {
-    content: [
-      {
-        type: "text",
-        text: "AI assistant is temporarily unavailable. Please try again in a moment.",
-      },
-    ],
-    usage: { input_tokens: 0, output_tokens: 0 },
-    _provider: "none",
-    _service: "None",
-    _allFailed: true,
-    _errors: errors,
-  };
+  return { text: "", provider: "Unavailable", _allFailed: true, _errors: errors };
 }
 
 module.exports = { callWithFallback };

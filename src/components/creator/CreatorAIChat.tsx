@@ -3,8 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, Send, X, Plus, Loader2, Instagram, Youtube, Linkedin, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MarkdownRenderer from "@/components/ui/markdown-renderer";
-import type { AIProvider } from "@/lib/ai-service";
-import { PROVIDER_LABELS } from "@/lib/ai-service";
 
 interface ChatMessage {
   id: string;
@@ -105,7 +103,7 @@ const CreatorAIChat = forwardRef<CreatorAIChatRef>(function CreatorAIChat(_, ref
     { id: makeId(), role: "assistant", text: GREETING },
   ]);
   const [loading, setLoading] = useState(false);
-  const [activeProvider, setActiveProvider] = useState<AIProvider>("claude");
+  const [activeProvider, setActiveProvider] = useState("Claude");
   const [showProviderPill, setShowProviderPill] = useState(false);
   const providerTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -160,8 +158,8 @@ const CreatorAIChat = forwardRef<CreatorAIChatRef>(function CreatorAIChat(_, ref
         }),
       });
 
-      // Read which AI provider responded
-      const provider = (res.headers.get("x-ai-provider") as AIProvider) || "claude";
+      // Read header BEFORE calling .json() — headers are available immediately
+      const provider = res.headers.get("X-AI-Provider") || "Claude";
       setActiveProvider(provider);
       setShowProviderPill(true);
       if (providerTimerRef.current) clearTimeout(providerTimerRef.current);
@@ -374,19 +372,19 @@ const CreatorAIChat = forwardRef<CreatorAIChatRef>(function CreatorAIChat(_, ref
               </div>
               <div className="flex items-center justify-center gap-2 mt-2">
                 <p className="text-[10px] text-muted-foreground">
-                  Powered by {PROVIDER_LABELS[activeProvider] || "Claude"}
+                  Powered by {activeProvider}
                 </p>
                 {showProviderPill && (
                   <span
                     className={cn(
                       "text-[10px] font-medium px-2 py-0.5 rounded-full transition-opacity duration-300",
-                      activeProvider === "claude" && "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400",
-                      activeProvider === "openai" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-                      activeProvider === "gemini" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+                      activeProvider === "Claude" && "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400",
+                      activeProvider === "GPT-4o" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+                      activeProvider === "Gemini" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
                     )}
                     title="Powered by this provider. MilCrunch uses Claude by default with automatic fallback."
                   >
-                    {PROVIDER_LABELS[activeProvider]}
+                    {activeProvider}
                   </span>
                 )}
               </div>
