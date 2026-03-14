@@ -1,8 +1,16 @@
 import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Send, X, Plus, Loader2, Instagram, Youtube, Linkedin, Globe } from "lucide-react";
+import { Sparkles, Send, X, Plus, Loader2, Instagram, Youtube, Linkedin, Globe, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MarkdownRenderer from "@/components/ui/markdown-renderer";
+
+type ModelOption = "Auto" | "Claude" | "Gemini" | "GPT-4o";
+const MODEL_OPTIONS: { value: ModelOption; label: string }[] = [
+  { value: "Auto", label: "Auto" },
+  { value: "Claude", label: "Claude" },
+  { value: "Gemini", label: "Gemini" },
+  { value: "GPT-4o", label: "GPT-4o" },
+];
 
 interface ChatMessage {
   id: string;
@@ -105,6 +113,8 @@ const CreatorAIChat = forwardRef<CreatorAIChatRef>(function CreatorAIChat(_, ref
   const [loading, setLoading] = useState(false);
   const [activeProvider, setActiveProvider] = useState("Claude");
   const [showProviderPill, setShowProviderPill] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<ModelOption>("Auto");
+  const [providerError, setProviderError] = useState<string | null>(null);
   const providerTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -155,6 +165,7 @@ const CreatorAIChat = forwardRef<CreatorAIChatRef>(function CreatorAIChat(_, ref
           max_tokens: 800,
           system: CREATOR_SYSTEM_PROMPT,
           messages: trimmed,
+          ...(selectedModel !== "Auto" ? { forceProvider: selectedModel } : {}),
         }),
       });
 
@@ -166,6 +177,15 @@ const CreatorAIChat = forwardRef<CreatorAIChatRef>(function CreatorAIChat(_, ref
       providerTimerRef.current = setTimeout(() => setShowProviderPill(false), 5000);
 
       const data = await res.json();
+
+      // Handle forced provider failure
+      if (!res.ok && data.failedProvider) {
+        setProviderError(`${data.failedProvider} is currently unavailable`);
+        setActiveProvider("Unavailable");
+      } else {
+        setProviderError(null);
+      }
+
       const text = data.content?.[0]?.text ?? "I'm having trouble right now. Please try again.";
 
       setMessages((m) => m.map((msg) =>
@@ -258,6 +278,24 @@ const CreatorAIChat = forwardRef<CreatorAIChatRef>(function CreatorAIChat(_, ref
                 </div>
               </div>
               <div className="flex items-center gap-1">
+                {/* Model selector */}
+                <div className="flex items-center gap-1 mr-1">
+                  <span className="text-[10px] text-white/40 hidden sm:inline">Model:</span>
+                  <div className="relative">
+                    <select
+                      value={selectedModel}
+                      onChange={(e) => setSelectedModel(e.target.value as ModelOption)}
+                      className="appearance-none bg-white/10 text-white text-[11px] font-medium pl-2 pr-5 py-1 rounded border border-white/15 hover:bg-white/15 focus:outline-none focus:ring-1 focus:ring-teal-400/50 cursor-pointer transition-colors"
+                    >
+                      {MODEL_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value} className="bg-[#1B3A6B] text-white">
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-1 top-1/2 -translate-y-1/2 h-3 w-3 text-white/50 pointer-events-none" />
+                  </div>
+                </div>
                 <button
                   onClick={resetChat}
                   className="flex items-center gap-1 text-xs text-white/60 hover:text-white px-2 py-1 rounded hover:bg-white/10 transition-colors"
@@ -381,10 +419,16 @@ const CreatorAIChat = forwardRef<CreatorAIChatRef>(function CreatorAIChat(_, ref
                       activeProvider === "Claude" && "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400",
                       activeProvider === "GPT-4o" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
                       activeProvider === "Gemini" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+                      activeProvider === "Unavailable" && "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
                     )}
                     title="Powered by this provider. MilCrunch uses Claude by default with automatic fallback."
                   >
                     {activeProvider}
+                  </span>
+                )}
+                {providerError && (
+                  <span className="text-[10px] text-red-500 dark:text-red-400">
+                    {providerError}
                   </span>
                 )}
               </div>

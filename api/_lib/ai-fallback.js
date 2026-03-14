@@ -232,12 +232,20 @@ const providers = [
   { name: "Gemini", fn: tryGemini },
 ];
 
+/** Map forceProvider values to internal provider names */
+const FORCE_MAP = {
+  Claude: "Claude",
+  Gemini: "Gemini",
+  "GPT-4o": "OpenAI",
+};
+
 /**
  * Call AI with automatic fallback: Claude → OpenAI → Gemini.
+ * If forceProvider is set, skip directly to that provider and don't fall back.
  *
  * @param {object} body — Anthropic-format request body
- *   { model, max_tokens, system, messages, temperature? }
- * @returns {object} Normalized response with _provider and _service fields
+ *   { model, max_tokens, system, messages, temperature?, forceProvider? }
+ * @returns {object} Normalized response with provider field
  */
 async function callWithFallback(body) {
   console.log("[ai-fallback] Starting fallback chain. Env var check:", {
@@ -249,12 +257,33 @@ async function callWithFallback(body) {
     VITE_GEMINI_API_KEY: !!process.env.VITE_GEMINI_API_KEY,
   });
 
+  const { forceProvider, ...cleanBody } = body;
+
+  // ─── Forced provider mode ───
+  if (forceProvider && FORCE_MAP[forceProvider]) {
+    const internalName = FORCE_MAP[forceProvider];
+    const match = providers.find((p) => p.name === internalName);
+    if (!match) {
+      return { text: "", provider: forceProvider, _allFailed: true, _errors: [{ provider: forceProvider, status: "unknown", reason: "Unknown provider" }] };
+    }
+    console.log(`[ai-fallback] Forced provider: ${forceProvider} (internal: ${internalName})`);
+    try {
+      return await match.fn(cleanBody);
+    } catch (err) {
+      const status = err.status || "network";
+      const reason = err.name === "AbortError" ? "timeout (15s)" : err.message?.slice(0, 150);
+      console.error(`[ai-fallback] Forced ${forceProvider} FAILED (${status}): ${reason}`);
+      return { text: "", provider: forceProvider, _allFailed: true, _errors: [{ provider: forceProvider, status, reason }] };
+    }
+  }
+
+  // ─── Normal fallback chain ───
   const errors = [];
 
   for (let i = 0; i < providers.length; i++) {
     const { name, fn } = providers[i];
     try {
-      const result = await fn(body);
+      const result = await fn(cleanBody);
       if (i > 0) {
         console.log(`[ai-fallback] ${name} succeeded (fallback from ${providers.slice(0, i).map((p) => p.name).join(" -> ")})`);
       } else {

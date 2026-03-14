@@ -29,8 +29,12 @@ module.exports = async function handler(req, res) {
     const result = await callWithFallback(req.body);
 
     if (result._allFailed) {
-      res.setHeader("X-AI-Provider", "Unavailable");
-      return res.status(503).json({ error: "AI temporarily unavailable", content: [{ text: "" }] });
+      res.setHeader("X-AI-Provider", result.provider || "Unavailable");
+      return res.status(503).json({
+        error: "AI temporarily unavailable",
+        failedProvider: result.provider || null,
+        content: [{ text: "" }],
+      });
     }
 
     // Set header BEFORE sending json
