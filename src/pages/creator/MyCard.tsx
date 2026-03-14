@@ -65,7 +65,7 @@ function fmtNum(n: number): string {
 }
 
 function fmtDollar(n: number): string {
-  return "$" + Math.round(n / 50) * 50;
+  return "$" + (Math.round(n / 50) * 50).toLocaleString("en-US");
 }
 
 /* ── Stat card item ── */
@@ -120,6 +120,7 @@ export default function MyCard() {
   const [calcFollowers, setCalcFollowers] = useState(100_000);
   const [calcEngagement, setCalcEngagement] = useState(5);
   const [calcNiche, setCalcNiche] = useState(2); // 1=General, 2=Military, 3=Lifestyle
+  const [showFallback, setShowFallback] = useState(false);
 
   const handle = creatorProfile?.handle ?? "";
   const email = user?.email ?? "";
@@ -139,7 +140,19 @@ export default function MyCard() {
 
       if (error) console.warn("[MyCard] query error:", error.message);
       if (data && data.length > 0) {
-        const row = data[0] as unknown as DirectoryMember;
+        const raw = data[0] as any;
+        console.log("[MyCard] directory_members row:", raw);
+        console.log("[MyCard] image fields:", {
+          avatar_url: raw.avatar_url,
+          ic_avatar_url: raw.ic_avatar_url,
+          profile_image: raw.profile_image,
+          picture: raw.picture,
+          image_url: raw.image_url,
+          photo_url: raw.photo_url,
+          thumbnail_url: raw.thumbnail_url,
+          profile_picture_url: raw.profile_picture_url,
+        });
+        const row = raw as DirectoryMember;
         setMember(row);
         // Set calculator defaults from real data
         if (row.follower_count) setCalcFollowers(row.follower_count);
@@ -214,7 +227,20 @@ export default function MyCard() {
   const displayName = isDemoUser
     ? "Johnny Rocket"
     : member?.creator_name ?? creatorProfile?.display_name ?? "Creator";
-  const avatarUrl = member?.avatar_url ?? member?.ic_avatar_url ?? null;
+  const raw = member as any;
+  const avatarUrl =
+    member?.avatar_url
+    ?? member?.ic_avatar_url
+    ?? raw?.profile_image
+    ?? raw?.picture
+    ?? raw?.image_url
+    ?? raw?.photo_url
+    ?? raw?.thumbnail_url
+    ?? raw?.profile_picture_url
+    ?? (member?.enrichment_data as any)?.profile_picture_url
+    ?? (member?.enrichment_data as any)?.avatar_url
+    ?? (member?.enrichment_data as any)?.picture
+    ?? null;
   const category = member?.category ?? (isDemoUser ? "Military Lifestyle" : null);
   const niche = category;
   const tags = category
@@ -290,18 +316,19 @@ export default function MyCard() {
                             animationIterationCount: "infinite",
                           }}
                         />
-                        {avatarUrl && (
+                        {avatarUrl && !showFallback ? (
                           <img
                             src={avatarUrl}
                             alt={displayName}
                             referrerPolicy="no-referrer"
                             className="h-20 w-20 rounded-full object-cover"
-                            onError={(e) => { e.currentTarget.style.display = "none"; (e.currentTarget.nextElementSibling as HTMLElement | null)?.classList.remove("hidden"); }}
+                            onError={() => setShowFallback(true)}
                           />
+                        ) : (
+                          <div className="h-20 w-20 rounded-full bg-gradient-to-br from-teal-400 to-blue-500 flex items-center justify-center text-2xl font-bold text-white">
+                            {displayName.charAt(0).toUpperCase()}
+                          </div>
                         )}
-                        <div className={cn("h-20 w-20 rounded-full bg-gradient-to-br from-teal-400 to-blue-500 flex items-center justify-center text-2xl font-bold text-white", avatarUrl && "hidden")}>
-                          {displayName.charAt(0).toUpperCase()}
-                        </div>
                         <CheckCircle2 className="absolute -bottom-1 -right-1 h-6 w-6 text-teal-400 fill-background" />
                       </div>
 
