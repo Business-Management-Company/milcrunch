@@ -4,26 +4,16 @@ module.exports = async function handler(req, res) {
   // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-RB2B-Secret");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(200).end();
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Verify webhook secret
-  const secret = process.env.RB2B_WEBHOOK_SECRET;
-  if (secret) {
-    const provided = req.headers["x-rb2b-secret"];
-    if (provided !== secret) {
-      console.warn("[rb2b-webhook] Invalid secret header");
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-  }
-
   const body = req.body;
-  if (!body || typeof body !== "object") {
-    return res.status(400).json({ error: "Invalid payload" });
+  if (!body || typeof body !== "object" || (!body.pageUrl && !body.linkedInProfile)) {
+    return res.status(400).json({ error: "Invalid payload — must include pageUrl or linkedInProfile" });
   }
 
   // Initialize Supabase with service role key for RLS bypass
