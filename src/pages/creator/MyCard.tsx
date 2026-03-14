@@ -132,31 +132,32 @@ export default function MyCard() {
         setLoading(false);
         return;
       }
+      // Use .ilike() on creator_handle — same pattern as getCreatorByHandle()
+      // in creators-db.ts and CreatorBioPage. This avoids RLS issues with .or().
+      const normalized = handle.replace(/^@/, "").trim().toLowerCase();
+      console.log("[MyCard] querying directory_members for handle:", normalized);
       const { data, error } = await supabase
         .from("directory_members")
         .select("*")
-        .or(`creator_handle.eq.${handle},creator_handle.eq.@${handle}`)
-        .limit(1);
+        .ilike("creator_handle", normalized)
+        .limit(1)
+        .maybeSingle();
 
       if (error) console.warn("[MyCard] query error:", error.message);
-      if (data && data.length > 0) {
-        const raw = data[0] as any;
+      if (data) {
+        const raw = data as any;
         console.log("[MyCard] directory_members row:", raw);
         console.log("[MyCard] image fields:", {
           avatar_url: raw.avatar_url,
           ic_avatar_url: raw.ic_avatar_url,
-          profile_image: raw.profile_image,
-          picture: raw.picture,
-          image_url: raw.image_url,
-          photo_url: raw.photo_url,
-          thumbnail_url: raw.thumbnail_url,
-          profile_picture_url: raw.profile_picture_url,
         });
-        const row = raw as DirectoryMember;
+        const row = raw as unknown as DirectoryMember;
         setMember(row);
         // Set calculator defaults from real data
         if (row.follower_count) setCalcFollowers(row.follower_count);
         if (row.engagement_rate) setCalcEngagement(row.engagement_rate);
+      } else {
+        console.warn("[MyCard] no directory_members row found for handle:", normalized);
       }
       setLoading(false);
     }
