@@ -290,17 +290,18 @@ export default function MyCard() {
                             animationIterationCount: "infinite",
                           }}
                         />
-                        {avatarUrl ? (
+                        {avatarUrl && (
                           <img
                             src={avatarUrl}
                             alt={displayName}
+                            referrerPolicy="no-referrer"
                             className="h-20 w-20 rounded-full object-cover"
+                            onError={(e) => { e.currentTarget.style.display = "none"; (e.currentTarget.nextElementSibling as HTMLElement | null)?.classList.remove("hidden"); }}
                           />
-                        ) : (
-                          <div className="h-20 w-20 rounded-full bg-gradient-to-br from-teal-400 to-blue-500 flex items-center justify-center text-2xl font-bold text-white">
-                            {displayName.charAt(0).toUpperCase()}
-                          </div>
                         )}
+                        <div className={cn("h-20 w-20 rounded-full bg-gradient-to-br from-teal-400 to-blue-500 flex items-center justify-center text-2xl font-bold text-white", avatarUrl && "hidden")}>
+                          {displayName.charAt(0).toUpperCase()}
+                        </div>
                         <CheckCircle2 className="absolute -bottom-1 -right-1 h-6 w-6 text-teal-400 fill-background" />
                       </div>
 
