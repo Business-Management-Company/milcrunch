@@ -57,6 +57,7 @@
     { "src": "/api/resend-verify-domain", "dest": "/api/resend-verify-domain" },
     { "src": "/api/resend/(.*)", "dest": "https://api.resend.com/$1" },
     { "src": "/api/resolve-handle", "dest": "/api/resolve-handle" },
+    { "src": "/api/rb2b-webhook", "dest": "/api/rb2b-webhook", "methods": ["POST", "OPTIONS"] },
     { "src": "/api/generate-caption", "dest": "/api/generate-caption" },
     { "src": "/api/(.*)", "dest": "/api/$1", "methods": ["GET", "POST", "OPTIONS", "PUT", "DELETE", "PATCH"] },
     { "handle": "filesystem" },
