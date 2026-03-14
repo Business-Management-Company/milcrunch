@@ -11,10 +11,8 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const body = req.body;
-  if (!body || typeof body !== "object" || (!body.pageUrl && !body.linkedInProfile)) {
-    return res.status(400).json({ error: "Invalid payload — must include pageUrl or linkedInProfile" });
-  }
+  const body = req.body || {};
+  console.log("[rb2b-webhook] Incoming payload:", JSON.stringify(body));
 
   // Initialize Supabase with service role key for RLS bypass
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -22,34 +20,35 @@ module.exports = async function handler(req, res) {
 
   if (!supabaseUrl || !serviceKey) {
     console.error("[rb2b-webhook] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
-    return res.status(500).json({ error: "Server misconfigured" });
+    // Still return 200 so RB2B doesn't retry
+    return res.status(200).json({ ok: true, warning: "Server misconfigured" });
   }
 
   const supabase = createClient(supabaseUrl, serviceKey);
 
   try {
     const { error } = await supabase.from("website_visitors").insert({
-      page_url: body.pageUrl || null,
-      linkedin_url: body.linkedInProfile || null,
-      full_name: body.name || null,
-      email: body.email || null,
-      company: body.company || null,
-      job_title: body.title || null,
-      location: body.location || null,
-      ip_address: body.ip || null,
-      rb2b_timestamp: body.timestamp || null,
+      page_url: body.pageUrl || body.page_url || body.url || null,
+      linkedin_url: body.linkedInProfile || body.linkedin_url || body.linkedin || null,
+      full_name: body.name || body.full_name || body.firstName ? `${body.firstName || ""} ${body.lastName || ""}`.trim() || null : null,
+      email: body.email || body.e_mail || null,
+      company: body.company || body.companyName || body.organization || null,
+      job_title: body.title || body.jobTitle || body.job_title || null,
+      location: body.location || body.city || null,
+      ip_address: body.ip || body.ipAddress || body.ip_address || null,
+      rb2b_timestamp: body.timestamp || body.created_at || null,
       raw_payload: body,
     });
 
     if (error) {
       console.error("[rb2b-webhook] Supabase insert error:", error.message);
-      return res.status(500).json({ error: "Failed to store visitor" });
+    } else {
+      console.log("[rb2b-webhook] Stored visitor:", body.email || body.name || "unknown");
     }
 
-    console.log("[rb2b-webhook] Stored visitor:", body.email || body.name || "unknown");
     return res.status(200).json({ ok: true });
   } catch (err) {
     console.error("[rb2b-webhook] Exception:", err.message);
-    return res.status(500).json({ error: err.message });
+    return res.status(200).json({ ok: true });
   }
 };
