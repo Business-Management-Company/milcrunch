@@ -25,6 +25,7 @@ import {
   ExternalLink,
   FileText,
   ImageIcon,
+  CreditCard,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
@@ -57,6 +58,7 @@ const SECTIONS: NavSection[] = [
     label: "CONTENT",
     items: [
       { icon: Link2, label: "My Bio Page", href: "/creator/bio" },
+      { icon: CreditCard, label: "My Card", href: "/creator/my-card" },
       { icon: Share2, label: "My Socials", href: "/creator/socials" },
       { icon: PenSquare, label: "Post", href: "/creator/post" },
       { icon: ImageIcon, label: "Media Library", href: "/creator/media-library" },

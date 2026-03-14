@@ -78,6 +78,7 @@ import SimilarCreators from "./pages/creator/SimilarCreators";
 import Leaderboard from "./pages/creator/Leaderboard";
 import CreatorOpportunities from "./pages/creator/CreatorOpportunities";
 import CreatorMediaLibrary from "./pages/creator/CreatorMediaLibrary";
+import MyCard from "./pages/creator/MyCard";
 
 import BrandDiscover from "./pages/brand/BrandDiscover";
 import BrandLists, { BrandListDetail } from "./pages/brand/BrandLists";
@@ -363,6 +364,7 @@ const App = () => (
               <Route path="/creator/dashboard" element={<CreatorRoute><CreatorDashboard /></CreatorRoute>} />
               <Route path="/creator/profile" element={<CreatorRoute><CreatorProfile /></CreatorRoute>} />
               <Route path="/creator/bio" element={<CreatorRoute><CreatorBioEditor /></CreatorRoute>} />
+              <Route path="/creator/my-card" element={<CreatorRoute><MyCard /></CreatorRoute>} />
               <Route path="/creator/socials" element={<CreatorRoute><CreatorSocials /></CreatorRoute>} />
               <Route path="/creator/post" element={<CreatorRoute><CreatorPosts /></CreatorRoute>} />
               <Route path="/creator/post/new" element={<Navigate to="/creator/post" replace />} />
