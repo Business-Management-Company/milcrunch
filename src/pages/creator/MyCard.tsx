@@ -128,36 +128,72 @@ export default function MyCard() {
 
   useEffect(() => {
     async function load() {
+      // Debug: fetch first 3 rows unfiltered to see actual field names/values
+      const { data: sample } = await supabase
+        .from("directory_members")
+        .select("*")
+        .limit(3);
+      console.log("[MyCard] sample rows (unfiltered):", sample);
+
       if (!handle) {
         setLoading(false);
         return;
       }
-      // Use .ilike() on creator_handle — same pattern as getCreatorByHandle()
-      // in creators-db.ts and CreatorBioPage. This avoids RLS issues with .or().
       const normalized = handle.replace(/^@/, "").trim().toLowerCase();
       console.log("[MyCard] querying directory_members for handle:", normalized);
-      const { data, error } = await supabase
+
+      // Try creator_handle first (used by getCreatorByHandle in creators-db.ts)
+      let { data, error } = await supabase
         .from("directory_members")
         .select("*")
         .ilike("creator_handle", normalized)
         .limit(1)
         .maybeSingle();
 
+      console.log("[MyCard] creator_handle query result:", { data, error: error?.message });
+
+      // If no match, also try with @ prefix
+      if (!data) {
+        const res = await supabase
+          .from("directory_members")
+          .select("*")
+          .ilike("creator_handle", `@${normalized}`)
+          .limit(1)
+          .maybeSingle();
+        data = res.data;
+        error = res.error;
+        console.log("[MyCard] @-prefixed query result:", { data, error: error?.message });
+      }
+
+      // If still no match, try a wildcard/contains search
+      if (!data) {
+        const res = await supabase
+          .from("directory_members")
+          .select("*")
+          .ilike("creator_handle", `%${normalized}%`)
+          .limit(1)
+          .maybeSingle();
+        data = res.data;
+        error = res.error;
+        console.log("[MyCard] wildcard query result:", { data, error: error?.message });
+      }
+
       if (error) console.warn("[MyCard] query error:", error.message);
       if (data) {
         const raw = data as any;
-        console.log("[MyCard] directory_members row:", raw);
-        console.log("[MyCard] image fields:", {
+        console.log("[MyCard] FOUND directory_members row:", raw);
+        console.log("[MyCard] key fields:", {
+          creator_handle: raw.creator_handle,
           avatar_url: raw.avatar_url,
           ic_avatar_url: raw.ic_avatar_url,
+          creator_name: raw.creator_name,
         });
         const row = raw as unknown as DirectoryMember;
         setMember(row);
-        // Set calculator defaults from real data
         if (row.follower_count) setCalcFollowers(row.follower_count);
         if (row.engagement_rate) setCalcEngagement(row.engagement_rate);
       } else {
-        console.warn("[MyCard] no directory_members row found for handle:", normalized);
+        console.warn("[MyCard] NO row found for handle:", normalized, "— check sample rows above for actual handles");
       }
       setLoading(false);
     }
