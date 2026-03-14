@@ -208,6 +208,38 @@ function extractHashtags(enrichData: unknown): string[] {
 }
 
 /* ------------------------------------------------------------------ */
+/* Visitor Fingerprint                                                 */
+/* ------------------------------------------------------------------ */
+
+function getVisitorFingerprint(): string {
+  try {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.textBaseline = "top";
+      ctx.font = "14px Arial";
+      ctx.fillText("milcrunch-fp", 2, 2);
+      const dataUrl = canvas.toDataURL();
+      let hash = 0;
+      for (let i = 0; i < dataUrl.length; i++) {
+        hash = ((hash << 5) - hash + dataUrl.charCodeAt(i)) | 0;
+      }
+      return Math.abs(hash).toString(36);
+    }
+  } catch {
+    /* canvas not available */
+  }
+  // Fallback: random ID in localStorage
+  const key = "mc_visitor_fp";
+  let fp = localStorage.getItem(key);
+  if (!fp) {
+    fp = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem(key, fp);
+  }
+  return fp;
+}
+
+/* ------------------------------------------------------------------ */
 /* Skeleton Loader                                                     */
 /* ------------------------------------------------------------------ */
 
@@ -305,6 +337,31 @@ export default function CreatorPublicProfile() {
     return () => {
       document.title = "MilCrunch";
     };
+  }, [handle]);
+
+  /* ---- Track profile visit (CreatorPixel) ---- */
+  useEffect(() => {
+    if (!handle) return;
+    try {
+      const fingerprint = getVisitorFingerprint();
+      fetch("https://creatorpixel.app/api/track-profile-visit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          creator_handle: handle,
+          visitor_fingerprint: fingerprint,
+          ip: "",
+          page_url: window.location.href,
+          referrer: document.referrer,
+          device: /mobile/i.test(navigator.userAgent) ? "mobile" : "desktop",
+          browser: navigator.userAgent,
+          country: "",
+          city: "",
+        }),
+      }).catch(() => {});
+    } catch {
+      /* silent fail */
+    }
   }, [handle]);
 
   /* ---- Fetch verification record ---- */
