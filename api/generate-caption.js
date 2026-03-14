@@ -2,20 +2,16 @@
  * POST /api/generate-caption
  *
  * Dedicated serverless function for AI caption generation.
- * Reads ANTHROPIC_API_KEY from server-side env (not exposed to client).
+ * Uses the multi-LLM fallback system (Claude -> OpenAI -> Gemini).
  *
  * Body: { topic: string, platforms: string[], tone?: string }
- * Returns: { caption: string }
+ * Returns: { caption: string, provider?: string }
  */
+const { callWithFallback } = require("./_lib/ai-fallback");
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) {
-    console.error("[generate-caption] ANTHROPIC_API_KEY is not set");
-    return res.status(500).json({ error: "ANTHROPIC_API_KEY not configured" });
   }
 
   const { topic, platforms = ["Instagram"], tone } = req.body || {};
@@ -49,31 +45,22 @@ Tailor the content specifically for the platform selected. Return ONLY the capti
   };
 
   try {
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify(body),
-    });
+    const result = await callWithFallback(body);
 
-    if (!resp.ok) {
-      const errText = await resp.text().catch(() => "");
-      console.error(`[generate-caption] Anthropic returned ${resp.status}:`, errText);
-      return res.status(resp.status).json({
-        error: `Anthropic API error (${resp.status})`,
-        detail: errText,
+    if (result._allFailed) {
+      return res.status(503).json({
+        error: "AI caption generation is temporarily unavailable. Please try again.",
+        caption: "",
       });
     }
 
-    const data = await resp.json();
-    const caption = data.content?.[0]?.text ?? "";
+    const caption = result.content?.[0]?.text ?? "";
+    const provider = result._provider || "claude";
 
-    return res.status(200).json({ caption });
+    res.setHeader("x-ai-provider", provider);
+    return res.status(200).json({ caption, provider });
   } catch (e) {
-    console.error("[generate-caption] Fetch error:", e.message);
-    return res.status(502).json({ error: "Failed to reach Anthropic API", message: e.message });
+    console.error("[generate-caption] Error:", e.message);
+    return res.status(502).json({ error: "Failed to generate caption", message: e.message });
   }
-}
+};
