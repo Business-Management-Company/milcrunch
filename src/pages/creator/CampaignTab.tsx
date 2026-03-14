@@ -28,6 +28,12 @@ import {
   Send,
   Image,
   Video,
+  Heart,
+  MessageCircle,
+  Bookmark,
+  MoreHorizontal,
+  ThumbsUp,
+  Repeat2,
 } from "lucide-react";
 
 const ALL_PLATFORMS = [
@@ -74,8 +80,11 @@ function spreadDates(posts: CampaignPost[], start: string, end: string): Campaig
 }
 
 export default function CampaignTab() {
-  const { user } = useAuth();
+  const { user, creatorProfile } = useAuth();
   const navigate = useNavigate();
+  const displayName = creatorProfile?.display_name ?? user?.user_metadata?.full_name ?? "Creator";
+  const creatorHandle = creatorProfile?.handle ?? "creator";
+  const avatarInitial = (displayName || "C").charAt(0).toUpperCase();
 
   // Campaign meta
   const [campaignName, setCampaignName] = useState("");
@@ -92,6 +101,10 @@ export default function CampaignTab() {
   const [accounts, setAccounts] = useState<ConnectedAccountRow[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const connectedPlatforms = new Set(accounts.map((a) => a.platform));
+
+  // Preview
+  const [previewPlatform, setPreviewPlatform] = useState("instagram");
+  const [lastEditedPostId, setLastEditedPostId] = useState<string | null>(null);
 
   // Actions
   const [saving, setSaving] = useState(false);
@@ -169,6 +182,7 @@ export default function CampaignTab() {
 
   const updatePost = (id: string, patch: Partial<CampaignPost>) => {
     setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+    if (patch.caption !== undefined) setLastEditedPostId(id);
   };
 
   const handleFileSelect = (postId: string, file: File) => {
@@ -380,11 +394,14 @@ export default function CampaignTab() {
         </div>
       </div>
 
-      {/* ── SCROLLABLE CONTENT ── */}
+      {/* ── SCROLLABLE TWO-COLUMN CONTENT ── */}
       <div className="flex-1 overflow-y-auto" style={{ backgroundColor: "#F5F7FA" }}>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+        <div className="flex gap-6 p-6 min-h-full">
 
-          {/* ═══ SECTION A: CAMPAIGN DETAILS ═══ */}
+          {/* ═══ LEFT EDITOR COLUMN ═══ */}
+          <div className="flex-1 min-w-0 space-y-6">
+
+          {/* ═══ SECTION 1: CAMPAIGN DETAILS ═══ */}
           <div
             className="bg-white dark:bg-card rounded-2xl p-6 space-y-4"
             style={{ borderLeft: "4px solid #1B3A6B", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}
@@ -394,7 +411,7 @@ export default function CampaignTab() {
                 className="flex items-center justify-center h-8 w-8 rounded-full text-white text-xs font-bold shrink-0"
                 style={{ backgroundColor: "#1B3A6B" }}
               >
-                A
+                1
               </span>
               Campaign Details
             </h2>
@@ -480,7 +497,7 @@ export default function CampaignTab() {
                 className="flex items-center justify-center h-8 w-8 rounded-full text-white text-xs font-bold shrink-0"
                 style={{ backgroundColor: "#1B3A6B" }}
               >
-                B
+                2
               </span>
               Select Platforms
             </h2>
@@ -552,7 +569,7 @@ export default function CampaignTab() {
                 className="flex items-center justify-center h-8 w-8 rounded-full text-white text-xs font-bold shrink-0"
                 style={{ backgroundColor: "#1B3A6B" }}
               >
-                C
+                3
               </span>
               Posts
             </h2>
@@ -706,6 +723,173 @@ export default function CampaignTab() {
               Add Post
             </Button>
           </div>
+
+          </div>{/* end left editor column */}
+
+          {/* ═══ RIGHT PREVIEW COLUMN ═══ */}
+          <div className="hidden lg:block w-[580px] shrink-0">
+            <div className="sticky top-0 space-y-4">
+              <div className="rounded-2xl border border-border bg-card overflow-hidden">
+                <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+                  <p className="text-xs font-semibold text-foreground">Preview</p>
+                  {selectedPlatforms.size > 0 && (
+                    <div className="flex gap-1">
+                      {Array.from(selectedPlatforms).map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => setPreviewPlatform(p)}
+                          className={cn(
+                            "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors",
+                            previewPlatform === p
+                              ? "bg-foreground text-background"
+                              : "bg-muted text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {p !== "x" && <PlatformIcon platform={p} size={12} />}
+                          {PLATFORM_NAMES[p] ?? p}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {/* Phone frame */}
+                <div className="p-4">
+                  <div className="rounded-[24px] border-[3px] border-gray-200 dark:border-gray-600 overflow-hidden bg-white dark:bg-gray-900">
+                    <div className="h-5 bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
+                      <span className="text-[8px] text-muted-foreground font-medium">9:41</span>
+                    </div>
+                    {(() => {
+                      const previewPost = lastEditedPostId
+                        ? posts.find((p) => p.id === lastEditedPostId) ?? posts[0]
+                        : posts[0];
+                      const captionPreview = previewPost?.caption || "Your caption will appear here...";
+                      const mediaPreview = previewPost?.mediaUrl && previewPost.mediaType === "photo"
+                        ? previewPost.mediaUrl : null;
+                      const isTikTok = previewPlatform === "tiktok";
+                      const isX = previewPlatform === "x";
+                      const isLinkedIn = previewPlatform === "linkedin";
+                      const isFacebook = previewPlatform === "facebook";
+
+                      if (selectedPlatforms.size === 0) {
+                        return (
+                          <div className="p-6 text-center">
+                            <Image className="h-8 w-8 mx-auto text-muted-foreground/20 mb-2" />
+                            <p className="text-xs text-muted-foreground">Select platforms to see preview</p>
+                          </div>
+                        );
+                      }
+
+                      if (isTikTok) {
+                        return (
+                          <div className="bg-black text-white aspect-[9/16] relative overflow-hidden flex items-end">
+                            {mediaPreview && <img src={mediaPreview} alt="" className="absolute inset-0 w-full h-full object-cover opacity-80" />}
+                            {!mediaPreview && <div className="absolute inset-0 bg-gradient-to-t from-black via-gray-900 to-gray-800" />}
+                            <div className="relative z-10 p-3 pb-4 flex gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold mb-1">@{creatorHandle}</p>
+                                <p className="text-[10px] leading-snug line-clamp-3 text-white/90">{captionPreview}</p>
+                              </div>
+                              <div className="flex flex-col items-center gap-3 shrink-0 pt-2">
+                                <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold">{avatarInitial}</div>
+                                <Heart className="h-5 w-5" /><span className="text-[9px] -mt-2">&mdash;</span>
+                                <MessageCircle className="h-5 w-5" /><span className="text-[9px] -mt-2">&mdash;</span>
+                                <Send className="h-5 w-5" />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="bg-white dark:bg-gray-900 p-3 space-y-2.5">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-[#1B3A6B] flex items-center justify-center text-white text-xs font-bold shrink-0">{avatarInitial}</div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold text-gray-900 dark:text-white leading-tight truncate">{displayName}</p>
+                              {(isX || isLinkedIn) && <p className="text-[10px] text-gray-500 leading-tight">@{creatorHandle}</p>}
+                              {isFacebook && <p className="text-[10px] text-gray-500 leading-tight">Just now</p>}
+                            </div>
+                            <MoreHorizontal className="h-4 w-4 text-gray-400 shrink-0" />
+                          </div>
+
+                          {isX && <p className="text-xs text-gray-800 dark:text-gray-200 leading-relaxed line-clamp-4 whitespace-pre-wrap">{captionPreview}</p>}
+
+                          {mediaPreview ? (
+                            <img src={mediaPreview} alt="" className={cn("w-full object-cover", isX ? "rounded-xl max-h-48" : "max-h-56")} />
+                          ) : (
+                            <div className={cn("w-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center", isX ? "rounded-xl h-32" : "h-40")}>
+                              <Image className="h-8 w-8 text-gray-300" />
+                            </div>
+                          )}
+
+                          {!isX && <p className="text-xs text-gray-800 dark:text-gray-200 leading-relaxed line-clamp-3 whitespace-pre-wrap">{captionPreview}</p>}
+
+                          <div className="flex items-center pt-1 border-t border-gray-100 dark:border-gray-800">
+                            {isX ? (
+                              <div className="flex items-center gap-5 text-gray-500">
+                                <span className="flex items-center gap-1"><MessageCircle className="h-3.5 w-3.5" /><span className="text-[10px]">&mdash;</span></span>
+                                <span className="flex items-center gap-1"><Repeat2 className="h-3.5 w-3.5" /><span className="text-[10px]">&mdash;</span></span>
+                                <span className="flex items-center gap-1"><Heart className="h-3.5 w-3.5" /><span className="text-[10px]">&mdash;</span></span>
+                                <Send className="h-3.5 w-3.5 ml-auto" />
+                              </div>
+                            ) : isLinkedIn || isFacebook ? (
+                              <div className="flex items-center gap-4 text-gray-500 w-full">
+                                <span className="flex items-center gap-1 text-[10px]"><ThumbsUp className="h-3.5 w-3.5" /> Like</span>
+                                <span className="flex items-center gap-1 text-[10px]"><MessageCircle className="h-3.5 w-3.5" /> Comment</span>
+                                <span className="flex items-center gap-1 text-[10px]"><Repeat2 className="h-3.5 w-3.5" /> Repost</span>
+                                <span className="flex items-center gap-1 text-[10px] ml-auto"><Send className="h-3.5 w-3.5" /></span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center w-full">
+                                <div className="flex items-center gap-3 text-gray-800 dark:text-gray-200">
+                                  <Heart className="h-5 w-5" />
+                                  <MessageCircle className="h-5 w-5" />
+                                  <Send className="h-5 w-5" />
+                                </div>
+                                <Bookmark className="h-5 w-5 ml-auto text-gray-800 dark:text-gray-200" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    <div className="h-5 bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
+                      <div className="w-16 h-1 rounded-full bg-gray-200 dark:bg-gray-600" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stat estimates */}
+              {selectedPlatforms.size > 0 && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Estimates</p>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Est. reach</span>
+                      <span className="text-foreground font-medium">2.4K – 8.1K</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Best time to post</span>
+                      <span className="text-foreground font-medium">6:00 PM</span>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Campaign</p>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Total posts</span>
+                      <span className="text-foreground font-medium">{posts.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Platforms</span>
+                      <span className="text-foreground font-medium">{selectedPlatforms.size}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
         </div>
       </div>
     </>
