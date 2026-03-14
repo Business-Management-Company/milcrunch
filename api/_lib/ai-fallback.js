@@ -5,13 +5,34 @@
  * (rate limit, server error, timeout), automatically falls through
  * to the next.
  *
- * Required Vercel Environment Variables:
- *   ANTHROPIC_API_KEY   — Claude (primary)
- *   OPENAI_API_KEY      — GPT-4o-mini (first fallback)
- *   GEMINI_API_KEY      — Gemini 1.5 Flash (second fallback)
+ * ┌─────────────────────────────────────────────────────────────┐
+ * │  VERCEL ENV VAR NAMING:                                     │
+ * │                                                             │
+ * │  VITE_ prefix = client-side only (Vite injects at build)   │
+ * │  No prefix    = server-side only (Vercel API functions)     │
+ * │                                                             │
+ * │  These vars must be set WITHOUT the VITE_ prefix in the    │
+ * │  Vercel dashboard under Settings → Environment Variables:   │
+ * │                                                             │
+ * │    ANTHROPIC_API_KEY  — Claude (primary)                    │
+ * │    OPENAI_API_KEY     — GPT-4o-mini (first fallback)        │
+ * │    GEMINI_API_KEY     — Gemini 1.5 Flash (second fallback)  │
+ * │                                                             │
+ * │  If you only have VITE_ prefixed versions, the code below  │
+ * │  will also check those as a fallback.                       │
+ * └─────────────────────────────────────────────────────────────┘
  */
 
 const TIMEOUT_MS = 15_000;
+
+/**
+ * Read an env var, trying non-prefixed first, then VITE_ prefixed.
+ * Strips quotes/whitespace that can sneak in from Vercel dashboard.
+ */
+function readKey(name) {
+  const raw = process.env[name] || process.env[`VITE_${name}`] || "";
+  return raw.replace(/^["' ]+|["' ]+$/g, "").trim();
+}
 
 /**
  * Fetch with a timeout. Rejects if the request takes longer than `ms`.
@@ -34,8 +55,8 @@ function isRetryableStatus(status) {
 /* ─── Provider: Claude ─────────────────────────────────────── */
 
 async function tryClaude(body) {
-  const raw = process.env.ANTHROPIC_API_KEY || process.env.VITE_ANTHROPIC_API_KEY || "";
-  const key = raw.replace(/^["' ]+|["' ]+$/g, "").trim();
+  const key = readKey("ANTHROPIC_API_KEY");
+  console.log(`[ai-fallback] Trying Claude — key: ${key ? key.slice(0, 8) + "..." : "MISSING"} (len=${key.length})`);
   if (!key) throw new Error("ANTHROPIC_API_KEY not configured");
 
   const resp = await fetchWithTimeout("https://api.anthropic.com/v1/messages", {
@@ -93,8 +114,9 @@ function toOpenAIMessages(body) {
 }
 
 async function tryOpenAI(body) {
-  const key = (process.env.OPENAI_API_KEY || "").trim();
-  if (!key) throw new Error("OPENAI_API_KEY not configured");
+  const key = readKey("OPENAI_API_KEY");
+  console.log(`[ai-fallback] Trying OpenAI — key: ${key ? key.slice(0, 8) + "..." : "MISSING"} (len=${key.length})`);
+  if (!key) throw new Error("OPENAI_API_KEY not configured — add OPENAI_API_KEY to Vercel env vars (no VITE_ prefix)");
 
   const resp = await fetchWithTimeout(
     "https://api.openai.com/v1/chat/completions",
@@ -155,8 +177,9 @@ function toGeminiContents(body) {
 }
 
 async function tryGemini(body) {
-  const key = (process.env.GEMINI_API_KEY || "").trim();
-  if (!key) throw new Error("GEMINI_API_KEY not configured");
+  const key = readKey("GEMINI_API_KEY");
+  console.log(`[ai-fallback] Trying Gemini — key: ${key ? key.slice(0, 8) + "..." : "MISSING"} (len=${key.length})`);
+  if (!key) throw new Error("GEMINI_API_KEY not configured — add GEMINI_API_KEY to Vercel env vars (no VITE_ prefix)");
 
   const systemText = typeof body.system === "string"
     ? body.system
@@ -219,6 +242,15 @@ const providers = [
  * @returns {object} Normalized response with _provider and _service fields
  */
 async function callWithFallback(body) {
+  console.log("[ai-fallback] Starting fallback chain. Env var check:", {
+    ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY,
+    VITE_ANTHROPIC_API_KEY: !!process.env.VITE_ANTHROPIC_API_KEY,
+    OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
+    VITE_OPENAI_API_KEY: !!process.env.VITE_OPENAI_API_KEY,
+    GEMINI_API_KEY: !!process.env.GEMINI_API_KEY,
+    VITE_GEMINI_API_KEY: !!process.env.VITE_GEMINI_API_KEY,
+  });
+
   const errors = [];
 
   for (let i = 0; i < providers.length; i++) {
@@ -233,19 +265,15 @@ async function callWithFallback(body) {
       return result;
     } catch (err) {
       const status = err.status || "network";
-      const retryable = err.name === "AbortError" || (typeof status === "number" && isRetryableStatus(status));
-      const reason = err.name === "AbortError" ? "timeout" : err.message?.slice(0, 100);
+      const reason = err.name === "AbortError" ? "timeout (15s)" : err.message?.slice(0, 150);
 
-      console.warn(`[ai-fallback] ${name} failed (${status}): ${reason}`);
+      console.warn(`[ai-fallback] ${name} FAILED (${status}): ${reason}`);
       errors.push({ provider: name, status, reason });
-
-      // If the error is NOT retryable (e.g. 400 bad request, 401 auth),
-      // still try next provider — the issue may be provider-specific
     }
   }
 
   // All providers failed
-  console.error("[ai-fallback] All providers failed:", errors);
+  console.error("[ai-fallback] ALL PROVIDERS FAILED:", JSON.stringify(errors, null, 2));
   return {
     content: [
       {
