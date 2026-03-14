@@ -7,8 +7,6 @@
  * Body: { topic: string, platforms: string[], tone?: string }
  * Returns: { caption: string, provider?: string }
  */
-const { callWithFallback } = require("./_lib/ai-fallback");
-
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -45,6 +43,16 @@ Tailor the content specifically for the platform selected. Return ONLY the capti
   };
 
   try {
+    // Lazy-require to catch import errors
+    let callWithFallback;
+    try {
+      ({ callWithFallback } = require("./_lib/ai-fallback"));
+    } catch (importErr) {
+      console.error("[generate-caption] FAILED to import ai-fallback:", importErr.message);
+      // Fall back to direct Claude call
+      return await directCaptionCall(body, res);
+    }
+
     const result = await callWithFallback(body);
 
     if (result._allFailed) {
@@ -60,7 +68,38 @@ Tailor the content specifically for the platform selected. Return ONLY the capti
     res.setHeader("x-ai-provider", provider);
     return res.status(200).json({ caption, provider });
   } catch (e) {
-    console.error("[generate-caption] Error:", e.message);
-    return res.status(502).json({ error: "Failed to generate caption", message: e.message });
+    console.error("[generate-caption] TOP LEVEL ERROR:", e.message, e.stack);
+    return res.status(500).json({ error: e.message });
   }
 };
+
+/** Emergency fallback — direct Claude if ai-fallback module fails */
+async function directCaptionCall(body, res) {
+  const key = process.env.ANTHROPIC_API_KEY || process.env.VITE_ANTHROPIC_API_KEY || "";
+  if (!key) {
+    return res.status(500).json({ error: "ANTHROPIC_API_KEY not configured", caption: "" });
+  }
+
+  try {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": key.replace(/^["' ]+|["' ]+$/g, "").trim(),
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => "");
+      return res.status(resp.status).json({ error: `Anthropic API error (${resp.status})`, caption: "" });
+    }
+
+    const data = await resp.json();
+    const caption = data.content?.[0]?.text ?? "";
+    return res.status(200).json({ caption });
+  } catch (e) {
+    return res.status(502).json({ error: "Failed to reach Anthropic API", caption: "" });
+  }
+}

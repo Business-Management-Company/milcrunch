@@ -23,7 +23,16 @@
  * └─────────────────────────────────────────────────────────────┘
  */
 
-const TIMEOUT_MS = 15_000;
+console.log("[ai-fallback] Module loading...", {
+  anthropic: !!process.env.ANTHROPIC_API_KEY,
+  vite_anthropic: !!process.env.VITE_ANTHROPIC_API_KEY,
+  openai: !!process.env.OPENAI_API_KEY,
+  vite_openai: !!process.env.VITE_OPENAI_API_KEY,
+  gemini: !!process.env.GEMINI_API_KEY,
+  vite_gemini: !!process.env.VITE_GEMINI_API_KEY,
+});
+
+const TIMEOUT_MS = 15000;
 
 /**
  * Read an env var, trying non-prefixed first, then VITE_ prefixed.

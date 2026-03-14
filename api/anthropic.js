@@ -1,6 +1,3 @@
-const { logCost } = require("./_lib/cost-tracker");
-const { callWithFallback } = require("./_lib/ai-fallback");
-
 module.exports = async function handler(req, res) {
   // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -18,6 +15,23 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    // Lazy-require to catch import errors inside the handler
+    let callWithFallback, logCost;
+    try {
+      ({ callWithFallback } = require("./_lib/ai-fallback"));
+      console.log("[anthropic] ai-fallback module loaded OK");
+    } catch (importErr) {
+      console.error("[anthropic] FAILED to import ai-fallback:", importErr.message, importErr.stack);
+      // Fall back to direct Claude call if the fallback module is broken
+      return await directClaudeCall(req, res);
+    }
+    try {
+      ({ logCost } = require("./_lib/cost-tracker"));
+    } catch (importErr) {
+      console.warn("[anthropic] cost-tracker import failed (non-fatal):", importErr.message);
+      logCost = () => Promise.resolve(); // no-op
+    }
+
     const result = await callWithFallback(req.body);
 
     // Set provider header so frontend can show which AI responded
@@ -29,7 +43,6 @@ module.exports = async function handler(req, res) {
     if (result.usage && result.usage.input_tokens && result.usage.output_tokens) {
       const model = result.model || req.body.model || "claude-sonnet-4-5";
 
-      // Extract operation from system prompt or use generic
       let operation = "AI Chat";
       if (req.body.system && typeof req.body.system === "string") {
         if (req.body.system.includes("MilCrunch AI Assistant")) {
@@ -51,11 +64,7 @@ module.exports = async function handler(req, res) {
         model,
         tokensIn: result.usage.input_tokens,
         tokensOut: result.usage.output_tokens,
-        metadata: {
-          model,
-          provider,
-          endpoint: req.url || "/api/anthropic",
-        },
+        metadata: { model, provider, endpoint: req.url || "/api/anthropic" },
       }).catch((err) => {
         console.error("[anthropic] Cost tracking error:", err.message);
       });
@@ -69,8 +78,39 @@ module.exports = async function handler(req, res) {
     // Strip internal fields before sending to client
     const { _service, _allFailed, _errors, ...clientData } = result;
     res.status(200).setHeader("Content-Type", "application/json").json(clientData);
-  } catch (e) {
-    console.error("[anthropic] Proxy error:", e.message);
-    res.status(502).json({ error: "AI proxy error", message: e.message });
+  } catch (err) {
+    console.error("[anthropic] TOP LEVEL ERROR:", err.message, err.stack);
+    res.status(500).json({ error: err.message, stack: err.stack?.split("\n").slice(0, 5) });
   }
 };
+
+/**
+ * Emergency fallback — direct Claude call if ai-fallback module fails to load.
+ * This preserves the original behavior so the API doesn't completely break.
+ */
+async function directClaudeCall(req, res) {
+  const raw = process.env.ANTHROPIC_API_KEY || process.env.VITE_ANTHROPIC_API_KEY || "";
+  const key = raw.replace(/^["' ]+|["' ]+$/g, "").trim();
+
+  if (!key) {
+    return res.status(500).json({ error: "ANTHROPIC_API_KEY not configured" });
+  }
+
+  try {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify(req.body),
+    });
+
+    const data = await resp.text();
+    res.status(resp.status).setHeader("Content-Type", "application/json").send(data);
+  } catch (e) {
+    console.error("[anthropic] Direct Claude fallback error:", e.message);
+    res.status(502).json({ error: "Anthropic proxy error", message: e.message });
+  }
+}
