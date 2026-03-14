@@ -68,6 +68,10 @@ async function tryClaude(body) {
   console.log(`[ai-fallback] Trying Claude — key: ${key ? key.slice(0, 8) + "..." : "MISSING"} (len=${key.length})`);
   if (!key) throw new Error("ANTHROPIC_API_KEY not configured");
 
+  // Use a known-good model; callers may pass anything
+  const safeBody = { ...body, model: body.model || "claude-sonnet-4-5-20250929" };
+  console.log("[ai-fallback] Claude request model:", safeBody.model, "max_tokens:", safeBody.max_tokens);
+
   const resp = await fetchWithTimeout("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -75,12 +79,13 @@ async function tryClaude(body) {
       "x-api-key": key,
       "anthropic-version": "2023-06-01",
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(safeBody),
   });
 
   if (!resp.ok) {
     const errText = await resp.text().catch(() => "");
-    const err = new Error(`Claude ${resp.status}: ${errText.slice(0, 200)}`);
+    console.error("[ai-fallback] Claude error body:", errText);
+    const err = new Error(`Claude ${resp.status}: ${errText.slice(0, 500)}`);
     err.status = resp.status;
     throw err;
   }
@@ -127,6 +132,9 @@ async function tryOpenAI(body) {
   console.log(`[ai-fallback] Trying OpenAI — key: ${key ? key.slice(0, 8) + "..." : "MISSING"} (len=${key.length})`);
   if (!key) throw new Error("OPENAI_API_KEY not configured — add OPENAI_API_KEY to Vercel env vars (no VITE_ prefix)");
 
+  const openaiMessages = toOpenAIMessages(body);
+  console.log("[ai-fallback] OpenAI messages count:", openaiMessages.length, "first role:", openaiMessages[0]?.role);
+
   const resp = await fetchWithTimeout(
     "https://api.openai.com/v1/chat/completions",
     {
@@ -139,14 +147,15 @@ async function tryOpenAI(body) {
         model: "gpt-4o-mini",
         max_tokens: body.max_tokens || 1000,
         temperature: body.temperature ?? 1,
-        messages: toOpenAIMessages(body),
+        messages: openaiMessages,
       }),
     }
   );
 
   if (!resp.ok) {
     const errText = await resp.text().catch(() => "");
-    const err = new Error(`OpenAI ${resp.status}: ${errText.slice(0, 200)}`);
+    console.error("[ai-fallback] OpenAI error body:", errText);
+    const err = new Error(`OpenAI ${resp.status}: ${errText.slice(0, 500)}`);
     err.status = resp.status;
     throw err;
   }
@@ -167,45 +176,45 @@ async function tryOpenAI(body) {
 
 /* ─── Provider: Gemini ─────────────────────────────────────── */
 
-function toGeminiContents(body) {
-  const contents = [];
-  if (Array.isArray(body.messages)) {
-    for (const msg of body.messages) {
-      const text = typeof msg.content === "string"
-        ? msg.content
-        : Array.isArray(msg.content)
-          ? msg.content.map((b) => b.text || "").join("\n")
-          : String(msg.content);
-      contents.push({
-        role: msg.role === "assistant" ? "model" : "user",
-        parts: [{ text }],
-      });
-    }
-  }
-  return contents;
-}
-
 async function tryGemini(body) {
   const key = readKey("GEMINI_API_KEY");
   console.log(`[ai-fallback] Trying Gemini — key: ${key ? key.slice(0, 8) + "..." : "MISSING"} (len=${key.length})`);
   if (!key) throw new Error("GEMINI_API_KEY not configured — add GEMINI_API_KEY to Vercel env vars (no VITE_ prefix)");
 
+  // Extract system prompt
   const systemText = typeof body.system === "string"
     ? body.system
     : Array.isArray(body.system)
       ? body.system.map((b) => b.text || "").join("\n")
       : "";
 
+  // Extract user prompt from messages
+  let userText = "";
+  if (Array.isArray(body.messages)) {
+    userText = body.messages
+      .map((msg) =>
+        typeof msg.content === "string"
+          ? msg.content
+          : Array.isArray(msg.content)
+            ? msg.content.map((b) => b.text || "").join("\n")
+            : String(msg.content)
+      )
+      .join("\n\n");
+  }
+
+  // Simplified format: concatenate system + user into one contents entry
+  const combinedPrompt = systemText
+    ? systemText + "\n\n" + userText
+    : userText;
+
   const payload = {
-    contents: toGeminiContents(body),
+    contents: [{ parts: [{ text: combinedPrompt }] }],
     generationConfig: {
       maxOutputTokens: body.max_tokens || 1000,
-      temperature: body.temperature ?? 1,
     },
   };
-  if (systemText) {
-    payload.systemInstruction = { parts: [{ text: systemText }] };
-  }
+
+  console.log("[ai-fallback] Gemini prompt length:", combinedPrompt.length);
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
   const resp = await fetchWithTimeout(url, {
@@ -216,7 +225,8 @@ async function tryGemini(body) {
 
   if (!resp.ok) {
     const errText = await resp.text().catch(() => "");
-    const err = new Error(`Gemini ${resp.status}: ${errText.slice(0, 200)}`);
+    console.error("[ai-fallback] Gemini error body:", errText);
+    const err = new Error(`Gemini ${resp.status}: ${errText.slice(0, 500)}`);
     err.status = resp.status;
     throw err;
   }
