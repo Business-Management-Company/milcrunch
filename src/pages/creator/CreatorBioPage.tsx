@@ -283,7 +283,7 @@ export default function CreatorBioPage() {
     const desc = creator.bio || `Connect with ${creator.display_name} on MilCrunch.`;
     const ogImage = creator.hero_image_url || creator.avatar_url || "/favicon-32x32.png";
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const url = `${origin}/c/${creatorHandle}`;
+    const url = `${origin}/${creatorHandle}`;
 
     document.title = title;
     const setMeta = (attr: string, value: string, key = "property") => {

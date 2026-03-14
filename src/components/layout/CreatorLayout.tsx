@@ -181,7 +181,7 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
   const isDemoUser = email === "andrew@podlogix.co" || handle === "johnny-rocket";
   const displayName = pres.active ? pres.displayName : isDemoUser ? "Johnny Rocket" : (creatorProfile?.display_name ?? user?.user_metadata?.full_name ?? "Creator");
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const bioUrl = handle ? `${origin}/c/${handle}` : "";
+  const bioUrl = handle ? `${origin}/${handle}` : "";
 
   const branch = (user?.user_metadata?.branch as string) || (creatorProfile as any)?.branch || "";
 

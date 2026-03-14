@@ -78,7 +78,7 @@ export default function CreatorSettings() {
                 <User className="h-4 w-4 text-muted-foreground" />
                 Username
               </Label>
-              <p className="text-xs text-muted-foreground">Your bio page URL: milcrunch.com/c/{handle || "yourhandle"}</p>
+              <p className="text-xs text-muted-foreground">Your bio page URL: milcrunch.com/{handle || "yourhandle"}</p>
               <div className="flex gap-2">
                 <Input
                   value={handle}

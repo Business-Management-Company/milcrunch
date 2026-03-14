@@ -80,7 +80,7 @@ export default function CreatorAnalytics() {
       ) : !handle ? (
         <Card className="p-6">
           <p className="text-muted-foreground">
-            Add a public handle in your Profile to get a bio page (e.g. /c/yourhandle). Analytics will appear here.
+            Add a public handle in your Profile to get a bio page (e.g. /yourhandle). Analytics will appear here.
           </p>
         </Card>
       ) : (
@@ -148,7 +148,7 @@ export default function CreatorAnalytics() {
                 </div>
               ))}
               {events.length === 0 && (
-                <p className="text-sm text-muted-foreground">No events yet. Share your link: /c/{handle}</p>
+                <p className="text-sm text-muted-foreground">No events yet. Share your link: /{handle}</p>
               )}
             </div>
           </Card>

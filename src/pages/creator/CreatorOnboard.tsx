@@ -155,7 +155,7 @@ export default function CreatorOnboard() {
 
   const progress = (step / 3) * 100;
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-  const bioPageUrl = handle ? `${baseUrl}/c/${handle}` : "";
+  const bioPageUrl = handle ? `${baseUrl}/${handle}` : "";
 
   if (!user) return null;
 
@@ -182,7 +182,7 @@ export default function CreatorOnboard() {
                 <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1 bg-white border-gray-300 text-gray-900" />
               </div>
               <div>
-                <Label className="text-gray-700">Handle (bio page URL: /c/yourhandle)</Label>
+                <Label className="text-gray-700">Handle (bio page URL: /yourhandle)</Label>
                 <Input
                   value={handle}
                   onChange={(e) => setHandle(e.target.value.replace(/^@/, "").toLowerCase())}

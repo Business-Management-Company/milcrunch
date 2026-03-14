@@ -109,7 +109,7 @@ export default function CreatorProfile() {
   };
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-  const bioUrl = handle ? `${baseUrl}/c/${handle.replace(/^@/, "").toLowerCase()}` : "";
+  const bioUrl = handle ? `${baseUrl}/${handle.replace(/^@/, "").toLowerCase()}` : "";
 
   return (
     <CreatorLayout>
@@ -133,7 +133,7 @@ export default function CreatorProfile() {
               <Label htmlFor="handle">Bio page handle</Label>
               <div className="flex gap-2 mt-1">
                 <span className="inline-flex items-center rounded-l-lg border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
-                  /c/
+                  milcrunch.com/
                 </span>
                 <Input
                   id="handle"

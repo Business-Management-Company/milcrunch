@@ -240,7 +240,7 @@ export default function CreatorBioEditor() {
   const displayName = profileName || handle;
   const avatarUrl = profileAvatar;
   const bioUrl = handle
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/c/${handle}`
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/${handle}`
     : "";
 
   const [sections, setSections] = useState<BioSectionConfig[]>([]);
@@ -992,7 +992,7 @@ export default function CreatorBioEditor() {
                     className="h-9 text-sm"
                   />
                   <p className="text-[11px] text-muted-foreground">
-                    milcrunch.com/c/{profileHandle || "your-username"}
+                    milcrunch.com/{profileHandle || "your-username"}
                   </p>
                 </div>
 
@@ -2012,7 +2012,7 @@ export default function CreatorBioEditor() {
                       </div>
                       <div className="flex-1 flex justify-center">
                         <div className="bg-white dark:bg-gray-700 rounded-md px-3 py-1 text-[11px] text-muted-foreground font-mono min-w-[200px] text-center border border-gray-200 dark:border-gray-600">
-                          milcrunch.com/c/{handle || "username"}
+                          milcrunch.com/{handle || "username"}
                         </div>
                       </div>
                       <div className="w-[54px]" />

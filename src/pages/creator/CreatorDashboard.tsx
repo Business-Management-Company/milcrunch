@@ -203,7 +203,7 @@ export default function CreatorDashboard() {
   const engagementRate = isDemo ? 6.8 : 0;
   const displayName = isDemo ? "Johnny Rocket" : (creatorProfile?.display_name ?? user?.user_metadata?.full_name ?? "");
   const firstName = getFirstName(displayName);
-  const bioUrl = handle ? `${typeof window !== "undefined" ? window.location.origin : ""}/c/${handle}` : "";
+  const bioUrl = handle ? `${typeof window !== "undefined" ? window.location.origin : ""}/${handle}` : "";
 
   const copyBioLink = () => {
     if (!bioUrl) {

@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DevAdminProvider } from "@/contexts/DevAdminContext";
 import DevRoleSwitcher from "@/components/DevRoleSwitcher";
@@ -191,6 +191,12 @@ import MilitaryCreatorEconomy from "./pages/seo/MilitaryCreatorEconomy";
 import BrandSafetyMilitary from "./pages/seo/BrandSafetyMilitary";
 import VeteranPodcastAdvertising from "./pages/seo/VeteranPodcastAdvertising";
 
+const RedirectCreatorPath = () => {
+  const { handle, eventSlug } = useParams();
+  const target = eventSlug ? `/${handle}/${eventSlug}` : `/${handle}`;
+  return <Navigate to={target} replace />;
+};
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -358,9 +364,9 @@ const App = () => (
               <Route path="/attend/:eventSlug/sponsors" element={<AttendeeSponsors />} />
               <Route path="/attend/:eventSlug/profile" element={<AttendeeProfilePage />} />
               <Route path="/attend/:eventSlug/register" element={<AttendeeRegister />} />
-              {/* Creator bio pages (public, with CreatorPixel tracking) */}
-              <Route path="/c/:handle" element={<CreatorBioPage />} />
-              <Route path="/c/:handle/:eventSlug" element={<CreatorBioPage />} />
+              {/* Redirect old /c/ URLs to new /:handle URLs */}
+              <Route path="/c/:handle/:eventSlug" element={<RedirectCreatorPath />} />
+              <Route path="/c/:handle" element={<RedirectCreatorPath />} />
               {/* Creator app (protected, role-based redirect) */}
               <Route path="/creator/onboard" element={<CreatorRoute><CreatorOnboard /></CreatorRoute>} />
               <Route path="/creator/dashboard" element={<CreatorRoute><CreatorDashboard /></CreatorRoute>} />
@@ -420,6 +426,9 @@ const App = () => (
               <Route path="/military-creator-economy" element={<MilitaryCreatorEconomy />} />
               <Route path="/brand-safety-military" element={<BrandSafetyMilitary />} />
               <Route path="/veteran-podcast-advertising" element={<VeteranPodcastAdvertising />} />
+              {/* Creator bio pages (public, with CreatorPixel tracking) — must be last before catch-all */}
+              <Route path="/:handle/:eventSlug" element={<CreatorBioPage />} />
+              <Route path="/:handle" element={<CreatorBioPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
