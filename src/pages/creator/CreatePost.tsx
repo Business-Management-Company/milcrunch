@@ -591,14 +591,20 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
 
         {/* ── CADENCE CAMPAIGN TAB ── */}
         {activeTab === "cadence" && (
-          <CadenceCampaign
-            prefilledCreatorId={qCreatorId}
-            prefilledCreatorName={qCreatorName}
-          />
+          <div className="flex-1 overflow-y-auto bg-background [&>*]:max-w-none [&_*]:max-w-none" style={{ padding: 0 }}>
+            <CadenceCampaign
+              prefilledCreatorId={qCreatorId}
+              prefilledCreatorName={qCreatorName}
+            />
+          </div>
         )}
 
         {/* ── CAMPAIGN TAB ── */}
-        {activeTab === "campaign" && <CampaignTab />}
+        {activeTab === "campaign" && (
+          <div className="flex-1 overflow-y-auto bg-background [&>*]:max-w-none [&_*]:max-w-none" style={{ padding: 0 }}>
+            <CampaignTab />
+          </div>
+        )}
 
         {/* ── SINGLE POST TAB ── */}
         {activeTab === "single" && <>
@@ -655,10 +661,10 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
           <div className="flex gap-6 p-6 min-h-full">
 
             {/* ═══ LEFT EDITOR COLUMN ═══ */}
-            <div className="flex-1 min-w-0 space-y-6">
+            <div className="flex-1 min-w-0 space-y-3">
 
               {/* ── Section 1: Platform selector (inline pills) ── */}
-              <div className="space-y-2">
+              <div className="bg-card border border-border rounded-xl p-4 px-5 space-y-2">
                 <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Post to</p>
                 {noAccounts ? (
                   <div className="rounded-xl border border-dashed border-border p-6 text-center">
@@ -702,7 +708,7 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
               </div>
 
               {/* ── Section 2: Caption editor ── */}
-              <div className="space-y-0">
+              <div className="bg-card border border-border rounded-xl overflow-hidden space-y-0">
                 <Textarea
                   value={caption}
                   onChange={(e) => {
@@ -799,7 +805,7 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
               )}
 
               {/* ── Section 3: Media attachment ── */}
-              <div className="space-y-3">
+              <div className="bg-card border border-border rounded-xl p-4 px-5 space-y-3">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -908,7 +914,7 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
               </div>
 
               {/* ── Section 4: Schedule toggle (single post only) ── */}
-              <div className="space-y-3 border-t border-border pt-6">
+              <div className="bg-card border border-border rounded-xl p-4 px-5 space-y-3">
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
@@ -952,7 +958,7 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
             </div>
 
             {/* ═══ RIGHT PREVIEW COLUMN ═══ */}
-            <div className="hidden lg:block w-80 shrink-0">
+            <div className="hidden lg:block w-[580px] shrink-0">
               <div className="sticky top-0 space-y-4">
                 <div className="rounded-2xl border border-border bg-card overflow-hidden">
                   <div className="px-4 py-3 border-b border-border flex items-center justify-between">
@@ -999,42 +1005,40 @@ export default function CreatePost({ noLayout, postType, editDraft }: { noLayout
                   </div>
                 </div>
 
-                {/* Stat estimates */}
+                {/* Stat estimates + Character counts side by side */}
                 {selected.size > 0 && (
-                  <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Estimates</p>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">Est. reach</span>
-                      <span className="text-foreground font-medium">2.4K – 8.1K</span>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+                      <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Estimates</p>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Est. reach</span>
+                        <span className="text-foreground font-medium">2.4K – 8.1K</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Best time to post</span>
+                        <span className="text-foreground font-medium">6:00 PM</span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">Best time to post</span>
-                      <span className="text-foreground font-medium">6:00 PM</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Character counts */}
-                {selected.size > 0 && (
-                  <div className="rounded-xl border border-border bg-card p-4">
-                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-2">Character Counts</p>
-                    <div className="space-y-1">
-                      {Array.from(selected).map((p) => {
-                        const rules = platformRules[p];
-                        if (!rules?.maxChars) return null;
-                        const name = PLATFORM_NAMES[p] ?? p;
-                        const len = caption.length;
-                        const max = rules.maxChars;
-                        const pct = len / max;
-                        return (
-                          <div key={p} className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">{name}</span>
-                            <span className={cn("font-medium", pct > 1 ? "text-red-500" : pct > 0.8 ? "text-amber-500" : "text-teal-600")}>
-                              {len}/{max}
-                            </span>
-                          </div>
-                        );
-                      })}
+                    <div className="rounded-xl border border-border bg-card p-4">
+                      <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-2">Character Counts</p>
+                      <div className="space-y-1">
+                        {Array.from(selected).map((p) => {
+                          const rules = platformRules[p];
+                          if (!rules?.maxChars) return null;
+                          const name = PLATFORM_NAMES[p] ?? p;
+                          const len = caption.length;
+                          const max = rules.maxChars;
+                          const pct = len / max;
+                          return (
+                            <div key={p} className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">{name}</span>
+                              <span className={cn("font-medium", pct > 1 ? "text-red-500" : pct > 0.8 ? "text-amber-500" : "text-teal-600")}>
+                                {len}/{max}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}
